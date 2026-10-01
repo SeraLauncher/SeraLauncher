@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Icon } from "./Icon";
@@ -24,7 +24,14 @@ type NewsResponse = {
   total?: number;
 };
 
-const DEFAULT_INSTANCES = ["1.21.4 (Latest Release)", "1.21.4 (Fabric Loader)", "1.20.1 (Forge)"];
+const DEFAULT_INSTANCES = [
+  "1.21.4 (Latest Release)",
+  "1.21.4 (Fabric Loader)",
+  "1.20.1 (Forge)",
+  "1.20.1 (Fabric Loader)",
+  "1.19.4 (Vanilla)",
+  "1.16.5 (Forge)",
+];
 
 const FALLBACK_ARTICLES: NewsArticle[] = [
   {
@@ -83,12 +90,64 @@ function openArticle(url: string) {
   });
 }
 
-export function HomePage({ theme }: { theme: Theme }) {
+export function HomePage({
+  theme,
+  instances = DEFAULT_INSTANCES,
+}: {
+  theme: Theme;
+  instances?: string[];
+}) {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedInstanceIndex, setSelectedInstanceIndex] = useState(0);
+  const [selectedInstance, setSelectedInstance] = useState(instances[0] ?? DEFAULT_INSTANCES[0]);
   const [showInstanceMenu, setShowInstanceMenu] = useState(false);
+  const [query, setQuery] = useState("");
   const [launching, setLaunching] = useState(false);
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // search input only renders when there are 5 or more instances
+  const hasSearch = instances.length >= 5;
+
+  const filteredInstances = useMemo(() => {
+    if (!hasSearch || !query.trim()) return instances;
+    const needle = query.trim().toLowerCase();
+    return instances.filter((inst) => inst.toLowerCase().includes(needle));
+  }, [hasSearch, instances, query]);
+
+  // focus search on open so the user can immediately type
+  useEffect(() => {
+    if (showInstanceMenu && hasSearch) {
+      searchInputRef.current?.focus();
+    }
+  }, [showInstanceMenu, hasSearch]);
+
+  // close on outside click to behave like a standard menu
+  useEffect(() => {
+    if (!showInstanceMenu) return;
+    const away = (event: PointerEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        setShowInstanceMenu(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [showInstanceMenu]);
+
+  // escape closes the dropdown
+  useEffect(() => {
+    if (!showInstanceMenu) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowInstanceMenu(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [showInstanceMenu]);
 
   useEffect(() => {
     let cancelled = false;
@@ -161,57 +220,120 @@ export function HomePage({ theme }: { theme: Theme }) {
             <span className="home-play-text">{launching ? "Launching..." : "Play"}</span>
           </motion.button>
 
-          <div className="home-instance-wrapper">
+          <div className="home-instance-wrapper" ref={wrapperRef}>
             <button
               type="button"
               className="home-instance-pill"
               style={{
-                background: theme.card,
-                borderColor: theme.raised,
+                background: theme.raised,
+                border: 0,
                 color: theme.text,
               }}
-              onClick={() => setShowInstanceMenu((prev) => !prev)}
+              onClick={() => {
+                setShowInstanceMenu((prev) => {
+                  if (prev) setQuery("");
+                  return !prev;
+                });
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={showInstanceMenu}
             >
               <Icon name="instance" size={16} color={theme.accent} />
-              <span className="home-instance-label">
-                {DEFAULT_INSTANCES[selectedInstanceIndex]}
-              </span>
-              <Icon name="chevronDown" size={14} color={theme.muted} />
+              <span className="home-instance-label">{selectedInstance}</span>
+              <motion.span
+                className="home-instance-chevron"
+                animate={{ rotate: showInstanceMenu ? 180 : 0 }}
+                transition={snappy}
+              >
+                <Icon name="chevronDown" size={14} color={theme.muted} />
+              </motion.span>
             </button>
 
-            {showInstanceMenu && (
-              <div
-                className="home-instance-dropdown"
-                style={{
-                  background: theme.card,
-                  borderColor: theme.raised,
-                  boxShadow: `0 8px 24px rgba(0, 0, 0, 0.45)`,
-                }}
-              >
-                {DEFAULT_INSTANCES.map((inst, index) => (
-                  <button
-                    key={inst}
-                    type="button"
-                    className="home-instance-option"
-                    style={{
-                      color: index === selectedInstanceIndex ? theme.accent : theme.text,
-                      background: index === selectedInstanceIndex ? theme.panel : "transparent",
-                    }}
-                    onClick={() => {
-                      setSelectedInstanceIndex(index);
-                      setShowInstanceMenu(false);
-                    }}
-                  >
-                    <span>{inst}</span>
-                    {index === selectedInstanceIndex && (
-                      <span className="home-instance-check" style={{ color: theme.accent }}>
-                        •
-                      </span>
+            <AnimatePresence>
+              {showInstanceMenu && (
+                <motion.div
+                  key="instance-dropdown"
+                  className="home-instance-dropdown"
+                  initial={{ opacity: 0, scale: 0.96, y: -4, x: "-50%" }}
+                  animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
+                  exit={{ opacity: 0, scale: 0.96, y: -4, x: "-50%" }}
+                  transition={snappy}
+                  style={{
+                    background: theme.raised,
+                    border: 0,
+                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
+                    transformOrigin: "top center",
+                  }}
+                >
+                  {hasSearch && (
+                    <div
+                      className="home-instance-search-box"
+                      style={{
+                        background: theme.panel,
+                        border: 0,
+                      }}
+                    >
+                      <Icon name="search" size={14} color={theme.muted} />
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        className="home-instance-search"
+                        placeholder="Search version..."
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        style={{ color: theme.text }}
+                      />
+                      {query && (
+                        <button
+                          type="button"
+                          className="home-instance-search-clear"
+                          onClick={() => setQuery("")}
+                          aria-label="Clear search"
+                        >
+                          <Icon name="reset" size={12} color={theme.muted} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="home-instance-list" role="listbox">
+                    {filteredInstances.map((inst) => {
+                      const isSelected = inst === selectedInstance;
+                      return (
+                        <button
+                          key={inst}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          className="home-instance-option"
+                          style={{
+                            color: isSelected ? theme.accent : theme.text,
+                            background: isSelected ? theme.panel : "transparent",
+                          }}
+                          onClick={() => {
+                            setSelectedInstance(inst);
+                            setShowInstanceMenu(false);
+                            setQuery("");
+                          }}
+                        >
+                          <span>{inst}</span>
+                          {isSelected && (
+                            <span className="home-instance-check" style={{ color: theme.accent }}>
+                              •
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    {filteredInstances.length === 0 && (
+                      <div className="home-instance-empty" style={{ color: theme.faint }}>
+                        No match
+                      </div>
                     )}
-                  </button>
-                ))}
-              </div>
-            )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

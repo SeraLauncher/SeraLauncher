@@ -29,10 +29,10 @@ bun run tauri dev
 bun run check          # lint + format check + typecheck
 bun run format         # write formatting
 bun run lint           # oxlint
-cd src-tauri && cargo test
+cd apps/client/src-tauri && cargo test
 ```
 
-`oxfmt` skips `src-tauri/` and `package.json`; see `.oxfmtignore`.
+`oxfmt` skips `apps/*/src-tauri/` and `package.json`; see `.oxfmtignore`.
 
 ## Assets
 

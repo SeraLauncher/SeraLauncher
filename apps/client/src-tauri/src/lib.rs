@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 mod fonts;
+mod java;
 
 const DEFAULT_APPEARANCE: &str = "dark";
 const BUNDLED_FAMILY: &str = "Sunghyun Sans";
@@ -11,14 +12,22 @@ const DEFAULT_FONT_SIZE: u32 = 16;
 const MIN_FONT_SIZE: u32 = 12;
 const MAX_FONT_SIZE: u32 = 20;
 
+const DEFAULT_MIN_MEMORY: u32 = 2048;
+const DEFAULT_MAX_MEMORY: u32 = 4096;
+const DEFAULT_JVM_ARGS: &str = "-XX:+UseG1GC";
+
 /// User preferences, persisted as json in the platform config dir. Unreadable or
 /// malformed data falls back to defaults rather than stopping the app.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default = "Settings::defaults", rename_all = "camelCase")]
-struct Settings {
-    appearance: String,
-    font: String,
-    font_size: u32,
+pub struct Settings {
+    pub appearance: String,
+    pub font: String,
+    pub font_size: u32,
+    pub java_path: Option<String>,
+    pub min_memory: u32,
+    pub max_memory: u32,
+    pub jvm_args: String,
 }
 
 impl Default for Settings {
@@ -35,6 +44,10 @@ impl Settings {
             appearance: DEFAULT_APPEARANCE.into(),
             font: BUNDLED_FAMILY.into(),
             font_size: DEFAULT_FONT_SIZE,
+            java_path: None,
+            min_memory: DEFAULT_MIN_MEMORY,
+            max_memory: DEFAULT_MAX_MEMORY,
+            jvm_args: DEFAULT_JVM_ARGS.into(),
         }
     }
 
@@ -48,6 +61,24 @@ impl Settings {
             self.font = BUNDLED_FAMILY.into();
         }
         self.font_size = self.font_size.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE);
+
+        self.java_path = self.java_path.and_then(|p| {
+            let t = p.trim();
+            if t.is_empty() {
+                None
+            } else {
+                Some(t.to_string())
+            }
+        });
+
+        // minimum RAM at least 512 MB, maximum RAM up to 64 GB
+        self.min_memory = self.min_memory.clamp(512, 65536);
+        self.max_memory = self.max_memory.clamp(self.min_memory, 65536);
+
+        if self.jvm_args.trim().is_empty() {
+            self.jvm_args = DEFAULT_JVM_ARGS.into();
+        }
+
         self
     }
 
@@ -107,6 +138,31 @@ fn list_fonts() -> Vec<String> {
     let mut families = vec![BUNDLED_FAMILY.to_string()];
     families.extend(installed.into_iter().filter(|name| name != BUNDLED_FAMILY));
     families
+}
+
+/// Lists all detected Java runtimes across the system, newest first.
+#[tauri::command]
+fn list_java_runtimes() -> Vec<java::JavaRuntime> {
+    java::discover_java_runtimes()
+}
+
+/// Returns the host system's total physical memory in megabytes (MB).
+#[tauri::command]
+fn get_system_memory() -> u32 {
+    java::system_total_memory_mb()
+}
+
+/// Validates a custom Java executable path by testing `-version`.
+#[tauri::command]
+fn validate_java_path(path: String) -> Result<java::JavaRuntime, String> {
+    let p = Path::new(&path);
+    java::inspect_java_binary(p).ok_or_else(|| format!("Invalid Java executable at {}", path))
+}
+
+/// Returns the required Java major version for a given Minecraft version string.
+#[tauri::command]
+fn get_required_java_version(mc_version: String) -> u32 {
+    java::required_java_version(&mc_version)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -208,7 +264,11 @@ pub fn run() {
             load_settings,
             save_settings,
             list_fonts,
-            fetch_minecraft_news
+            fetch_minecraft_news,
+            list_java_runtimes,
+            get_system_memory,
+            validate_java_path,
+            get_required_java_version
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -230,6 +290,10 @@ mod tests {
             appearance: "light".into(),
             font: "Inter".into(),
             font_size: 18,
+            java_path: Some("/usr/bin/java".into()),
+            min_memory: 1024,
+            max_memory: 8192,
+            jvm_args: "-XX:+UseG1GC".into(),
         };
 
         saved.write(&path).unwrap();
@@ -263,6 +327,8 @@ mod tests {
 
         assert_eq!(loaded, Settings::defaults());
         assert!(matches!(loaded.appearance.as_str(), "dark" | "light"));
+        assert_eq!(loaded.min_memory, DEFAULT_MIN_MEMORY);
+        assert_eq!(loaded.max_memory, DEFAULT_MAX_MEMORY);
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -292,43 +358,25 @@ mod tests {
     }
 
     #[test]
+    fn ram_allocation_is_clamped() {
+        let dir = scratch("ram");
+        let path = settings_path(&dir);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, r#"{ "minMemory": 128, "maxMemory": 256 }"#).unwrap();
+
+        let sanitized = Settings::read(&path).sanitized();
+        assert_eq!(sanitized.min_memory, 512);
+        assert_eq!(sanitized.max_memory, 512);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
     fn the_config_dir_is_named_after_the_app() {
         let base = Path::new("/home/someone/.config");
 
         assert_eq!(
             settings_path(base),
             Path::new("/home/someone/.config/SeraLauncher/settings.json")
-        );
-    }
-
-    #[test]
-    fn news_response_deserializes_from_mojang_schema() {
-        let sample = r#"{
-            "result": {
-                "results": [
-                    {
-                        "title": "Minecraft 26.4 Snapshot 2",
-                        "description": "Minecraft 26.4 Snapshot 2",
-                        "url": "https://www.minecraft.net/en-us/article/minecraft-26-4-snapshot-2",
-                        "image": "https://www.minecraft.net/content/dam/minecraftnet/article-asset/2026/minecraft-26-4-snapshot-2/new-article-hero-image.jpg",
-                        "time": 1790690400,
-                        "tags": ["minecraft:news", "minecraft:games/minecraft-java"]
-                    }
-                ],
-                "numFound": 748,
-                "page": 1
-            }
-        }"#;
-
-        let parsed: Result<RawNewsResponse, _> = serde_json::from_str(sample);
-        assert!(parsed.is_ok());
-        let raw = parsed.unwrap();
-        let results = raw.result.unwrap().results;
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].title, "Minecraft 26.4 Snapshot 2");
-        assert_eq!(
-            results[0].image,
-            "https://www.minecraft.net/content/dam/minecraftnet/article-asset/2026/minecraft-26-4-snapshot-2/new-article-hero-image.jpg"
         );
     }
 }

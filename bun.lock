@@ -4,7 +4,18 @@
   "workspaces": {
     "": {
       "name": "sera-launcher",
+      "devDependencies": {
+        "@tauri-apps/cli": "^2",
+        "oxfmt": "^0.71.0",
+        "oxlint": "^1.86.0",
+        "typescript": "~6.0.3",
+      },
+    },
+    "apps/client": {
+      "name": "@sera/client",
+      "version": "0.1.0",
       "dependencies": {
+        "@sera/ui": "workspace:*",
         "@tauri-apps/api": "^2",
         "@tauri-apps/plugin-opener": "^2",
         "motion": "^13.4.6",
@@ -16,10 +27,24 @@
         "@types/react": "^19.1.8",
         "@types/react-dom": "^19.1.6",
         "@vitejs/plugin-react": "^6.0.2",
-        "oxfmt": "^0.71.0",
-        "oxlint": "^1.86.0",
         "typescript": "~6.0.3",
         "vite": "^8.0.16",
+      },
+    },
+    "packages/ui": {
+      "name": "@sera/ui",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tauri-apps/api": "^2",
+        "@tauri-apps/plugin-opener": "^2",
+        "motion": "^13.4.6",
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0",
+      },
+      "devDependencies": {
+        "@types/react": "^19.1.8",
+        "@types/react-dom": "^19.1.6",
+        "typescript": "~6.0.3",
       },
     },
   },
@@ -133,6 +158,10 @@
     "@rolldown/binding-win32-x64-msvc": ["@rolldown/binding-win32-x64-msvc@1.2.11", "", { "os": "win32", "cpu": "x64" }, "sha512-/PzKqzAJ03i19oy2ItPvyvaVjOjBCNnfaJs8yvUdGBKmiESgnrJSQ2awd81QzFbbnAmu7YO9ZnJrDCb9VSJPRA=="],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
+
+    "@sera/client": ["@sera/client@workspace:apps/client"],
+
+    "@sera/ui": ["@sera/ui@workspace:packages/ui"],
 
     "@tauri-apps/api": ["@tauri-apps/api@2.12.0", "", {}, "sha512-fUSxFX8VABYe9W9K5ROdEaKVkNUFRcMSRofjruvaxztXA+I0XnQHcYHF8m/a6iExRUxsUf0HsFWhPBuH9IgzJw=="],
 

@@ -89,7 +89,7 @@ export function Dropdown<T extends string | number>({
       ref={root}
       className={`dropdown ${className ?? ""}`}
       onKeyDown={onKeyDown}
-      style={{ borderColor: theme.raised, background: theme.background }}
+      style={{ border: 0, background: theme.raised }}
     >
       <motion.button
         type="button"
@@ -133,7 +133,7 @@ export function Dropdown<T extends string | number>({
           <motion.div
             key="list"
             className="dropdown-list"
-            style={{ background: theme.background, borderColor: theme.raised }}
+            style={{ background: theme.raised, border: 0 }}
             initial={{ opacity: 0, scale: 0.97, y: -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: -3 }}
@@ -151,7 +151,11 @@ export function Dropdown<T extends string | number>({
                   // the filter just reshuffled the list under the cursor
                   setCursor(0);
                 }}
-                style={{ color: theme.text, background: theme.shell }}
+                style={{
+                  color: theme.text,
+                  background: theme.panel,
+                  border: 0,
+                }}
               />
             )}
 
@@ -167,7 +171,7 @@ export function Dropdown<T extends string | number>({
                     className="dropdown-option"
                     style={{
                       color: option === value ? theme.accent : theme.text,
-                      background: index === cursor ? theme.raised : "transparent",
+                      background: index === cursor ? theme.panel : "transparent",
                     }}
                   >
                     {render(option)}

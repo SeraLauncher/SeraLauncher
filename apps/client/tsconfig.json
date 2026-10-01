@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@sera/ui": ["../../packages/ui/src/index.ts"],
+      "@sera/ui/*": ["../../packages/ui/src/*"]
+    }
+  },
+  "include": ["src"]
+}

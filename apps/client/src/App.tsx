@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { NAV, RailIcons, RailLogo, RAIL_WIDTH } from "./components/Sidebar";
-import { PageHeader } from "./components/PageHeader";
-import { SettingsPage } from "./components/SettingsPage";
-import { HomePage } from "./components/HomePage";
-import { AppHeader } from "./components/AppHeader";
-import { fontFamily, themes } from "./theme";
+import {
+  AppHeader,
+  HomePage,
+  NAV,
+  RAIL_WIDTH,
+  RailIcons,
+  RailLogo,
+  SettingsPage,
+  SettingsRailNav,
+  fade,
+  fontFamily,
+  pageFade,
+  rail,
+  railLabel,
+  themes,
+  type Appearance,
+  type SettingsTab,
+} from "@sera/ui";
 import { useSettings } from "./store";
-import { fade, pageFade, rail, railLabel } from "./motion";
-import type { Appearance } from "./settings";
 
 /** the settings item is last in NAV, so its index is the settings page */
 const SETTINGS = NAV.length - 1;
@@ -17,8 +27,10 @@ const SETTINGS = NAV.length - 1;
 const OPEN_WIDTH = 200;
 
 export default function App() {
-  const { settings, update, fonts } = useSettings();
+  const { settings, update, fonts, javaRuntimes, systemMemoryMb, refreshJavaRuntimes } =
+    useSettings();
   const [page, setPage] = useState(0);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
 
   const theme = themes[settings.appearance];
   const open = page === SETTINGS;
@@ -81,9 +93,9 @@ export default function App() {
           <AnimatePresence mode="wait" initial={false}>
             {open ? (
               <motion.div key="open" {...pageFade} transition={fade} className="rail-inner">
-                <PageHeader
-                  icon="palette"
-                  label="Appearance"
+                <SettingsRailNav
+                  activeTab={settingsTab}
+                  onSelectTab={setSettingsTab}
                   theme={theme}
                   onBack={() => setPage(0)}
                 />
@@ -110,12 +122,19 @@ export default function App() {
               <motion.main key={NAV[page].label} {...pageFade} transition={fade} className="page">
                 {open ? (
                   <SettingsPage
+                    activeTab={settingsTab}
                     settings={settings}
                     fonts={fonts}
                     theme={theme}
+                    javaRuntimes={javaRuntimes}
+                    systemMemoryMb={systemMemoryMb}
                     onFont={(font) => update({ font })}
                     onFontSize={(fontSize) => update({ fontSize })}
                     onAppearance={(appearance: Appearance) => update({ appearance })}
+                    onJavaPath={(javaPath) => update({ javaPath })}
+                    onMemory={(minMemory, maxMemory) => update({ minMemory, maxMemory })}
+                    onJvmArgs={(jvmArgs) => update({ jvmArgs })}
+                    onRefreshJava={refreshJavaRuntimes}
                   />
                 ) : page === 0 ? (
                   <HomePage theme={theme} />

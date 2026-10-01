@@ -1,4 +1,7 @@
 # the rust side and the package manifest are not ours to restyle
+apps/*/src-tauri/
 src-tauri/
 package.json
+apps/*/package.json
+packages/*/package.json
 bun.lock
