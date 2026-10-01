@@ -14,7 +14,9 @@ const MAX_FONT_SIZE: u32 = 20;
 
 const DEFAULT_MIN_MEMORY: u32 = 2048;
 const DEFAULT_MAX_MEMORY: u32 = 4096;
-const DEFAULT_JVM_ARGS: &str = "-XX:+UseG1GC";
+const DEFAULT_GC_PRESET: &str = "g1gc";
+const DEFAULT_JAVA_OPTIMIZE: bool = true;
+const DEFAULT_JVM_ARGS: &str = "";
 
 /// User preferences, persisted as json in the platform config dir. Unreadable or
 /// malformed data falls back to defaults rather than stopping the app.
@@ -27,6 +29,8 @@ pub struct Settings {
     pub java_path: Option<String>,
     pub min_memory: u32,
     pub max_memory: u32,
+    pub gc_preset: String,
+    pub java_optimize: bool,
     pub jvm_args: String,
 }
 
@@ -47,6 +51,8 @@ impl Settings {
             java_path: None,
             min_memory: DEFAULT_MIN_MEMORY,
             max_memory: DEFAULT_MAX_MEMORY,
+            gc_preset: DEFAULT_GC_PRESET.into(),
+            java_optimize: DEFAULT_JAVA_OPTIMIZE,
             jvm_args: DEFAULT_JVM_ARGS.into(),
         }
     }
@@ -75,8 +81,8 @@ impl Settings {
         self.min_memory = self.min_memory.clamp(512, 65536);
         self.max_memory = self.max_memory.clamp(self.min_memory, 65536);
 
-        if self.jvm_args.trim().is_empty() {
-            self.jvm_args = DEFAULT_JVM_ARGS.into();
+        if !matches!(self.gc_preset.to_lowercase().as_str(), "none" | "g1gc" | "zgc") {
+            self.gc_preset = DEFAULT_GC_PRESET.into();
         }
 
         self
@@ -293,7 +299,9 @@ mod tests {
             java_path: Some("/usr/bin/java".into()),
             min_memory: 1024,
             max_memory: 8192,
-            jvm_args: "-XX:+UseG1GC".into(),
+            gc_preset: "zgc".into(),
+            java_optimize: false,
+            jvm_args: "-Dsun.misc.URLClassPath.disableJarChecking=true".into(),
         };
 
         saved.write(&path).unwrap();
@@ -329,6 +337,8 @@ mod tests {
         assert!(matches!(loaded.appearance.as_str(), "dark" | "light"));
         assert_eq!(loaded.min_memory, DEFAULT_MIN_MEMORY);
         assert_eq!(loaded.max_memory, DEFAULT_MAX_MEMORY);
+        assert_eq!(loaded.gc_preset, DEFAULT_GC_PRESET);
+        assert_eq!(loaded.java_optimize, DEFAULT_JAVA_OPTIMIZE);
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -354,6 +364,19 @@ mod tests {
         std::fs::write(&path, r#"{ "fontSize": 900 }"#).unwrap();
 
         assert_eq!(Settings::read(&path).sanitized().font_size, MAX_FONT_SIZE);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+
+    #[test]
+    fn an_unknown_gc_preset_falls_back_to_g1gc() {
+        let dir = scratch("gc");
+        let path = settings_path(&dir);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, r#"{ "gcPreset": "shenandoah" }"#).unwrap();
+
+        let loaded = Settings::read(&path).sanitized();
+        assert_eq!(loaded.gc_preset, DEFAULT_GC_PRESET);
         std::fs::remove_dir_all(&dir).ok();
     }
 

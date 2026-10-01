@@ -1,3 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-shell: var(--shell);
+  --color-raised: var(--raised);
+  --color-card: var(--card);
+  --color-panel: var(--panel);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+
+  --color-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--shell);
+  --color-secondary: var(--panel);
+  --color-secondary-foreground: var(--text);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--shell);
+  --color-border: var(--raised);
+  --color-input: var(--raised);
+  --color-ring: var(--accent);
+}
+
 /* Sunghyun Sans ships with the app. The app root overrides `font-family` inline
    when the settings page picks a different family, so no variable is needed here. */
 @font-face {
@@ -109,9 +137,24 @@ button {
   padding-left: 9px;
 }
 
+.rail-wordmark-wrapper {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+}
+
 .rail-wordmark {
   font-size: 0.95rem;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.rail-version {
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
   white-space: nowrap;
 }
 
@@ -1145,25 +1188,107 @@ button {
 .settings-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent);
+  width: 5px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--text);
   cursor: pointer;
-  border: 2px solid var(--panel);
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 120ms ease;
+}
+
+.settings-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.08);
+}
+
+.settings-slider::-webkit-slider-thumb:active {
+  transform: scale(1.12);
 }
 
 .settings-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent);
+  width: 5px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--text);
   cursor: pointer;
-  border: 2px solid var(--panel);
+  border: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 120ms ease;
 }
 
-.settings-jvm-control {
-  width: 260px;
+.settings-slider::-moz-range-thumb:hover {
+  transform: scale(1.08);
+}
+
+.settings-slider::-moz-range-thumb:active {
+  transform: scale(1.12);
+}
+
+.settings-slider::-moz-range-progress {
+  background: transparent;
+}
+
+.settings-switch {
+  position: relative;
+  width: 46px;
+  height: 24px;
+  border-radius: 12px;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  transition: background 150ms ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.settings-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  width: 22px;
+  height: 20px;
+  border-radius: 10px;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0, 0, 1),
+    background 150ms ease;
+}
+
+.settings-block-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0 6px;
+  border-top: 1px solid color-mix(in srgb, var(--faint) 25%, transparent);
+}
+
+.settings-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-textarea {
+  width: 100%;
+  min-height: 80px;
+  max-height: 280px;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--raised);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.settings-textarea:focus {
+  outline: 1px solid var(--accent);
 }
 
 .settings-compat-card {

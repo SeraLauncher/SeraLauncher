@@ -3,12 +3,15 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   BUNDLED_FAMILY,
   DEFAULT_FONT_SIZE,
+  DEFAULT_GC_PRESET,
+  DEFAULT_JAVA_OPTIMIZE,
   DEFAULT_JVM_ARGS,
   DEFAULT_MAX_MEMORY,
   DEFAULT_MIN_MEMORY,
   MAX_FONT_SIZE,
   MIN_FONT_SIZE,
   type FontChoice,
+  type GcPreset,
   type JavaRuntime,
   type Settings,
 } from "@sera/ui";
@@ -20,12 +23,15 @@ const DEFAULTS: Settings = {
   javaPath: null,
   minMemory: DEFAULT_MIN_MEMORY,
   maxMemory: DEFAULT_MAX_MEMORY,
+  gcPreset: DEFAULT_GC_PRESET,
+  javaOptimize: DEFAULT_JAVA_OPTIMIZE,
   jvmArgs: DEFAULT_JVM_ARGS,
 };
 
 /** Anything the ui does not recognise is replaced, so a hand-edited or older settings
  *  file can never leave the app without a palette to paint itself. */
 const APPEARANCES = ["dark", "light"] as const;
+const GC_PRESETS: readonly GcPreset[] = ["none", "g1gc", "zgc"];
 
 function usable(loaded: Partial<Settings>): Settings {
   const appearance = APPEARANCES.find((option) => option === loaded.appearance);
@@ -34,6 +40,7 @@ function usable(loaded: Partial<Settings>): Settings {
 
   const clampedMin = Math.max(512, Math.min(65536, Math.round(minMemory)));
   const clampedMax = Math.max(clampedMin, Math.min(65536, Math.round(maxMemory)));
+  const gcPreset = GC_PRESETS.find((gc) => gc === loaded.gcPreset) ?? DEFAULTS.gcPreset;
 
   return {
     appearance: appearance ?? DEFAULTS.appearance,
@@ -45,6 +52,9 @@ function usable(loaded: Partial<Settings>): Settings {
     javaPath: loaded.javaPath?.trim() ? loaded.javaPath : null,
     minMemory: clampedMin,
     maxMemory: clampedMax,
+    gcPreset,
+    javaOptimize:
+      typeof loaded.javaOptimize === "boolean" ? loaded.javaOptimize : DEFAULTS.javaOptimize,
     jvmArgs: typeof loaded.jvmArgs === "string" ? loaded.jvmArgs : DEFAULTS.jvmArgs,
   };
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   AppHeader,
+  APP_VERSION,
   HomePage,
   NAV,
   RAIL_WIDTH,
@@ -75,17 +76,21 @@ export default function App() {
             <RailLogo appearance={settings.appearance} />
             <AnimatePresence>
               {open && (
-                <motion.span
+                <motion.div
                   key="wordmark"
-                  className="rail-wordmark"
-                  style={{ color: theme.text }}
+                  className="rail-wordmark-wrapper"
                   initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -6 }}
                   transition={railLabel}
                 >
-                  Sera
-                </motion.span>
+                  <span className="rail-wordmark" style={{ color: theme.text }}>
+                    Sera
+                  </span>
+                  <span className="rail-version" style={{ color: theme.muted }}>
+                    v{APP_VERSION}
+                  </span>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
@@ -133,6 +138,8 @@ export default function App() {
                     onAppearance={(appearance: Appearance) => update({ appearance })}
                     onJavaPath={(javaPath) => update({ javaPath })}
                     onMemory={(minMemory, maxMemory) => update({ minMemory, maxMemory })}
+                    onGcPreset={(gcPreset) => update({ gcPreset })}
+                    onJavaOptimize={(javaOptimize) => update({ javaOptimize })}
                     onJvmArgs={(jvmArgs) => update({ jvmArgs })}
                     onRefreshJava={refreshJavaRuntimes}
                   />

@@ -1,6 +1,7 @@
 export * from "./theme";
 export * from "./motion";
 export * from "./settings";
+export * from "./lib/utils";
 export * from "./components/Icon";
 export * from "./components/Dropdown";
 export * from "./components/Appearance";
@@ -9,3 +10,8 @@ export * from "./components/AppHeader";
 export * from "./components/HomePage";
 export * from "./components/SettingsPage";
 export * from "./components/PageHeader";
+export * from "./components/ui/button";
+export * from "./components/ui/input";
+export * from "./components/ui/badge";
+export * from "./components/ui/card";
+export * from "./components/ui/separator";

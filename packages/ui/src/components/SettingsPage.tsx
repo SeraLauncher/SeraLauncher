@@ -6,6 +6,8 @@ import type { SettingsTab } from "./PageHeader";
 import {
   BUNDLED_FAMILY,
   DEFAULT_FONT_SIZE,
+  DEFAULT_GC_PRESET,
+  DEFAULT_JAVA_OPTIMIZE,
   DEFAULT_JVM_ARGS,
   DEFAULT_MAX_MEMORY,
   DEFAULT_MIN_MEMORY,
@@ -13,6 +15,7 @@ import {
   MIN_FONT_SIZE,
   type Appearance,
   type FontChoice,
+  type GcPreset,
   type JavaRuntime,
   type Settings,
 } from "../settings";
@@ -45,6 +48,8 @@ export function SettingsPage({
   onAppearance,
   onJavaPath,
   onMemory,
+  onGcPreset,
+  onJavaOptimize,
   onJvmArgs,
   onRefreshJava,
 }: {
@@ -59,6 +64,8 @@ export function SettingsPage({
   onAppearance: (appearance: Appearance) => void;
   onJavaPath?: (javaPath: string | null) => void;
   onMemory?: (minMemory: number, maxMemory: number) => void;
+  onGcPreset?: (gcPreset: GcPreset) => void;
+  onJavaOptimize?: (javaOptimize: boolean) => void;
   onJvmArgs?: (jvmArgs: string) => void;
   onRefreshJava?: () => void;
 }) {
@@ -70,6 +77,8 @@ export function SettingsPage({
     settings.font === BUNDLED_FAMILY && settings.fontSize === DEFAULT_FONT_SIZE;
   const memoryDefault =
     settings.minMemory === DEFAULT_MIN_MEMORY && settings.maxMemory === DEFAULT_MAX_MEMORY;
+  const gcDefault = (settings.gcPreset || DEFAULT_GC_PRESET) === DEFAULT_GC_PRESET;
+  const optimizeDefault = settings.javaOptimize === DEFAULT_JAVA_OPTIMIZE;
   const jvmDefault = settings.jvmArgs.trim() === DEFAULT_JVM_ARGS;
 
   // Dropdown options for Java runtimes
@@ -95,6 +104,20 @@ export function SettingsPage({
     const hostGb = Math.round(systemMemoryMb / 1024);
     return Math.max(16384, hostGb * 1024);
   }, [systemMemoryMb]);
+
+  const maxRamMin = 1024;
+  const maxRamRange = Math.max(1, maxSliderLimit - maxRamMin);
+  const maxRamPercent = Math.min(
+    100,
+    Math.max(0, ((settings.maxMemory - maxRamMin) / maxRamRange) * 100),
+  );
+
+  const minRamMin = 512;
+  const minRamRange = Math.max(1, settings.maxMemory - minRamMin);
+  const minRamPercent = Math.min(
+    100,
+    Math.max(0, ((settings.minMemory - minRamMin) / minRamRange) * 100),
+  );
 
   if (activeTab === "java") {
     return (
@@ -244,6 +267,9 @@ export function SettingsPage({
                     max={maxSliderLimit}
                     step={512}
                     value={settings.maxMemory}
+                    style={{
+                      background: `linear-gradient(to right, ${theme.accent} 0%, ${theme.accent} ${maxRamPercent}%, ${theme.raised} ${maxRamPercent}%, ${theme.raised} 100%)`,
+                    }}
                     onChange={(e) => {
                       const newMax = Number(e.target.value);
                       const newMin = Math.min(settings.minMemory, newMax);
@@ -267,6 +293,9 @@ export function SettingsPage({
                     max={settings.maxMemory}
                     step={256}
                     value={settings.minMemory}
+                    style={{
+                      background: `linear-gradient(to right, ${theme.accent} 0%, ${theme.accent} ${minRamPercent}%, ${theme.raised} ${minRamPercent}%, ${theme.raised} 100%)`,
+                    }}
                     onChange={(e) => {
                       const newMin = Number(e.target.value);
                       onMemory?.(newMin, settings.maxMemory);
@@ -277,40 +306,125 @@ export function SettingsPage({
             }
           />
 
-          {/* JVM Arguments */}
+          {/* Garbage Collector Preset */}
           <Row
-            label="JVM Arguments"
-            hint="Arguments appended to the java command line"
+            label="Garbage Collector"
+            hint="Reclamation algorithm: G1GC is recommended; ZGC minimizes pauses on 12+ GB"
             theme={theme}
             action={
               <button
                 type="button"
-                onClick={() => onJvmArgs?.(DEFAULT_JVM_ARGS)}
-                disabled={jvmDefault}
-                title="Reset JVM arguments"
-                aria-label="Reset JVM arguments"
+                onClick={() => onGcPreset?.(DEFAULT_GC_PRESET)}
+                disabled={gcDefault}
+                title="Reset garbage collector to G1GC"
+                aria-label="Reset garbage collector to G1GC"
                 style={{ color: theme.muted }}
               >
                 <Icon name="reset" size={16} color={theme.muted} />
               </button>
             }
             control={
-              <div className="settings-jvm-control">
-                <input
-                  type="text"
-                  className="settings-input settings-mono"
-                  style={{
-                    background: theme.raised,
-                    color: theme.text,
-                    border: 0,
-                  }}
-                  value={settings.jvmArgs}
-                  placeholder="-XX:+UseG1GC"
-                  onChange={(e) => onJvmArgs?.(e.target.value)}
-                />
+              <div className="settings-chips">
+                {[
+                  { label: "None", value: "none" as const },
+                  { label: "G1GC", value: "g1gc" as const },
+                  { label: "ZGC", value: "zgc" as const },
+                ].map((gc) => {
+                  const isActive = (settings.gcPreset || DEFAULT_GC_PRESET) === gc.value;
+                  return (
+                    <button
+                      key={gc.value}
+                      type="button"
+                      className={`settings-chip ${isActive ? "active" : ""}`}
+                      style={{
+                        background: isActive ? theme.accent : theme.raised,
+                        color: isActive ? theme.shell : theme.text,
+                      }}
+                      onClick={() => onGcPreset?.(gc.value)}
+                    >
+                      {gc.label}
+                    </button>
+                  );
+                })}
               </div>
             }
           />
+
+          {/* Java Optimize Defaults */}
+          <Row
+            label="Java Optimize Defaults"
+            hint="Applies community-tested flags (-XX:+AlwaysPreTouch, -XX:+ParallelRefProcEnabled, etc.)"
+            theme={theme}
+            action={
+              <button
+                type="button"
+                onClick={() => onJavaOptimize?.(DEFAULT_JAVA_OPTIMIZE)}
+                disabled={optimizeDefault}
+                title="Reset Java optimize defaults"
+                aria-label="Reset Java optimize defaults"
+                style={{ color: theme.muted }}
+              >
+                <Icon name="reset" size={16} color={theme.muted} />
+              </button>
+            }
+            control={
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.javaOptimize}
+                aria-label="Toggle Java optimize defaults"
+                className={`settings-switch ${settings.javaOptimize ? "active" : ""}`}
+                style={{
+                  background: settings.javaOptimize ? theme.accent : theme.raised,
+                }}
+                onClick={() => onJavaOptimize?.(!settings.javaOptimize)}
+              >
+                <span
+                  className="settings-switch-knob"
+                  style={{
+                    background: settings.javaOptimize ? theme.panel : theme.faint,
+                    transform: settings.javaOptimize ? "translateX(22px)" : "translateX(2px)",
+                  }}
+                />
+              </button>
+            }
+          />
+
+          {/* Custom Java Arguments */}
+          <div className="settings-block-row">
+            <div className="settings-block-header">
+              <div className="row-label">
+                <span className="row-title" style={{ color: theme.text }}>
+                  Custom Java Arguments
+                </span>
+                <span className="row-hint" style={{ color: theme.muted }}>
+                  Additional custom arguments appended to the launch command
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onJvmArgs?.(DEFAULT_JVM_ARGS)}
+                disabled={jvmDefault}
+                title="Clear custom Java arguments"
+                aria-label="Clear custom Java arguments"
+                style={{ color: theme.muted }}
+              >
+                <Icon name="reset" size={16} color={theme.muted} />
+              </button>
+            </div>
+            <textarea
+              className="settings-textarea settings-mono"
+              rows={3}
+              style={{
+                background: theme.raised,
+                color: theme.text,
+                border: 0,
+              }}
+              value={settings.jvmArgs}
+              placeholder="e.g. -Dsun.rmi.dgc.server.gcInterval=2147483646 -XX:+UseStringDeduplication"
+              onChange={(e) => onJvmArgs?.(e.target.value)}
+            />
+          </div>
         </Group>
 
         {/* Minecraft Java Compatibility Matrix Card */}
