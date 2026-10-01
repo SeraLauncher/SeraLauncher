@@ -96,7 +96,7 @@ export default function App() {
           </AnimatePresence>
         </motion.nav>
 
-        <div className="content-area">
+        <div className="content-area" style={{ background: theme.background }}>
           <AppHeader
             theme={theme}
             appearance={settings.appearance}
@@ -105,30 +105,32 @@ export default function App() {
             }
           />
 
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.main key={NAV[page].label} {...pageFade} transition={fade} className="page">
-              {open ? (
-                <SettingsPage
-                  settings={settings}
-                  fonts={fonts}
-                  theme={theme}
-                  onFont={(font) => update({ font })}
-                  onFontSize={(fontSize) => update({ fontSize })}
-                  onAppearance={(appearance: Appearance) => update({ appearance })}
-                />
-              ) : page === 0 ? (
-                <HomePage theme={theme} />
-              ) : (
-                <>
-                  <h1>{NAV[page].label}</h1>
-                  <p className="page-note">
-                    {NAV[page].label} is empty for now. The rail and palette are the parts to build
-                    on.
-                  </p>
-                </>
-              )}
-            </motion.main>
-          </AnimatePresence>
+          <div className="page-viewport" style={{ background: theme.shell }}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.main key={NAV[page].label} {...pageFade} transition={fade} className="page">
+                {open ? (
+                  <SettingsPage
+                    settings={settings}
+                    fonts={fonts}
+                    theme={theme}
+                    onFont={(font) => update({ font })}
+                    onFontSize={(fontSize) => update({ fontSize })}
+                    onAppearance={(appearance: Appearance) => update({ appearance })}
+                  />
+                ) : page === 0 ? (
+                  <HomePage theme={theme} />
+                ) : (
+                  <>
+                    <h1>{NAV[page].label}</h1>
+                    <p className="page-note">
+                      {NAV[page].label} is empty for now. The rail and palette are the parts to
+                      build on.
+                    </p>
+                  </>
+                )}
+              </motion.main>
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* a wash over the swap, so a scheme change cross-fades instead of cutting.

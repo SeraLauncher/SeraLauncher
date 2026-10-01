@@ -198,6 +198,7 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--background);
 }
 
 /* persistent top header for account status and quick actions */
@@ -206,11 +207,23 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  padding: 0 20px;
   border: 0;
   outline: none;
   flex-shrink: 0;
   z-index: 20;
+}
+
+/* rounds the inner corner where the sidebar and top header meet the page */
+.page-viewport {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  position: relative;
+  background: var(--shell);
+  border-top-left-radius: 14px;
+  overflow: hidden;
 }
 
 .header-left {
@@ -274,8 +287,8 @@ button {
 
 .page > h1,
 .page > .page-note {
-  margin-left: 28px;
-  margin-right: 28px;
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 .page > h1 {
@@ -289,11 +302,11 @@ button {
 }
 
 .page > h1 {
-  margin: 24px 28px 0;
+  margin: 24px 20px 0;
 }
 
 .page-note {
-  margin: 8px 28px 0;
+  margin: 8px 20px 0;
   color: var(--muted);
   font-size: 0.85rem;
 }
@@ -619,7 +632,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 20px 28px 32px;
+  padding: 20px 20px 32px;
   min-height: 100%;
 }
 

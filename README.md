@@ -14,8 +14,7 @@ there yet.
 
 - [Bun](https://bun.sh)
 - [Rust](https://rustup.rs)
-- Tauri 2's [system dependencies](https://tauri.app/start/prerequisites/) — on Linux
-  this means `webkit2gtk-4.1`, `libappindicator3` and `librsvg2` plus a build toolchain
+- Tauri 2's [system dependencies](https://tauri.app/start/prerequisites/)
 
 ## Running it
 
