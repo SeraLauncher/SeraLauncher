@@ -1,3 +1,4 @@
+import { EffectiveJavaArgsModal } from "./EffectiveJavaArgsModal";
 import { useMemo, useState } from "react";
 import { Dropdown } from "./Dropdown";
 import { AppearancePicker } from "./Appearance";
@@ -72,6 +73,7 @@ export function SettingsPage({
   const [customPathMode, setCustomPathMode] = useState(
     () => Boolean(settings.javaPath) && !javaRuntimes.some((r) => r.path === settings.javaPath),
   );
+  const [showArgsModal, setShowArgsModal] = useState(false);
 
   const typographyDefault =
     settings.font === BUNDLED_FAMILY && settings.fontSize === DEFAULT_FONT_SIZE;
@@ -401,16 +403,27 @@ export function SettingsPage({
                   Additional custom arguments appended to the launch command
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => onJvmArgs?.(DEFAULT_JVM_ARGS)}
-                disabled={jvmDefault}
-                title="Clear custom Java arguments"
-                aria-label="Clear custom Java arguments"
-                style={{ color: theme.muted }}
-              >
-                <Icon name="reset" size={16} color={theme.muted} />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowArgsModal(true)}
+                  title="View effective Java arguments"
+                  aria-label="View effective Java arguments"
+                  style={{ color: theme.muted }}
+                >
+                  <Icon name="eye" size={16} color={theme.muted} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onJvmArgs?.(DEFAULT_JVM_ARGS)}
+                  disabled={jvmDefault}
+                  title="Clear custom Java arguments"
+                  aria-label="Clear custom Java arguments"
+                  style={{ color: theme.muted }}
+                >
+                  <Icon name="reset" size={16} color={theme.muted} />
+                </button>
+              </div>
             </div>
             <textarea
               className="settings-textarea settings-mono"
@@ -534,6 +547,12 @@ export function SettingsPage({
           }
         />
       </Group>
+      <EffectiveJavaArgsModal
+        isOpen={showArgsModal}
+        onClose={() => setShowArgsModal(false)}
+        settings={settings}
+        theme={theme}
+      />
     </main>
   );
 }

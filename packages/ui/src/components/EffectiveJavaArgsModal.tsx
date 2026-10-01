@@ -88,7 +88,8 @@ export function EffectiveJavaArgsModal({
                   Effective Java Arguments
                 </h3>
                 <p className="java-args-modal-subtitle" style={{ color: theme.muted }}>
-                  Runtime flags that will be passed when launching Minecraft ({allArgs.length} total)
+                  Runtime flags that will be passed when launching Minecraft ({allArgs.length}{" "}
+                  total)
                 </p>
               </div>
             </div>
@@ -108,10 +109,7 @@ export function EffectiveJavaArgsModal({
           <div className="java-args-modal-body">
             {/* Quick Status Cards */}
             <div className="java-args-summary-grid">
-              <div
-                className="java-args-summary-item"
-                style={{ background: theme.raised }}
-              >
+              <div className="java-args-summary-item" style={{ background: theme.raised }}>
                 <span className="summary-label" style={{ color: theme.muted }}>
                   Allocated RAM
                 </span>
@@ -119,10 +117,7 @@ export function EffectiveJavaArgsModal({
                   {settings.minMemory}M – {settings.maxMemory}M
                 </span>
               </div>
-              <div
-                className="java-args-summary-item"
-                style={{ background: theme.raised }}
-              >
+              <div className="java-args-summary-item" style={{ background: theme.raised }}>
                 <span className="summary-label" style={{ color: theme.muted }}>
                   Garbage Collector
                 </span>
@@ -130,10 +125,7 @@ export function EffectiveJavaArgsModal({
                   {settings.gcPreset.toUpperCase()}
                 </span>
               </div>
-              <div
-                className="java-args-summary-item"
-                style={{ background: theme.raised }}
-              >
+              <div className="java-args-summary-item" style={{ background: theme.raised }}>
                 <span className="summary-label" style={{ color: theme.muted }}>
                   Optimization
                 </span>
@@ -144,10 +136,7 @@ export function EffectiveJavaArgsModal({
                   {settings.javaOptimize ? "Enabled" : "Disabled"}
                 </span>
               </div>
-              <div
-                className="java-args-summary-item"
-                style={{ background: theme.raised }}
-              >
+              <div className="java-args-summary-item" style={{ background: theme.raised }}>
                 <span className="summary-label" style={{ color: theme.muted }}>
                   Custom Flags
                 </span>
