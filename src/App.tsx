@@ -1,0 +1,148 @@
+import { useEffect, useState } from "react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { NAV, RailIcons, RailLogo, RAIL_WIDTH } from "./components/Sidebar";
+import { PageHeader } from "./components/PageHeader";
+import { SettingsPage } from "./components/SettingsPage";
+import { HomePage } from "./components/HomePage";
+import { AppHeader } from "./components/AppHeader";
+import { fontFamily, themes } from "./theme";
+import { useSettings } from "./store";
+import { fade, pageFade, rail, railLabel } from "./motion";
+import type { Appearance } from "./settings";
+
+/** the settings item is last in NAV, so its index is the settings page */
+const SETTINGS = NAV.length - 1;
+
+/** the open rail, wide enough for a wordmark beside the logo */
+const OPEN_WIDTH = 200;
+
+export default function App() {
+  const { settings, update, fonts } = useSettings();
+  const [page, setPage] = useState(0);
+
+  const theme = themes[settings.appearance];
+  const open = page === SETTINGS;
+
+  // the favicon follows the shell, the same pair the rail picks between
+  useEffect(() => {
+    document.documentElement.dataset.appearance = settings.appearance;
+  }, [settings.appearance]);
+
+  return (
+    // `user` honours the os setting, so reduced-motion users get fades without the
+    // sliding and scaling
+    <MotionConfig reducedMotion="user">
+      <div
+        className="app"
+        style={
+          {
+            // react does not emit css custom properties from a style object, so each
+            // palette entry is spelled with the leading dashes for the `var(--x)` in
+            // the stylesheet to resolve
+            ...Object.fromEntries(Object.entries(theme).map(([key, value]) => [`--${key}`, value])),
+            fontFamily: fontFamily(settings.font),
+            // every `rem` in the stylesheet scales from this one line
+            fontSize: settings.fontSize,
+            color: theme.text,
+            // the page recedes; `background` is the sidebar's tone, drawn over it
+            background: theme.shell,
+          } as React.CSSProperties
+        }
+      >
+        {/* the rail is one element for the whole app: going to settings widens it,
+            coming back narrows it, and the page beside it never moves */}
+        <motion.nav
+          className="rail"
+          animate={{ width: open ? OPEN_WIDTH : RAIL_WIDTH }}
+          transition={rail}
+          style={{ background: theme.background }}
+        >
+          {/* the logo is pinned to the rail and never moves between pages; only the
+              wordmark beside it comes and goes */}
+          <div className="rail-brand">
+            <RailLogo appearance={settings.appearance} />
+            <AnimatePresence>
+              {open && (
+                <motion.span
+                  key="wordmark"
+                  className="rail-wordmark"
+                  style={{ color: theme.text }}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -6 }}
+                  transition={railLabel}
+                >
+                  Sera
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <AnimatePresence mode="wait" initial={false}>
+            {open ? (
+              <motion.div key="open" {...pageFade} transition={fade} className="rail-inner">
+                <PageHeader
+                  icon="palette"
+                  label="Appearance"
+                  theme={theme}
+                  onBack={() => setPage(0)}
+                />
+              </motion.div>
+            ) : (
+              <motion.div key="icons" {...pageFade} transition={fade} className="rail-inner">
+                <RailIcons selected={page} onSelect={setPage} theme={theme} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.nav>
+
+        <div className="content-area">
+          <AppHeader
+            theme={theme}
+            appearance={settings.appearance}
+            onToggleTheme={() =>
+              update({ appearance: settings.appearance === "dark" ? "light" : "dark" })
+            }
+          />
+
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.main key={NAV[page].label} {...pageFade} transition={fade} className="page">
+              {open ? (
+                <SettingsPage
+                  settings={settings}
+                  fonts={fonts}
+                  theme={theme}
+                  onFont={(font) => update({ font })}
+                  onFontSize={(fontSize) => update({ fontSize })}
+                  onAppearance={(appearance: Appearance) => update({ appearance })}
+                />
+              ) : page === 0 ? (
+                <HomePage theme={theme} />
+              ) : (
+                <>
+                  <h1>{NAV[page].label}</h1>
+                  <p className="page-note">
+                    {NAV[page].label} is empty for now. The rail and palette are the parts to build
+                    on.
+                  </p>
+                </>
+              )}
+            </motion.main>
+          </AnimatePresence>
+        </div>
+
+        {/* a wash over the swap, so a scheme change cross-fades instead of cutting.
+            keyed on the appearance, motion replays it on every change and leaves it
+            transparent. */}
+        <motion.div
+          aria-hidden="true"
+          className="scheme-wash"
+          key={`wash-${settings.appearance}`}
+          initial={{ opacity: 0.5 }}
+          animate={{ opacity: 0 }}
+          transition={fade}
+        />
+      </div>
+    </MotionConfig>
+  );
+}

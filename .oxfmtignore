@@ -1,0 +1,4 @@
+# the rust side and the package manifest are not ours to restyle
+src-tauri/
+package.json
+bun.lock

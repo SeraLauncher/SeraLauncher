@@ -1,0 +1,898 @@
+/* Sunghyun Sans ships with the app. The app root overrides `font-family` inline
+   when the settings page picks a different family, so no variable is needed here. */
+@font-face {
+  font-family: "Sunghyun Sans";
+  src: url("./assets/fonts/SunghyunSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Sunghyun Sans";
+  src: url("./assets/fonts/SunghyunSans-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Sunghyun Sans";
+  src: url("./assets/fonts/SunghyunSans-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Sunghyun Sans";
+  src: url("./assets/fonts/SunghyunSans-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  font-family:
+    "Sunghyun Sans",
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  /* prevents a white flash before react mounts and injects theme variables */
+  background-color: var(--shell, #161413);
+}
+
+button {
+  font: inherit;
+}
+
+/* the palette reaches every descendant as custom properties off `.app` */
+.app {
+  display: flex;
+  height: 100%;
+  /* holds the wash, which sits over everything during a scheme change */
+  position: relative;
+  overflow: hidden;
+}
+
+/* a wash over the shell during a scheme change, so the palette cross-fades instead
+   of cutting. motion animates its opacity; this only positions it. */
+.scheme-wash {
+  position: absolute;
+  inset: 0;
+  background: var(--shell);
+  pointer-events: none;
+  z-index: 40;
+}
+
+/* the rail is one persistent element; its width animates between the collapsed icon
+   list and the open settings header */
+.rail {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px 12px;
+  overflow: hidden;
+}
+
+/* the logo, and the wordmark when it is there. the row is full width with the logo
+   pinned at the centre of the collapsed rail's content, so the logo holds one x in both
+   states and the wordmark only ever extends to the right of it. 9px is
+   (68 - 2*10 - 30) / 2, the collapsed rail's centre offset. */
+.rail-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 30px;
+  padding-left: 9px;
+}
+
+.rail-wordmark {
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* holds whichever set of contents is showing. it is a column so each set can lay
+   itself out — the icon rail floats its group in the middle and pins the foot to the
+   bottom, the settings header puts its tab at the top and Back at the bottom. */
+.rail-inner {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+
+/* the main group floats in the middle, the footer pinned to the bottom */
+.rail-icons {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.rail-icons-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rail-icons-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* one page fills the shell; the rail beside it animates rather than sliding */
+/* the rail's labels, drawn beside the icon rather than under it; the attribute holds
+   the text so a css pseudo-element can show it without a second element per button */
+.nav-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.nav-button::after {
+  content: attr(data-label);
+  position: absolute;
+  left: calc(100% + 8px);
+  padding: 5px 10px;
+  border: 1px solid var(--raised);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 30;
+}
+
+.nav-button:hover::after {
+  opacity: 1;
+}
+
+/* holds the top header and whichever page is mounted beside the rail */
+.content-area {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* persistent top header for account status and quick actions */
+.app-header {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  border: 0;
+  outline: none;
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 120ms ease;
+}
+
+.account-chip:hover {
+  opacity: 0.85;
+}
+
+.account-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.theme-toggle-btn:hover {
+  color: var(--text) !important;
+}
+
+.page {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.page > h1,
+.page > .page-note {
+  margin-left: 28px;
+  margin-right: 28px;
+}
+
+.page > h1 {
+  margin-top: 24px;
+}
+
+.page h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.page > h1 {
+  margin: 24px 28px 0;
+}
+
+.page-note {
+  margin: 8px 28px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* settings: content column is centred, each setting in its own box */
+.settings {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 36px 24px;
+}
+
+.settings-title {
+  width: 100%;
+  max-width: 620px;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* colour scheme: three pictures of the app, each painted in its own palette */
+.schemes {
+  display: flex;
+  gap: 16px;
+}
+
+/* the button itself carries no chrome; the outline goes on the preview only */
+.scheme {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.swatch {
+  position: relative;
+  display: flex;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  transition: border-color 120ms ease;
+}
+
+.scheme:hover .swatch {
+  border-color: var(--faint);
+}
+
+.scheme[aria-pressed="true"] .swatch {
+  border-color: var(--accent);
+}
+
+/* the rail is a stack of bars, the way the icon rail reads at a glance: the labels
+   are too small to draw, so the marks stand in for them */
+.swatch-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 9%;
+  width: 30%;
+  padding: 12% 5%;
+}
+
+.swatch-rail .swatch-bar {
+  width: 100%;
+  height: 8%;
+  border-radius: 2px;
+}
+
+.swatch-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9%;
+  padding: 14% 10%;
+}
+
+.swatch-bar {
+  height: 8%;
+  border-radius: 2px;
+}
+
+.swatch-bar-short {
+  width: 72%;
+}
+
+.swatch-bar-mid {
+  width: 88%;
+}
+
+.swatch-bar-strong {
+  width: 97%;
+}
+
+.scheme-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.group {
+  width: 100%;
+  max-width: 620px;
+}
+
+.group h2 {
+  margin: 0 0 8px 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* no border and no shadow: the panel fill alone separates the box from the page */
+.box {
+  padding: 4px 18px;
+  background: var(--panel);
+  border-radius: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 9px 0;
+}
+
+/* hairline between stacked settings, the way a list separates its rows */
+.row + .row {
+  border-top: 1px solid var(--faint);
+}
+
+/* rows stack instead of squeezing the controls when the text is scaled up */
+@media (max-width: 520px) {
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.row-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.row-title button {
+  display: flex;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  transition: opacity 120ms ease;
+}
+
+.row-title button:hover:not(:disabled) {
+  opacity: 0.6;
+}
+
+.row-title button:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+
+.row-hint {
+  font-size: 0.85rem;
+}
+
+.row-control {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+/* dropdown: a native select paints its popup with the platform widget, outside this
+   document, so the list is drawn here to keep the palette */
+.dropdown {
+  position: relative;
+  min-width: 150px;
+  border: 1px solid;
+  border-radius: 8px;
+}
+
+.dropdown-narrow {
+  min-width: 88px;
+}
+
+/* the font list is the widest thing in the row, so the box is wider than a control
+   that only shows a size. 180 fits beside the label inside the 560px group. */
+.dropdown-wide {
+  min-width: 180px;
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+}
+
+.dropdown-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
+}
+
+.dropdown-list > ul {
+  max-height: 240px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.dropdown-search {
+  width: 100%;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.dropdown-empty {
+  padding: 9px;
+  font-size: 0.85rem;
+}
+
+.dropdown-option {
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* plain text button, no resting fill or border to read as a selected chip */
+/* the open rail's two rows: the page's tab, and the way back */
+.rail-contents {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.rail-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.back:hover {
+  background: var(--card);
+}
+
+/* home: launcher home view with hero banner, docked action pill, and articles */
+.home-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 28px 32px;
+  min-height: 100%;
+}
+
+.home-hero-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 28px;
+  flex-shrink: 0;
+}
+
+.home-hero {
+  position: relative;
+  width: 100%;
+  height: 360px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--raised);
+  flex-shrink: 0;
+}
+
+.home-hero-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.home-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.55) 100%);
+  pointer-events: none;
+}
+
+/* center action dock overlapping the bottom boundary of the hero */
+.home-dock {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 10;
+}
+
+.home-play-btn {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 240px;
+  height: 48px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.home-play-text {
+  line-height: 1;
+}
+
+.home-instance-wrapper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: -6px;
+}
+
+.home-instance-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 210px;
+  padding: 9px 12px 6px;
+  border-radius: 0 0 10px 10px;
+  border: 1px solid var(--raised);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: border-color 140ms ease;
+}
+
+.home-instance-pill:hover {
+  border-color: var(--accent);
+}
+
+.home-instance-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.home-instance-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 240px;
+  border-radius: 10px;
+  border: 1px solid var(--raised);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+}
+
+.home-instance-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.home-instance-option:hover {
+  background: var(--raised) !important;
+}
+
+.home-instance-check {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* section divider with title */
+.home-divider-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  margin-bottom: 2px;
+}
+
+.home-divider-line {
+  flex: 1;
+  height: 1px;
+}
+
+.home-divider-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* news article grid: 3 columns on smaller screens, 4 columns on wider windows */
+.home-articles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* hides 4th card on smaller screens so exactly 3 cards display */
+.home-article-card:nth-child(n + 4) {
+  display: none;
+}
+
+/* on wider screens (>= 1040px), expand to 4 columns and reveal the 4th card */
+@media (min-width: 1040px) {
+  .home-articles-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .home-article-card:nth-child(n + 4) {
+    display: flex;
+  }
+}
+
+.home-article-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  border: 1px solid var(--raised);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.home-article-thumb-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.home-article-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.home-article-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--raised);
+  backdrop-filter: blur(8px);
+}
+
+.home-article-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 14px;
+  flex: 1;
+}
+
+.home-article-date {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.home-article-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.home-article-desc {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* skeleton shimmer for loading state */
+.home-article-skeleton {
+  min-height: 190px;
+  opacity: 0.6;
+  animation: pulse-shimmer 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-shimmer {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
