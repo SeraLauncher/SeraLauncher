@@ -2,28 +2,39 @@
 
 @theme {
   --color-background: var(--background);
-  --color-shell: var(--shell);
-  --color-raised: var(--raised);
+  --color-foreground: var(--foreground);
   --color-card: var(--card);
-  --color-panel: var(--panel);
-  --color-text: var(--text);
-  --color-muted: var(--muted);
-  --color-faint: var(--faint);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted-foreground);
+  --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
-  --color-danger: var(--danger);
-  --color-warning: var(--warning);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-  --color-foreground: var(--text);
-  --color-primary: var(--accent);
-  --color-primary-foreground: var(--shell);
-  --color-secondary: var(--panel);
-  --color-secondary-foreground: var(--text);
-  --color-destructive: var(--danger);
-  --color-destructive-foreground: var(--shell);
-  --color-border: var(--raised);
-  --color-input: var(--raised);
-  --color-ring: var(--accent);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 /* Sunghyun Sans ships with the app. The app root overrides `font-family` inline
@@ -58,6 +69,41 @@
 }
 
 :root {
+  --background: #dfc8b1;
+  --foreground: #352b2d;
+  --card: #ecd6bd;
+  --card-foreground: #352b2d;
+  --popover: #ecd6bd;
+  --popover-foreground: #352b2d;
+  --primary: #4b3d43;
+  --primary-foreground: #f1dbc2;
+  --secondary: #f1dbc2;
+  --secondary-foreground: #352b2d;
+  --muted: #ecd6bd;
+  --muted-foreground: #625458;
+  --accent: #ecd6bd;
+  --accent-foreground: #352b2d;
+  --destructive: #a64b4b;
+  --destructive-foreground: #f1dbc2;
+  --border: #ccb7a0;
+  --input: #f1dbc2;
+  --ring: #857974;
+  --chart-1: #4b3d43;
+  --chart-2: #8a9684;
+  --chart-3: #857974;
+  --chart-4: #ccb7a0;
+  --chart-5: #625458;
+  --radius: 0.5rem;
+  --sidebar: #f1dbc2;
+  --sidebar-foreground: #352b2d;
+  --sidebar-primary: #4b3d43;
+  --sidebar-primary-foreground: #f1dbc2;
+  --sidebar-accent: #e2c8ae;
+  --sidebar-accent-foreground: #352b2d;
+  --sidebar-border: #dfc8b1;
+  --sidebar-ring: #857974;
+  --success: #54944c;
+
   font-family:
     "Sunghyun Sans",
     -apple-system,
@@ -69,6 +115,42 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+}
+
+.dark,
+[data-appearance="dark"] {
+  --background: #352b2d;
+  --foreground: #f1dbc2;
+  --card: #44373a;
+  --card-foreground: #f1dbc2;
+  --popover: #44373a;
+  --popover-foreground: #f1dbc2;
+  --primary: #ccb7a0;
+  --primary-foreground: #352b2d;
+  --secondary: #4b3d43;
+  --secondary-foreground: #dfc8b1;
+  --muted: #4b3d43;
+  --muted-foreground: #aa9d8a;
+  --accent: #4b3d43;
+  --accent-foreground: #f1dbc2;
+  --destructive: #c96a6a;
+  --destructive-foreground: #352b2d;
+  --border: #4b3d43;
+  --input: #4b3d43;
+  --ring: #908a7b;
+  --chart-1: #ccb7a0;
+  --chart-2: #8a9684;
+  --chart-3: #908a7b;
+  --chart-4: #aa9d8a;
+  --chart-5: #dfc8b1;
+  --sidebar: #44373a;
+  --sidebar-foreground: #f1dbc2;
+  --sidebar-primary: #ccb7a0;
+  --sidebar-primary-foreground: #352b2d;
+  --sidebar-accent: #524347;
+  --sidebar-accent-foreground: #f1dbc2;
+  --sidebar-border: #4b3d43;
+  --sidebar-ring: #908a7b;
 }
 
 * {
@@ -85,7 +167,8 @@ body,
 body {
   overflow: hidden;
   /* prevents a white flash before react mounts and injects theme variables */
-  background-color: var(--shell, #161413);
+  background-color: var(--background, #352b2d);
+  color: var(--foreground, #f1dbc2);
 }
 
 button {
@@ -106,7 +189,7 @@ button {
 .scheme-wash {
   position: absolute;
   inset: 0;
-  background: var(--shell);
+  background: var(--background);
   pointer-events: none;
   z-index: 40;
 }
@@ -115,13 +198,13 @@ button {
    list and the open settings header */
 .rail {
   position: relative;
+  z-index: 30;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding: 16px 10px 12px;
-  overflow: hidden;
 }
 
 /* the logo, and the wordmark when it is there. the row is full width with the logo
@@ -209,24 +292,37 @@ button {
   border: 0;
   border-radius: 10px;
   cursor: pointer;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.nav-button:hover {
+  background: var(--sidebar-accent);
+}
+
+.nav-button.active {
+  background: var(--sidebar-accent) !important;
 }
 
 .nav-button::after {
   content: attr(data-label);
   position: absolute;
   left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
   padding: 5px 10px;
-  border: 1px solid var(--raised);
+  border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--card);
-  color: var(--text);
+  color: var(--foreground);
   font-size: 0.88rem;
   font-weight: 500;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
-  z-index: 30;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .nav-button:hover::after {
@@ -241,7 +337,7 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--background);
+  background: var(--sidebar);
 }
 
 /* persistent top header for account status and quick actions */
@@ -255,6 +351,7 @@ button {
   outline: none;
   flex-shrink: 0;
   z-index: 20;
+  background: var(--sidebar);
 }
 
 /* rounds the inner corner where the sidebar and top header meet the page */
@@ -264,7 +361,7 @@ button {
   min-height: 0;
   height: 100%;
   position: relative;
-  background: var(--shell);
+  background: var(--background);
   border-top-left-radius: 14px;
   overflow: hidden;
 }
@@ -317,7 +414,7 @@ button {
 }
 
 .theme-toggle-btn:hover {
-  color: var(--text) !important;
+  color: var(--foreground) !important;
 }
 
 .page {
@@ -350,7 +447,7 @@ button {
 
 .page-note {
   margin: 8px 20px 0;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 0.85rem;
 }
 
@@ -404,7 +501,7 @@ button {
 }
 
 .scheme:hover .swatch {
-  border-color: var(--faint);
+  border-color: var(--muted-foreground);
 }
 
 .scheme[aria-pressed="true"] .swatch {
@@ -473,7 +570,7 @@ button {
 /* no border and no shadow: the panel fill alone separates the box from the page */
 .box {
   padding: 4px 18px;
-  background: var(--panel);
+  background: var(--card);
   border-radius: 12px;
 }
 
@@ -487,7 +584,7 @@ button {
 
 /* hairline between stacked settings, the way a list separates its rows */
 .row + .row {
-  border-top: 1px solid color-mix(in srgb, var(--faint) 25%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--muted-foreground) 25%, transparent);
 }
 
 /* rows stack instead of squeezing the controls when the text is scaled up */
@@ -555,7 +652,7 @@ button {
   min-width: 150px;
   border: 0;
   border-radius: 8px;
-  background: var(--raised);
+  background: var(--secondary);
 }
 
 .dropdown-narrow {
@@ -594,7 +691,7 @@ button {
   padding: 4px;
   border: 0;
   border-radius: 8px;
-  background: var(--raised);
+  background: var(--secondary);
   box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
 }
 
@@ -613,7 +710,7 @@ button {
   padding: 7px 9px;
   border: 0;
   border-radius: 6px;
-  background: var(--panel);
+  background: var(--card);
   font: inherit;
   font-size: 0.85rem;
   outline: none;
@@ -687,11 +784,13 @@ button {
 }
 
 .rail-nav-item:hover {
-  background: var(--card) !important;
+  background: var(--sidebar-accent) !important;
+  color: var(--sidebar-accent-foreground) !important;
 }
 
 .rail-nav-item.active {
-  background: var(--raised) !important;
+  background: var(--sidebar-accent) !important;
+  color: var(--sidebar-primary) !important;
 }
 
 .rail-nav-label {
@@ -718,7 +817,8 @@ button {
 }
 
 .back:hover {
-  background: var(--card);
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
 }
 
 /* home: launcher home view with hero banner, docked action pill, and articles */
@@ -733,7 +833,7 @@ button {
 .home-hero-container {
   position: relative;
   width: 100%;
-  margin-bottom: 28px;
+  margin-bottom: 48px;
   flex-shrink: 0;
 }
 
@@ -743,7 +843,7 @@ button {
   height: 360px;
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid var(--raised);
+  border: 1px solid var(--secondary);
   flex-shrink: 0;
 }
 
@@ -765,7 +865,7 @@ button {
 /* center action dock overlapping the bottom boundary of the hero */
 .home-dock {
   position: absolute;
-  bottom: -28px;
+  top: calc(100% - 24px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -815,7 +915,7 @@ button {
   padding: 9px 12px 6px;
   border-radius: 0 0 10px 10px;
   border: 0;
-  background: var(--raised);
+  background: var(--secondary);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -850,7 +950,7 @@ button {
   width: max-content;
   border-radius: 10px;
   border: 0;
-  background: var(--raised);
+  background: var(--secondary);
   padding: 4px;
   display: flex;
   flex-direction: column;
@@ -867,7 +967,7 @@ button {
   margin-bottom: 2px;
   border-radius: 6px;
   border: 0;
-  background: var(--panel);
+  background: var(--card);
   transition: border-color 140ms ease;
 }
 
@@ -887,7 +987,7 @@ button {
 }
 
 .home-instance-search::placeholder {
-  color: var(--muted);
+  color: var(--muted-foreground);
   opacity: 0.7;
 }
 
@@ -915,7 +1015,7 @@ button {
   overflow-y: auto;
   max-height: calc(4 * 2.15rem + 6px);
   scrollbar-width: thin;
-  scrollbar-color: var(--raised) transparent;
+  scrollbar-color: var(--secondary) transparent;
 }
 
 .home-instance-list::-webkit-scrollbar {
@@ -927,7 +1027,7 @@ button {
 }
 
 .home-instance-list::-webkit-scrollbar-thumb {
-  background: var(--raised);
+  background: var(--secondary);
   border-radius: 4px;
 }
 
@@ -954,7 +1054,7 @@ button {
 }
 
 .home-instance-option:hover {
-  background: var(--panel) !important;
+  background: var(--card) !important;
 }
 
 .home-instance-check {
@@ -974,7 +1074,7 @@ button {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-top: 14px;
+  margin-top: 18px;
   margin-bottom: 2px;
 }
 
@@ -1018,7 +1118,7 @@ button {
   display: flex;
   flex-direction: column;
   border-radius: 10px;
-  border: 1px solid var(--raised);
+  border: 1px solid var(--secondary);
   overflow: hidden;
   cursor: pointer;
   transition: border-color 150ms ease;
@@ -1028,7 +1128,7 @@ button {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: var(--panel);
+  background: var(--card);
   overflow: hidden;
 }
 
@@ -1048,7 +1148,7 @@ button {
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  border: 1px solid var(--raised);
+  border: 1px solid var(--secondary);
   backdrop-filter: blur(8px);
 }
 
@@ -1113,7 +1213,7 @@ button {
 .settings-custom-path-row {
   width: 100%;
   padding: 6px 0 10px;
-  border-top: 1px dashed color-mix(in srgb, var(--faint) 25%, transparent);
+  border-top: 1px dashed color-mix(in srgb, var(--muted-foreground) 25%, transparent);
 }
 
 .settings-input {
@@ -1121,7 +1221,7 @@ button {
   padding: 7px 10px;
   border-radius: 8px;
   border: 0;
-  background: var(--raised);
+  background: var(--secondary);
   font: inherit;
   font-size: 0.85rem;
   outline: none;
@@ -1186,7 +1286,7 @@ button {
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  background: var(--raised);
+  background: var(--secondary);
   outline: none;
   cursor: pointer;
 }
@@ -1197,7 +1297,7 @@ button {
   width: 5px;
   height: 12px;
   border-radius: 3px;
-  background: var(--text);
+  background: var(--foreground);
   cursor: pointer;
   border: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -1216,7 +1316,7 @@ button {
   width: 5px;
   height: 12px;
   border-radius: 3px;
-  background: var(--text);
+  background: var(--foreground);
   cursor: pointer;
   border: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -1267,7 +1367,7 @@ button {
   flex-direction: column;
   gap: 10px;
   padding: 10px 0 6px;
-  border-top: 1px solid color-mix(in srgb, var(--faint) 25%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--muted-foreground) 25%, transparent);
 }
 
 .settings-block-header {
@@ -1312,7 +1412,7 @@ button {
   padding: 10px 12px;
   border-radius: 8px;
   border: 0;
-  background: var(--raised);
+  background: var(--secondary);
   font: inherit;
   font-size: 0.85rem;
   line-height: 1.45;
@@ -1403,8 +1503,8 @@ button {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
   padding: 24px;
   gap: 18px;
-  background: var(--panel);
-  color: var(--text);
+  background: var(--card);
+  color: var(--foreground);
 }
 
 .java-args-modal-header {
@@ -1440,8 +1540,8 @@ button {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: var(--raised);
-  color: var(--text);
+  background: var(--secondary);
+  color: var(--foreground);
   transition:
     opacity 120ms ease,
     transform 120ms ease;
@@ -1488,8 +1588,8 @@ button {
   font-weight: 600;
   border: 0;
   cursor: pointer;
-  background: var(--raised);
-  color: var(--text);
+  background: var(--secondary);
+  color: var(--foreground);
   transition: opacity 120ms ease;
 }
 
@@ -1507,6 +1607,6 @@ button {
   max-height: 220px;
   overflow-y: auto;
   user-select: text;
-  background: var(--raised);
-  color: var(--text);
+  background: var(--secondary);
+  color: var(--foreground);
 }

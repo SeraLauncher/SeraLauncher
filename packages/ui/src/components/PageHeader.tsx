@@ -47,11 +47,11 @@ export function SettingsRailNav({
               exit={{ opacity: 0, x: -6 }}
               transition={railLabel}
               style={{
-                background: active ? theme.raised : "transparent",
-                color: active ? theme.accent : theme.muted,
+                background: active ? theme.sidebarAccent : "transparent",
+                color: active ? theme.sidebarPrimary : theme.mutedForeground,
               }}
             >
-              <Icon name={tab.icon} size={18} color={active ? theme.accent : theme.muted} />
+              <Icon name={tab.icon} size={18} color="currentColor" />
               <span className="rail-nav-label" style={{ fontWeight: active ? 600 : 500 }}>
                 {tab.label}
               </span>
@@ -64,13 +64,13 @@ export function SettingsRailNav({
         type="button"
         onClick={onBack}
         className="back"
-        style={{ color: theme.muted }}
+        style={{ color: theme.mutedForeground }}
         initial={{ opacity: 0, x: -6 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -6 }}
         transition={railLabel}
       >
-        <Icon name="arrowLeft" size={18} color={theme.muted} />
+        <Icon name="arrowLeft" size={18} color={theme.mutedForeground} />
         <span>Back</span>
       </motion.button>
     </div>
@@ -97,11 +97,11 @@ export function PageHeader({
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -6 }}
         transition={railLabel}
-        style={{ background: theme.raised }}
+        style={{ background: theme.sidebarAccent }}
       >
-        <Icon name={icon} size={20} color={theme.accent} />
+        <Icon name={icon} size={20} color={theme.sidebarPrimary} />
         <motion.span
-          animate={{ color: theme.accent }}
+          animate={{ color: theme.sidebarPrimary }}
           style={{ fontSize: "1.05rem", fontWeight: 600 }}
         >
           {label}
@@ -112,13 +112,13 @@ export function PageHeader({
         type="button"
         onClick={onBack}
         className="back"
-        style={{ color: theme.muted }}
+        style={{ color: theme.mutedForeground }}
         initial={{ opacity: 0, x: -6 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -6 }}
         transition={railLabel}
       >
-        <Icon name="arrowLeft" size={18} color={theme.muted} />
+        <Icon name="arrowLeft" size={18} color={theme.mutedForeground} />
         <span>Back</span>
       </motion.button>
     </div>

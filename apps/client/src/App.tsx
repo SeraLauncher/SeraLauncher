@@ -39,6 +39,11 @@ export default function App() {
   // the favicon follows the shell, the same pair the rail picks between
   useEffect(() => {
     document.documentElement.dataset.appearance = settings.appearance;
+    if (settings.appearance === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   }, [settings.appearance]);
 
   return (
@@ -52,13 +57,19 @@ export default function App() {
             // react does not emit css custom properties from a style object, so each
             // palette entry is spelled with the leading dashes for the `var(--x)` in
             // the stylesheet to resolve
-            ...Object.fromEntries(Object.entries(theme).map(([key, value]) => [`--${key}`, value])),
+            ...Object.fromEntries(
+              Object.entries(theme).flatMap(([key, value]) => {
+                const kebab = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+                return [
+                  [`--${key}`, value],
+                  [`--${kebab}`, value],
+                ];
+              }),
+            ),
             fontFamily: fontFamily(settings.font),
-            // every `rem` in the stylesheet scales from this one line
             fontSize: settings.fontSize,
-            color: theme.text,
-            // the page recedes; `background` is the sidebar's tone, drawn over it
-            background: theme.shell,
+            color: theme.foreground,
+            background: theme.background,
           } as React.CSSProperties
         }
       >
@@ -68,7 +79,7 @@ export default function App() {
           className="rail"
           animate={{ width: open ? OPEN_WIDTH : RAIL_WIDTH }}
           transition={rail}
-          style={{ background: theme.background }}
+          style={{ background: theme.sidebar }}
         >
           {/* the logo is pinned to the rail and never moves between pages; only the
               wordmark beside it comes and goes */}
@@ -84,10 +95,10 @@ export default function App() {
                   exit={{ opacity: 0, x: -6 }}
                   transition={railLabel}
                 >
-                  <span className="rail-wordmark" style={{ color: theme.text }}>
+                  <span className="rail-wordmark" style={{ color: theme.sidebarForeground }}>
                     Sera
                   </span>
-                  <span className="rail-version" style={{ color: theme.muted }}>
+                  <span className="rail-version" style={{ color: theme.mutedForeground }}>
                     v{APP_VERSION}
                   </span>
                 </motion.div>
@@ -113,7 +124,7 @@ export default function App() {
           </AnimatePresence>
         </motion.nav>
 
-        <div className="content-area" style={{ background: theme.background }}>
+        <div className="content-area" style={{ background: theme.sidebar }}>
           <AppHeader
             theme={theme}
             appearance={settings.appearance}
@@ -122,7 +133,7 @@ export default function App() {
             }
           />
 
-          <div className="page-viewport" style={{ background: theme.shell }}>
+          <div className="page-viewport" style={{ background: theme.background }}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.main key={NAV[page].label} {...pageFade} transition={fade} className="page">
                 {open ? (

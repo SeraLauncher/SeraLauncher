@@ -89,7 +89,7 @@ export function Dropdown<T extends string | number>({
       ref={root}
       className={`dropdown ${className ?? ""}`}
       onKeyDown={onKeyDown}
-      style={{ border: 0, background: theme.raised }}
+      style={{ border: 0, background: theme.secondary }}
     >
       <motion.button
         type="button"
@@ -97,7 +97,7 @@ export function Dropdown<T extends string | number>({
         onClick={() => (open ? close() : setOpen(true))}
         aria-haspopup="listbox"
         aria-expanded={open}
-        style={{ color: theme.text }}
+        style={{ color: theme.foreground }}
         whileTap={{ scale: 0.985 }}
         transition={snappy}
       >
@@ -115,7 +115,7 @@ export function Dropdown<T extends string | number>({
           height="12"
           viewBox="0 0 24 24"
           fill="none"
-          stroke={theme.muted}
+          stroke={theme.mutedForeground}
           strokeWidth={2.5}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -133,7 +133,7 @@ export function Dropdown<T extends string | number>({
           <motion.div
             key="list"
             className="dropdown-list"
-            style={{ background: theme.raised, border: 0 }}
+            style={{ background: theme.secondary, border: 0 }}
             initial={{ opacity: 0, scale: 0.97, y: -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: -3 }}
@@ -152,8 +152,8 @@ export function Dropdown<T extends string | number>({
                   setCursor(0);
                 }}
                 style={{
-                  color: theme.text,
-                  background: theme.panel,
+                  color: theme.foreground,
+                  background: theme.card,
                   border: 0,
                 }}
               />
@@ -170,8 +170,8 @@ export function Dropdown<T extends string | number>({
                     onPointerEnter={() => setCursor(index)}
                     className="dropdown-option"
                     style={{
-                      color: option === value ? theme.accent : theme.text,
-                      background: index === cursor ? theme.panel : "transparent",
+                      color: option === value ? theme.primary : theme.foreground,
+                      background: index === cursor ? theme.card : "transparent",
                     }}
                   >
                     {render(option)}
@@ -179,7 +179,7 @@ export function Dropdown<T extends string | number>({
                 </li>
               ))}
               {shown.length === 0 && (
-                <li className="dropdown-empty" style={{ color: theme.faint }}>
+                <li className="dropdown-empty" style={{ color: theme.mutedForeground }}>
                   No match
                 </li>
               )}

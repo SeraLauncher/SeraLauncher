@@ -194,7 +194,7 @@ export function HomePage({
         <div
           className="home-hero"
           style={{
-            borderColor: theme.raised,
+            borderColor: theme.border,
             background: theme.card,
           }}
         >
@@ -225,9 +225,9 @@ export function HomePage({
               type="button"
               className="home-instance-pill"
               style={{
-                background: theme.raised,
+                background: theme.secondary,
                 border: 0,
-                color: theme.text,
+                color: theme.foreground,
               }}
               onClick={() => {
                 setShowInstanceMenu((prev) => {
@@ -238,14 +238,14 @@ export function HomePage({
               aria-haspopup="listbox"
               aria-expanded={showInstanceMenu}
             >
-              <Icon name="instance" size={16} color={theme.accent} />
+              <Icon name="instance" size={16} color={theme.primary} />
               <span className="home-instance-label">{selectedInstance}</span>
               <motion.span
                 className="home-instance-chevron"
                 animate={{ rotate: showInstanceMenu ? 180 : 0 }}
                 transition={snappy}
               >
-                <Icon name="chevronDown" size={14} color={theme.muted} />
+                <Icon name="chevronDown" size={14} color={theme.mutedForeground} />
               </motion.span>
             </button>
 
@@ -259,8 +259,8 @@ export function HomePage({
                   exit={{ opacity: 0, scale: 0.96, y: -4, x: "-50%" }}
                   transition={snappy}
                   style={{
-                    background: theme.raised,
-                    border: 0,
+                    background: theme.secondary,
+                    border: `1px solid ${theme.border}`,
                     boxShadow: "0 8px 24px rgba(0, 0, 0, 0.45)",
                     transformOrigin: "top center",
                   }}
@@ -269,11 +269,11 @@ export function HomePage({
                     <div
                       className="home-instance-search-box"
                       style={{
-                        background: theme.panel,
+                        background: theme.card,
                         border: 0,
                       }}
                     >
-                      <Icon name="search" size={14} color={theme.muted} />
+                      <Icon name="search" size={14} color={theme.mutedForeground} />
                       <input
                         ref={searchInputRef}
                         type="text"
@@ -281,7 +281,7 @@ export function HomePage({
                         placeholder="Search version..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        style={{ color: theme.text }}
+                        style={{ color: theme.foreground }}
                       />
                       {query && (
                         <button
@@ -290,7 +290,7 @@ export function HomePage({
                           onClick={() => setQuery("")}
                           aria-label="Clear search"
                         >
-                          <Icon name="reset" size={12} color={theme.muted} />
+                          <Icon name="reset" size={12} color={theme.mutedForeground} />
                         </button>
                       )}
                     </div>
@@ -307,8 +307,8 @@ export function HomePage({
                           aria-selected={isSelected}
                           className="home-instance-option"
                           style={{
-                            color: isSelected ? theme.accent : theme.text,
-                            background: isSelected ? theme.panel : "transparent",
+                            color: isSelected ? theme.primary : theme.foreground,
+                            background: isSelected ? theme.card : "transparent",
                           }}
                           onClick={() => {
                             setSelectedInstance(inst);
@@ -318,7 +318,7 @@ export function HomePage({
                         >
                           <span>{inst}</span>
                           {isSelected && (
-                            <span className="home-instance-check" style={{ color: theme.accent }}>
+                            <span className="home-instance-check" style={{ color: theme.primary }}>
                               •
                             </span>
                           )}
@@ -326,7 +326,7 @@ export function HomePage({
                       );
                     })}
                     {filteredInstances.length === 0 && (
-                      <div className="home-instance-empty" style={{ color: theme.faint }}>
+                      <div className="home-instance-empty" style={{ color: theme.mutedForeground }}>
                         No match
                       </div>
                     )}
@@ -340,11 +340,11 @@ export function HomePage({
 
       {/* article section divider */}
       <div className="home-divider-row">
-        <div className="home-divider-line" style={{ background: theme.raised }} />
-        <span className="home-divider-title" style={{ color: theme.text }}>
+        <div className="home-divider-line" style={{ background: theme.border }} />
+        <span className="home-divider-title" style={{ color: theme.foreground }}>
           Latest News
         </span>
-        <div className="home-divider-line" style={{ background: theme.raised }} />
+        <div className="home-divider-line" style={{ background: theme.border }} />
       </div>
 
       {/* article cards row: 3 or 4 cards depending on screen width */}
@@ -356,7 +356,7 @@ export function HomePage({
                 className="home-article-card home-article-skeleton"
                 style={{
                   background: theme.card,
-                  borderColor: theme.raised,
+                  borderColor: theme.border,
                 }}
               />
             ))
@@ -366,9 +366,9 @@ export function HomePage({
                 className="home-article-card"
                 style={{
                   background: theme.card,
-                  borderColor: theme.raised,
+                  borderColor: theme.border,
                 }}
-                whileHover={{ borderColor: theme.accent }}
+                whileHover={{ borderColor: theme.primary }}
                 transition={snappy}
                 onClick={() => openArticle(article.url)}
               >
@@ -383,9 +383,9 @@ export function HomePage({
                     <span
                       className="home-article-badge"
                       style={{
-                        background: theme.panel,
-                        color: theme.accent,
-                        borderColor: theme.raised,
+                        background: theme.secondary,
+                        color: theme.primary,
+                        borderColor: theme.border,
                       }}
                     >
                       {article.category}
@@ -394,13 +394,13 @@ export function HomePage({
                 </div>
 
                 <div className="home-article-body">
-                  <span className="home-article-date" style={{ color: theme.muted }}>
+                  <span className="home-article-date" style={{ color: theme.mutedForeground }}>
                     {formatDate(article.time)}
                   </span>
-                  <h3 className="home-article-title" style={{ color: theme.text }}>
+                  <h3 className="home-article-title" style={{ color: theme.foreground }}>
                     {article.title}
                   </h3>
-                  <p className="home-article-desc" style={{ color: theme.muted }}>
+                  <p className="home-article-desc" style={{ color: theme.mutedForeground }}>
                     {article.description}
                   </p>
                 </div>

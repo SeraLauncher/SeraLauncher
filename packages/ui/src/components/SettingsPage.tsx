@@ -124,7 +124,7 @@ export function SettingsPage({
   if (activeTab === "java") {
     return (
       <main className="settings">
-        <h1 className="settings-title" style={{ color: theme.text }}>
+        <h1 className="settings-title" style={{ color: theme.foreground }}>
           Java &amp; Runtime
         </h1>
 
@@ -147,9 +147,9 @@ export function SettingsPage({
                   onClick={onRefreshJava}
                   title="Rescan system for installed Java runtimes"
                   aria-label="Rescan system for installed Java runtimes"
-                  style={{ color: theme.muted }}
+                  style={{ color: theme.mutedForeground }}
                 >
-                  <Icon name="refresh" size={16} color={theme.muted} />
+                  <Icon name="refresh" size={16} color={theme.mutedForeground} />
                 </button>
               ) : undefined
             }
@@ -199,8 +199,8 @@ export function SettingsPage({
                 type="text"
                 className="settings-input"
                 style={{
-                  background: theme.raised,
-                  color: theme.text,
+                  background: theme.secondary,
+                  color: theme.foreground,
                   border: 0,
                 }}
                 value={settings.javaPath || ""}
@@ -222,9 +222,9 @@ export function SettingsPage({
                 disabled={memoryDefault}
                 title="Reset memory allocation"
                 aria-label="Reset memory allocation"
-                style={{ color: theme.muted }}
+                style={{ color: theme.mutedForeground }}
               >
-                <Icon name="reset" size={16} color={theme.muted} />
+                <Icon name="reset" size={16} color={theme.mutedForeground} />
               </button>
             }
             control={
@@ -239,8 +239,8 @@ export function SettingsPage({
                         type="button"
                         className={`settings-chip ${isActive ? "active" : ""}`}
                         style={{
-                          background: isActive ? theme.accent : theme.raised,
-                          color: isActive ? theme.shell : theme.text,
+                          background: isActive ? theme.primary : theme.secondary,
+                          color: isActive ? theme.primaryForeground : theme.foreground,
                         }}
                         onClick={() => {
                           const newMax = p.value;
@@ -257,8 +257,8 @@ export function SettingsPage({
                 {/* Max RAM slider */}
                 <div className="settings-slider-wrapper">
                   <div className="settings-slider-label">
-                    <span style={{ color: theme.muted }}>Maximum RAM:</span>
-                    <strong style={{ color: theme.text }}>
+                    <span style={{ color: theme.mutedForeground }}>Maximum RAM:</span>
+                    <strong style={{ color: theme.foreground }}>
                       {(settings.maxMemory / 1024).toFixed(1)} GB ({settings.maxMemory} MB)
                     </strong>
                   </div>
@@ -270,7 +270,7 @@ export function SettingsPage({
                     step={512}
                     value={settings.maxMemory}
                     style={{
-                      background: `linear-gradient(to right, ${theme.accent} 0%, ${theme.accent} ${maxRamPercent}%, ${theme.raised} ${maxRamPercent}%, ${theme.raised} 100%)`,
+                      background: `linear-gradient(to right, ${theme.primary} 0%, ${theme.primary} ${maxRamPercent}%, ${theme.secondary} ${maxRamPercent}%, ${theme.secondary} 100%)`,
                     }}
                     onChange={(e) => {
                       const newMax = Number(e.target.value);
@@ -283,8 +283,8 @@ export function SettingsPage({
                 {/* Min RAM slider */}
                 <div className="settings-slider-wrapper">
                   <div className="settings-slider-label">
-                    <span style={{ color: theme.muted }}>Minimum RAM:</span>
-                    <strong style={{ color: theme.text }}>
+                    <span style={{ color: theme.mutedForeground }}>Minimum RAM:</span>
+                    <strong style={{ color: theme.foreground }}>
                       {(settings.minMemory / 1024).toFixed(1)} GB ({settings.minMemory} MB)
                     </strong>
                   </div>
@@ -296,7 +296,7 @@ export function SettingsPage({
                     step={256}
                     value={settings.minMemory}
                     style={{
-                      background: `linear-gradient(to right, ${theme.accent} 0%, ${theme.accent} ${minRamPercent}%, ${theme.raised} ${minRamPercent}%, ${theme.raised} 100%)`,
+                      background: `linear-gradient(to right, ${theme.primary} 0%, ${theme.primary} ${minRamPercent}%, ${theme.secondary} ${minRamPercent}%, ${theme.secondary} 100%)`,
                     }}
                     onChange={(e) => {
                       const newMin = Number(e.target.value);
@@ -320,9 +320,9 @@ export function SettingsPage({
                 disabled={gcDefault}
                 title="Reset garbage collector to G1GC"
                 aria-label="Reset garbage collector to G1GC"
-                style={{ color: theme.muted }}
+                style={{ color: theme.mutedForeground }}
               >
-                <Icon name="reset" size={16} color={theme.muted} />
+                <Icon name="reset" size={16} color={theme.mutedForeground} />
               </button>
             }
             control={
@@ -339,8 +339,8 @@ export function SettingsPage({
                       type="button"
                       className={`settings-chip ${isActive ? "active" : ""}`}
                       style={{
-                        background: isActive ? theme.accent : theme.raised,
-                        color: isActive ? theme.shell : theme.text,
+                        background: isActive ? theme.primary : theme.secondary,
+                        color: isActive ? theme.primaryForeground : theme.foreground,
                       }}
                       onClick={() => onGcPreset?.(gc.value)}
                     >
@@ -354,19 +354,19 @@ export function SettingsPage({
 
           {/* Java Optimize Defaults */}
           <Row
-            label="Java Optimize Defaults"
-            hint="Applies community-tested flags (-XX:+AlwaysPreTouch, -XX:+ParallelRefProcEnabled, etc.)"
+            label="Use Mojang Optimize Defaults"
+            hint="Applies official JVM optimization arguments recommended by Mojang"
             theme={theme}
             action={
               <button
                 type="button"
                 onClick={() => onJavaOptimize?.(DEFAULT_JAVA_OPTIMIZE)}
                 disabled={optimizeDefault}
-                title="Reset Java optimize defaults"
-                aria-label="Reset Java optimize defaults"
-                style={{ color: theme.muted }}
+                title="Reset Mojang optimize defaults"
+                aria-label="Reset Mojang optimize defaults"
+                style={{ color: theme.mutedForeground }}
               >
-                <Icon name="reset" size={16} color={theme.muted} />
+                <Icon name="reset" size={16} color={theme.mutedForeground} />
               </button>
             }
             control={
@@ -374,17 +374,17 @@ export function SettingsPage({
                 type="button"
                 role="switch"
                 aria-checked={settings.javaOptimize}
-                aria-label="Toggle Java optimize defaults"
+                aria-label="Toggle Mojang optimize defaults"
                 className={`settings-switch ${settings.javaOptimize ? "active" : ""}`}
                 style={{
-                  background: settings.javaOptimize ? theme.accent : theme.raised,
+                  background: settings.javaOptimize ? theme.primary : theme.secondary,
                 }}
                 onClick={() => onJavaOptimize?.(!settings.javaOptimize)}
               >
                 <span
                   className="settings-switch-knob"
                   style={{
-                    background: settings.javaOptimize ? theme.panel : theme.faint,
+                    background: settings.javaOptimize ? theme.card : theme.mutedForeground,
                     transform: settings.javaOptimize ? "translateX(22px)" : "translateX(2px)",
                   }}
                 />
@@ -396,7 +396,7 @@ export function SettingsPage({
           <div className="settings-block-row">
             <div className="settings-block-header">
               <div className="row-label">
-                <span className="row-title" style={{ color: theme.text }}>
+                <span className="row-title" style={{ color: theme.foreground }}>
                   Custom Java Arguments
                   <span className="row-actions">
                     <button
@@ -405,22 +405,22 @@ export function SettingsPage({
                       disabled={jvmDefault}
                       title="Clear custom Java arguments"
                       aria-label="Clear custom Java arguments"
-                      style={{ color: theme.muted }}
+                      style={{ color: theme.mutedForeground }}
                     >
-                      <Icon name="reset" size={16} color={theme.muted} />
+                      <Icon name="reset" size={16} color={theme.mutedForeground} />
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowArgsModal(true)}
                       title="View effective Java arguments"
                       aria-label="View effective Java arguments"
-                      style={{ color: theme.muted }}
+                      style={{ color: theme.mutedForeground }}
                     >
-                      <Icon name="eye" size={16} color={theme.muted} />
+                      <Icon name="eye" size={16} color={theme.mutedForeground} />
                     </button>
                   </span>
                 </span>
-                <span className="row-hint" style={{ color: theme.muted }}>
+                <span className="row-hint" style={{ color: theme.mutedForeground }}>
                   Additional custom arguments appended to the launch command
                 </span>
               </div>
@@ -429,8 +429,8 @@ export function SettingsPage({
               className="settings-textarea settings-mono"
               rows={3}
               style={{
-                background: theme.raised,
-                color: theme.text,
+                background: theme.secondary,
+                color: theme.foreground,
                 border: 0,
               }}
               value={settings.jvmArgs}
@@ -442,12 +442,12 @@ export function SettingsPage({
 
         {/* Minecraft Java Compatibility Matrix Card */}
         <section className="group">
-          <div className="settings-compat-card" style={{ background: theme.panel }}>
+          <div className="settings-compat-card" style={{ background: theme.card }}>
             <div className="settings-compat-header">
-              <h3 style={{ color: theme.text }}>Minecraft Java Compatibility</h3>
+              <h3 style={{ color: theme.foreground }}>Minecraft Java Compatibility</h3>
               <span
                 className="settings-badge"
-                style={{ background: theme.raised, color: theme.accent }}
+                style={{ background: theme.secondary, color: theme.primary }}
               >
                 Phase 4 Auto-Downloader
               </span>
@@ -455,32 +455,32 @@ export function SettingsPage({
 
             <div className="settings-compat-grid">
               <div className="settings-compat-item">
-                <span className="compat-ver" style={{ color: theme.muted }}>
+                <span className="compat-ver" style={{ color: theme.mutedForeground }}>
                   1.20.5 – 1.21+
                 </span>
-                <strong style={{ color: theme.text }}>Java 21 (LTS)</strong>
+                <strong style={{ color: theme.foreground }}>Java 21 (LTS)</strong>
               </div>
               <div className="settings-compat-item">
-                <span className="compat-ver" style={{ color: theme.muted }}>
+                <span className="compat-ver" style={{ color: theme.mutedForeground }}>
                   1.18 – 1.20.4
                 </span>
-                <strong style={{ color: theme.text }}>Java 17 (LTS)</strong>
+                <strong style={{ color: theme.foreground }}>Java 17 (LTS)</strong>
               </div>
               <div className="settings-compat-item">
-                <span className="compat-ver" style={{ color: theme.muted }}>
+                <span className="compat-ver" style={{ color: theme.mutedForeground }}>
                   1.17 – 1.17.1
                 </span>
-                <strong style={{ color: theme.text }}>Java 16 / 17</strong>
+                <strong style={{ color: theme.foreground }}>Java 16 / 17</strong>
               </div>
               <div className="settings-compat-item">
-                <span className="compat-ver" style={{ color: theme.muted }}>
+                <span className="compat-ver" style={{ color: theme.mutedForeground }}>
                   1.16.5 &amp; older
                 </span>
-                <strong style={{ color: theme.text }}>Java 8 (64-bit)</strong>
+                <strong style={{ color: theme.foreground }}>Java 8 (64-bit)</strong>
               </div>
             </div>
 
-            <p className="settings-compat-note" style={{ color: theme.faint }}>
+            <p className="settings-compat-note" style={{ color: theme.mutedForeground }}>
               In Phase 4, SeraLauncher will automatically detect instance version requirements and
               download any missing Java runtimes (via Adoptium Eclipse Temurin API) directly during
               instance creation.
@@ -500,13 +500,13 @@ export function SettingsPage({
 
   return (
     <main className="settings">
-      <h1 className="settings-title" style={{ color: theme.text }}>
+      <h1 className="settings-title" style={{ color: theme.foreground }}>
         Appearance
       </h1>
 
       {/* Appearance Section */}
       <section className="group">
-        <h2 style={{ color: theme.muted }}>Color scheme</h2>
+        <h2 style={{ color: theme.mutedForeground }}>Color scheme</h2>
         <AppearancePicker value={settings.appearance} onChange={onAppearance} theme={theme} />
       </section>
 
@@ -547,9 +547,9 @@ export function SettingsPage({
               disabled={typographyDefault}
               title="Reset typography"
               aria-label="Reset typography"
-              style={{ color: theme.muted }}
+              style={{ color: theme.mutedForeground }}
             >
-              <Icon name="reset" size={16} color={theme.muted} />
+              <Icon name="reset" size={16} color={theme.mutedForeground} />
             </button>
           }
         />
@@ -575,7 +575,7 @@ function Group({
 }) {
   return (
     <section className="group">
-      <h2 style={{ color: theme.muted }}>{title}</h2>
+      <h2 style={{ color: theme.mutedForeground }}>{title}</h2>
       <div className="box">{children}</div>
     </section>
   );
@@ -598,11 +598,11 @@ function Row({
   return (
     <div className="row">
       <div className="row-label">
-        <span className="row-title" style={{ color: theme.text }}>
+        <span className="row-title" style={{ color: theme.foreground }}>
           {label}
           {action}
         </span>
-        <span className="row-hint" style={{ color: theme.faint }}>
+        <span className="row-hint" style={{ color: theme.mutedForeground }}>
           {hint}
         </span>
       </div>

@@ -38,14 +38,14 @@ export function AppearancePicker({
           <motion.span
             className="scheme-label"
             animate={{
-              color: value === option ? theme.accent : theme.muted,
+              color: value === option ? theme.primary : theme.mutedForeground,
             }}
             transition={fade}
           >
             <Icon
               name={icon[option]}
               size={15}
-              color={value === option ? theme.accent : theme.muted}
+              color={value === option ? theme.primary : theme.mutedForeground}
             />
             {label[option]}
           </motion.span>
@@ -60,8 +60,8 @@ export function AppearancePicker({
 function Swatch({ appearance }: { appearance: Appearance }) {
   const swatch =
     appearance === "dark"
-      ? { page: "#1c1a19", rail: "#161413", line: "#7d746b", strong: "#a79e94" }
-      : { page: "#f6f2ec", rail: "#ebe5dc", line: "#c9c1b8", strong: "#8a807a" };
+      ? { page: "#352B2D", rail: "#44373A", line: "#4B3D43", strong: "#F1DBC2" }
+      : { page: "#DFC8B1", rail: "#F1DBC2", line: "#ECD6BD", strong: "#352B2D" };
 
   return (
     <span className="swatch" style={{ background: swatch.page }}>

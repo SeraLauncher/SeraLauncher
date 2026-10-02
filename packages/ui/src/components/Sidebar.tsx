@@ -79,12 +79,16 @@ function NavButton({
       data-label={item.label}
       aria-label={item.label}
       aria-current={selected ? "page" : undefined}
-      className="nav-button"
-      style={{ background: selected ? theme.raised : "transparent" }}
+      className={`nav-button ${selected ? "active" : ""}`}
+      style={{ background: selected ? theme.sidebarAccent : "transparent" }}
       whileTap={{ scale: 0.92 }}
       transition={snappy}
     >
-      <Icon name={item.icon} size={22} color={selected ? theme.accent : theme.muted} />
+      <Icon
+        name={item.icon}
+        size={22}
+        color={selected ? theme.sidebarPrimary : theme.mutedForeground}
+      />
     </motion.button>
   );
 }

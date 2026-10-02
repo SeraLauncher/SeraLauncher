@@ -1,60 +1,127 @@
 import type { Appearance } from "./settings";
 
-/** Palette keys, one entry per colour the ui is allowed to use. */
-export type Theme = Record<
-  | "background"
-  | "shell"
-  | "raised"
-  | "card"
-  | "panel"
-  | "text"
-  | "muted"
-  | "faint"
-  | "accent"
-  | "danger"
-  | "warning"
-  | "success",
-  string
->;
+/** Palette keys matching standard shadcn CSS variables, plus backwards compatibility aliases. */
+export type Theme = {
+  background: string;
+  foreground: string;
+  card: string;
+  cardForeground: string;
+  popover: string;
+  popoverForeground: string;
+  primary: string;
+  primaryForeground: string;
+  secondary: string;
+  secondaryForeground: string;
+  muted: string;
+  mutedForeground: string;
+  accent: string;
+  accentForeground: string;
+  destructive: string;
+  destructiveForeground: string;
+  border: string;
+  input: string;
+  ring: string;
+  radius: string;
+  sidebar: string;
+  sidebarForeground: string;
+  sidebarPrimary: string;
+  sidebarPrimaryForeground: string;
+  sidebarAccent: string;
+  sidebarAccentForeground: string;
+  sidebarBorder: string;
+  sidebarRing: string;
+  success: string;
 
-/** Warm near-black, not neutral gray. Everything sits a few percent warmer than a
- *  standard editor theme so long reading stays soft on the eyes. */
-const dark: Theme = {
-  /// The rail. Advances off `shell` and carries every sidebar in the app, as well as
-  /// the settings boxes.
-  background: "#242120",
-  /// The page content sits on.
-  shell: "#161413",
-  raised: "#2b2724",
-  card: "#242120",
-  /// Panel a boxed group sits on: a hair darker than the rail, so the box separates
-  /// from the chrome beside it without going darker than the page.
-  panel: "#221f1e",
-  text: "#e8e2da",
-  muted: "#a79e94",
-  faint: "#7d746b",
-  accent: "#e0a86a",
-  danger: "#e0796a",
-  warning: "#d6a544",
-  success: "#8bb573",
+  // Compatibility aliases for existing UI code linked directly to new variables:
+  shell: string;
+  raised: string;
+  panel: string;
+  text: string;
+  faint: string;
+  danger: string;
+  warning: string;
 };
 
-/** Same warmth, inverted: `shell` recedes as the page and `background` advances as the
- *  rail, matching the dark palette's relationship. */
 const light: Theme = {
-  background: "#f6f2ec",
-  shell: "#ebe5dc",
-  raised: "#fffdfa",
-  card: "#faf6f0",
-  /// A hair darker than the rail, matching where the dark palette puts its panel.
-  panel: "#f4f0e9",
-  text: "#2b2622",
-  muted: "#635a52",
-  faint: "#8a807a",
-  accent: "#a2651f",
-  danger: "#b04434",
-  warning: "#8a6516",
-  success: "#4a7038",
+  background: "#DFC8B1",
+  foreground: "#352B2D",
+  card: "#ECD6BD",
+  cardForeground: "#352B2D",
+  popover: "#ECD6BD",
+  popoverForeground: "#352B2D",
+  primary: "#4B3D43",
+  primaryForeground: "#F1DBC2",
+  secondary: "#F1DBC2",
+  secondaryForeground: "#352B2D",
+  muted: "#ECD6BD",
+  mutedForeground: "#625458",
+  accent: "#ECD6BD",
+  accentForeground: "#352B2D",
+  destructive: "#A64B4B",
+  destructiveForeground: "#F1DBC2",
+  border: "#CCB7A0",
+  input: "#F1DBC2",
+  ring: "#857974",
+  radius: "0.5rem",
+  sidebar: "#F1DBC2",
+  sidebarForeground: "#352B2D",
+  sidebarPrimary: "#4B3D43",
+  sidebarPrimaryForeground: "#F1DBC2",
+  sidebarAccent: "#E2C8AE",
+  sidebarAccentForeground: "#352B2D",
+  sidebarBorder: "#DFC8B1",
+  sidebarRing: "#857974",
+  success: "#54944C",
+
+  // Compatibility aliases
+  shell: "#DFC8B1",
+  raised: "#F1DBC2",
+  panel: "#ECD6BD",
+  text: "#352B2D",
+  faint: "#625458",
+  danger: "#A64B4B",
+  warning: "#857974",
+};
+
+const dark: Theme = {
+  background: "#352B2D",
+  foreground: "#F1DBC2",
+  card: "#44373A",
+  cardForeground: "#F1DBC2",
+  popover: "#44373A",
+  popoverForeground: "#F1DBC2",
+  primary: "#CCB7A0",
+  primaryForeground: "#352B2D",
+  secondary: "#4B3D43",
+  secondaryForeground: "#DFC8B1",
+  muted: "#4B3D43",
+  mutedForeground: "#C8B9A6",
+  accent: "#4B3D43",
+  accentForeground: "#F1DBC2",
+  destructive: "#C96A6A",
+  destructiveForeground: "#352B2D",
+  border: "#524347",
+  input: "#4B3D43",
+  ring: "#908A7B",
+  radius: "0.5rem",
+  sidebar: "#44373A",
+  sidebarForeground: "#F1DBC2",
+  sidebarPrimary: "#CCB7A0",
+  sidebarPrimaryForeground: "#352B2D",
+  sidebarAccent: "#4B3D43",
+  sidebarAccentForeground: "#F1DBC2",
+  sidebarBorder: "#4B3D43",
+  sidebarRing: "#908A7B",
+  success: "#54944C",
+
+  // Compatibility aliases linked to legible, high-contrast values:
+  shell: "#352B2D",
+  raised: "#4B3D43",
+  panel: "#44373A",
+  text: "#F1DBC2",
+  faint: "#C8B9A6",
+  danger: "#C96A6A",
+  warning: "#908A7B",
 };
 
 export const themes: Record<Appearance, Theme> = { dark, light };

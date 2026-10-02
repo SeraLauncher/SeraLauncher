@@ -102,7 +102,7 @@ export function AppHeader({
   const displayName = hasAccount ? account!.username : "No Account";
 
   return (
-    <header className="app-header" style={{ background: theme.background }}>
+    <header className="app-header" style={{ background: theme.sidebar }}>
       {/* left slot reserved for running task indicators or notifications */}
       <div className="header-left">
         <div className="header-tasks" />
@@ -110,7 +110,10 @@ export function AppHeader({
 
       {/* right slot containing plain account info and plain theme toggle icon */}
       <div className="header-right">
-        <div className="account-chip" style={{ color: hasAccount ? theme.text : theme.muted }}>
+        <div
+          className="account-chip"
+          style={{ color: hasAccount ? theme.sidebarForeground : theme.mutedForeground }}
+        >
           <MinecraftHead
             username={account?.username}
             skinUrl={account?.skinUrl}
@@ -125,7 +128,7 @@ export function AppHeader({
         <motion.button
           type="button"
           className="theme-toggle-btn"
-          style={{ color: theme.muted }}
+          style={{ color: theme.mutedForeground }}
           whileTap={{ scale: 0.9 }}
           transition={snappy}
           onClick={onToggleTheme}

@@ -59,8 +59,8 @@ export function EffectiveJavaArgsModal({
           <motion.div
             className="java-args-modal"
             style={{
-              background: theme.panel,
-              color: theme.text,
+              background: theme.card,
+              color: theme.foreground,
             }}
             initial={{ opacity: 0, scale: 0.94, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -77,11 +77,11 @@ export function EffectiveJavaArgsModal({
                 <h3
                   id="java-args-modal-title"
                   className="java-args-modal-title"
-                  style={{ color: theme.text }}
+                  style={{ color: theme.foreground }}
                 >
                   Effective Java Arguments
                 </h3>
-                <p className="java-args-modal-subtitle" style={{ color: theme.muted }}>
+                <p className="java-args-modal-subtitle" style={{ color: theme.mutedForeground }}>
                   Combined runtime arguments for Minecraft ({allArgs.length} flags)
                 </p>
               </div>
@@ -94,11 +94,11 @@ export function EffectiveJavaArgsModal({
                 title="Close modal"
                 aria-label="Close modal"
                 style={{
-                  background: theme.raised,
-                  color: theme.text,
+                  background: theme.secondary,
+                  color: theme.foreground,
                 }}
               >
-                <Icon name="x" size={14} color={theme.text} />
+                <Icon name="x" size={14} color={theme.foreground} />
               </button>
             </div>
 
@@ -106,7 +106,7 @@ export function EffectiveJavaArgsModal({
             <div className="java-args-modal-body">
               <div className="java-args-command-section">
                 <div className="java-args-command-header">
-                  <span className="section-title" style={{ color: theme.muted }}>
+                  <span className="section-title" style={{ color: theme.mutedForeground }}>
                     Arguments String
                   </span>
                   {/* Copy button using the same raised color as the text box */}
@@ -115,14 +115,14 @@ export function EffectiveJavaArgsModal({
                     className="java-args-copy-button"
                     onClick={handleCopy}
                     style={{
-                      background: theme.raised,
-                      color: copied ? theme.success : theme.text,
+                      background: theme.secondary,
+                      color: copied ? theme.success : theme.foreground,
                     }}
                   >
                     <Icon
                       name={copied ? "check" : "copy"}
                       size={14}
-                      color={copied ? theme.success : theme.muted}
+                      color={copied ? theme.success : theme.mutedForeground}
                     />
                     <span>{copied ? "Copied!" : "Copy"}</span>
                   </button>
@@ -131,8 +131,8 @@ export function EffectiveJavaArgsModal({
                 <div
                   className="java-args-command-box"
                   style={{
-                    background: theme.raised,
-                    color: theme.text,
+                    background: theme.secondary,
+                    color: theme.foreground,
                   }}
                 >
                   {commandLineText}
