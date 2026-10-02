@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
+  AccountModal,
   AppHeader,
   APP_VERSION,
   HomePage,
+  InstancePage,
   NAV,
   RAIL_WIDTH,
   RailIcons,
@@ -19,7 +21,8 @@ import {
   type Appearance,
   type SettingsTab,
 } from "@sera/ui";
-import { useSettings } from "./store";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { useSettings, useInstances, useAccounts, useDownloads } from "./store";
 
 /** the settings item is last in NAV, so its index is the settings page */
 const SETTINGS = NAV.length - 1;
@@ -30,6 +33,30 @@ const OPEN_WIDTH = 200;
 export default function App() {
   const { settings, update, fonts, javaRuntimes, systemMemoryMb, refreshJavaRuntimes } =
     useSettings();
+  const {
+    instances,
+    versions,
+    createInstance,
+    deleteInstance,
+    updateInstance,
+    openFolder,
+    launchInstance,
+    runningInstances,
+    killInstance,
+  } = useInstances();
+  const {
+    activeAccount,
+    accounts,
+    selectAccount,
+    removeAccount,
+    startMicrosoftLogin,
+    pollMicrosoftLogin,
+    addOfflineAccount,
+  } = useAccounts();
+  const { downloads } = useDownloads();
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [loginReason, setLoginReason] = useState<string | null>(null);
+
   const [page, setPage] = useState(0);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
 
@@ -128,9 +155,25 @@ export default function App() {
           <AppHeader
             theme={theme}
             appearance={settings.appearance}
+            account={
+              activeAccount
+                ? {
+                    username: activeAccount.username,
+                    uuid: activeAccount.uuid,
+                    skinUrl: activeAccount.skinUrl ?? undefined,
+                  }
+                : null
+            }
             onToggleTheme={() =>
               update({ appearance: settings.appearance === "dark" ? "light" : "dark" })
             }
+            runningInstances={runningInstances}
+            downloads={downloads}
+            onKillInstance={killInstance}
+            onAccountClick={() => {
+              setLoginReason(null);
+              setShowAccountModal(true);
+            }}
           />
 
           <div className="page-viewport" style={{ background: theme.background }}>
@@ -155,7 +198,44 @@ export default function App() {
                     onRefreshJava={refreshJavaRuntimes}
                   />
                 ) : page === 0 ? (
-                  <HomePage theme={theme} />
+                  <HomePage
+                    theme={theme}
+                    instances={instances.map((i) => i.name)}
+                    onNavigateToInstances={() => setPage(1)}
+                    onLaunch={async (instanceName) => {
+                      if (!activeAccount) {
+                        setLoginReason("launch_required");
+                        setShowAccountModal(true);
+                        return;
+                      }
+                      const target = instances.find((i) => i.name === instanceName);
+                      if (target) {
+                        await launchInstance(target.id);
+                      }
+                    }}
+                  />
+                ) : page === 1 ? (
+                  <InstancePage
+                    theme={theme}
+                    instances={instances}
+                    versions={versions}
+                    javaRuntimes={javaRuntimes as any}
+                    onCreateInstance={async (name, mcVersion, versionType, icon) => {
+                      await createInstance(name, mcVersion, versionType, icon);
+                      refreshJavaRuntimes();
+                    }}
+                    onDeleteInstance={deleteInstance}
+                    onUpdateInstance={updateInstance}
+                    onOpenFolder={openFolder}
+                    onLaunch={async (inst) => {
+                      if (!activeAccount) {
+                        setLoginReason("launch_required");
+                        setShowAccountModal(true);
+                        return;
+                      }
+                      await launchInstance(inst.id);
+                    }}
+                  />
                 ) : (
                   <>
                     <h1>{NAV[page].label}</h1>
@@ -182,6 +262,29 @@ export default function App() {
           transition={fade}
         />
       </div>
+      <AccountModal
+        isOpen={showAccountModal}
+        onClose={() => {
+          setShowAccountModal(false);
+          setLoginReason(null);
+        }}
+        theme={theme}
+        account={activeAccount}
+        accounts={accounts}
+        onSelectAccount={selectAccount}
+        onRemoveAccount={removeAccount}
+        onAddOfflineAccount={addOfflineAccount}
+        onStartDeviceFlow={startMicrosoftLogin}
+        onPollDeviceFlow={pollMicrosoftLogin}
+        onOpenUrl={async (url) => {
+          try {
+            await openUrl(url);
+          } catch {
+            window.open(url, "_blank");
+          }
+        }}
+        loginReason={loginReason}
+      />
     </MotionConfig>
   );
 }

@@ -1,10 +1,17 @@
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
 
+mod auth;
+mod downloader;
+mod downloads;
 mod fonts;
+mod instances;
 mod java;
+mod minecraft;
+mod paths;
 
 const DEFAULT_APPEARANCE: &str = "dark";
 const BUNDLED_FAMILY: &str = "Sunghyun Sans";
@@ -112,28 +119,22 @@ impl Settings {
     }
 }
 
-/// Where settings live, e.g. `~/.config/SeraLauncher/settings.json`.
+/// Where settings live under a base data/config directory.
+#[cfg(test)]
 fn settings_path(base: &Path) -> PathBuf {
     base.join("SeraLauncher").join("settings.json")
 }
 
-/// Per-user config base for the platform. `app_config_dir` nests under the bundle
-/// identifier (`~/.config/com.yoruakio.sera-launcher`); its parent is the plain
-/// per-user base, so the app keeps a readable name on every platform.
-fn config_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    let scoped = app.path().app_config_dir().map_err(|err| err.to_string())?;
-    Ok(scoped.parent().unwrap_or(&scoped).to_path_buf())
-}
-
 #[tauri::command]
 fn load_settings(app: tauri::AppHandle) -> Result<Settings, String> {
-    let path = settings_path(&config_root(&app)?);
+    let path = paths::settings_file_path(&app)?;
     Ok(Settings::read(&path).sanitized())
 }
 
 #[tauri::command]
 fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
-    settings.write(&settings_path(&config_root(&app)?))
+    let path = paths::settings_file_path(&app)?;
+    settings.write(&path)
 }
 
 /// Families the user can pick from, with the bundled face first so it stays the
@@ -146,10 +147,146 @@ fn list_fonts() -> Vec<String> {
     families
 }
 
-/// Lists all detected Java runtimes across the system, newest first.
+/// Lists all detected Java runtimes across the system and app runtimes directory.
 #[tauri::command]
-fn list_java_runtimes() -> Vec<java::JavaRuntime> {
-    java::discover_java_runtimes()
+fn list_java_runtimes(app: tauri::AppHandle) -> Vec<java::JavaRuntime> {
+    let extra = paths::runtimes_dir(&app).ok();
+    let extras: Vec<PathBuf> = extra.into_iter().collect();
+    java::discover_java_runtimes_with_extra(&extras)
+}
+
+#[tauri::command]
+async fn install_java_runtime(app: tauri::AppHandle, major_version: u32) -> Result<java::JavaRuntime, String> {
+    downloader::install_adoptium_runtime(&app, major_version).await
+}
+
+#[tauri::command]
+async fn get_minecraft_versions() -> Result<minecraft::MinecraftVersionsResponse, String> {
+    minecraft::fetch_minecraft_versions().await
+}
+
+#[tauri::command]
+fn list_instances(app: tauri::AppHandle) -> Result<Vec<instances::Instance>, String> {
+    instances::list_instances(&app)
+}
+
+#[tauri::command]
+fn get_active_downloads() -> Vec<downloads::DownloadItem> {
+    downloads::list_downloads()
+}
+
+#[tauri::command]
+async fn create_instance(
+    app: tauri::AppHandle,
+    name: String,
+    mc_version: String,
+    version_type: Option<String>,
+    icon: Option<String>,
+) -> Result<instances::Instance, String> {
+    instances::create_instance(&app, name, mc_version, version_type, icon).await
+}
+
+#[tauri::command]
+fn delete_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    instances::delete_instance(&app, &id)
+}
+
+#[tauri::command]
+fn update_instance(app: tauri::AppHandle, instance: instances::Instance) -> Result<(), String> {
+    instances::update_instance(&app, &instance)
+}
+
+
+#[tauri::command]
+fn get_active_account(app: tauri::AppHandle) -> Result<Option<auth::PublicAccountInfo>, String> {
+    auth::get_active_account_info(&app)
+}
+
+#[tauri::command]
+fn get_all_accounts(app: tauri::AppHandle) -> Result<Vec<auth::PublicAccountInfo>, String> {
+    auth::get_all_accounts_info(&app)
+}
+
+#[tauri::command]
+fn set_active_account(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    auth::set_active_account_by_id(&app, &id)
+}
+
+#[tauri::command]
+fn remove_account(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    auth::remove_account_by_id(&app, &id)
+}
+
+#[tauri::command]
+async fn start_microsoft_login() -> Result<auth::DeviceCodeResponse, String> {
+    auth::start_device_code_flow().await
+}
+
+#[tauri::command]
+async fn poll_microsoft_login(
+    app: tauri::AppHandle,
+    device_code: String,
+) -> Result<auth::PublicAccountInfo, String> {
+    auth::poll_device_code(&app, &device_code).await
+}
+
+#[tauri::command]
+fn add_offline_account(
+    app: tauri::AppHandle,
+    username: String,
+) -> Result<auth::PublicAccountInfo, String> {
+    auth::add_offline_account(&app, &username)
+}
+
+#[tauri::command]
+fn get_running_instances() -> Vec<minecraft::RunningInstanceInfo> {
+    minecraft::list_running_instances()
+}
+
+#[tauri::command]
+fn kill_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    use tauri::Emitter;
+    minecraft::terminate_running_instance(&id)?;
+    let _ = app.emit("running_instances_changed", minecraft::list_running_instances());
+    Ok(())
+}
+
+#[tauri::command]
+async fn launch_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    minecraft::launch_minecraft_instance(&app, &id).await
+}
+
+#[tauri::command]
+fn open_instance_folder(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let dir = instances::get_instance_dir(&app, &id)?;
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&dir)
+            .spawn()
+            .map_err(|err| err.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&dir)
+            .spawn()
+            .map_err(|err| err.to_string())?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&dir)
+            .spawn()
+            .map_err(|err| err.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_instance_path(app: tauri::AppHandle, id: String) -> Result<String, String> {
+    let dir = instances::get_instance_dir(&app, &id)?;
+    Ok(dir.to_string_lossy().to_string())
 }
 
 /// Returns the host system's total physical memory in megabytes (MB).
@@ -213,17 +350,38 @@ pub struct NewsResponse {
     pub total: Option<u32>,
 }
 
+#[derive(Clone)]
+struct CachedNews {
+    response: NewsResponse,
+    fetched_at: Instant,
+}
+
+static CACHED_NEWS: Mutex<Option<CachedNews>> = Mutex::new(None);
+const NEWS_CACHE_TTL_SECS: u64 = 1800; // 30 minutes TTL
+
 /// fetches java news from mojang services; proxied through rust because the endpoint
-/// does not emit permissive cors headers for webview origins
+/// does not emit permissive cors headers for webview origins. Cached to prevent frequent requests.
 #[tauri::command]
 async fn fetch_minecraft_news(page_size: Option<u32>) -> Result<NewsResponse, String> {
+    if let Ok(guard) = CACHED_NEWS.lock() {
+        if let Some(cached) = guard.as_ref() {
+            if cached.fetched_at.elapsed() < Duration::from_secs(NEWS_CACHE_TTL_SECS) {
+                return Ok(cached.response.clone());
+            }
+        }
+    }
+
     let size = page_size.unwrap_or(4).clamp(1, 50);
     let url = format!(
         "https://net-secondary.web.minecraft-services.net/api/v1.0/en-us/search?pageSize={size}&sortType=Recent&category=News&newsOnly=true&filter%5Bsubscription%5D=Minecraft%3A+Java"
     );
 
-    let client = reqwest::Client::new();
-    let res = client
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    let send_result = client
         .get(&url)
         .header("accept", "*/*")
         .header("accept-language", "en-US,en;q=0.9")
@@ -245,21 +403,36 @@ async fn fetch_minecraft_news(page_size: Option<u32>) -> Result<NewsResponse, St
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
         )
         .send()
-        .await
-        .map_err(|err| err.to_string())?;
+        .await;
 
-    if !res.status().is_success() {
-        return Err(format!("minecraft services responded with {}", res.status()));
+    match send_result {
+        Ok(res) if res.status().is_success() => {
+            let parsed: RawNewsResponse = res.json().await.map_err(|err| err.to_string())?;
+            let (entries, total) = if let Some(result) = parsed.result {
+                (result.results, result.num_found)
+            } else {
+                (parsed.entries.unwrap_or_default(), parsed.total)
+            };
+
+            let response = NewsResponse { entries, total };
+            if let Ok(mut guard) = CACHED_NEWS.lock() {
+                *guard = Some(CachedNews {
+                    response: response.clone(),
+                    fetched_at: Instant::now(),
+                });
+            }
+            Ok(response)
+        }
+        _ => {
+            // If network request failed, return stale cached news if available
+            if let Ok(guard) = CACHED_NEWS.lock() {
+                if let Some(cached) = guard.as_ref() {
+                    return Ok(cached.response.clone());
+                }
+            }
+            Err("Failed to fetch minecraft news from services".to_string())
+        }
     }
-
-    let parsed: RawNewsResponse = res.json().await.map_err(|err| err.to_string())?;
-    let (entries, total) = if let Some(result) = parsed.result {
-        (result.results, result.num_found)
-    } else {
-        (parsed.entries.unwrap_or_default(), parsed.total)
-    };
-
-    Ok(NewsResponse { entries, total })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -272,9 +445,28 @@ pub fn run() {
             list_fonts,
             fetch_minecraft_news,
             list_java_runtimes,
+            install_java_runtime,
             get_system_memory,
             validate_java_path,
-            get_required_java_version
+            get_required_java_version,
+            get_minecraft_versions,
+            list_instances,
+            create_instance,
+            delete_instance,
+            update_instance,
+            open_instance_folder,
+            get_instance_path,
+            launch_instance,
+            get_running_instances,
+            kill_instance,
+            get_active_account,
+            get_all_accounts,
+            set_active_account,
+            remove_account,
+            start_microsoft_login,
+            poll_microsoft_login,
+            add_offline_account,
+            get_active_downloads
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -394,12 +586,12 @@ mod tests {
     }
 
     #[test]
-    fn the_config_dir_is_named_after_the_app() {
-        let base = Path::new("/home/someone/.config");
+    fn the_data_dir_is_named_after_the_app() {
+        let base = Path::new("/home/someone/.local/share");
 
         assert_eq!(
             settings_path(base),
-            Path::new("/home/someone/.config/SeraLauncher/settings.json")
+            Path::new("/home/someone/.local/share/SeraLauncher/settings.json")
         );
     }
 }

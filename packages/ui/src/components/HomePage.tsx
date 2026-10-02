@@ -24,15 +24,6 @@ type NewsResponse = {
   total?: number;
 };
 
-const DEFAULT_INSTANCES = [
-  "1.21.4 (Latest Release)",
-  "1.21.4 (Fabric Loader)",
-  "1.20.1 (Forge)",
-  "1.20.1 (Fabric Loader)",
-  "1.19.4 (Vanilla)",
-  "1.16.5 (Forge)",
-];
-
 const FALLBACK_ARTICLES: NewsArticle[] = [
   {
     title: "Minecraft 26.4 Snapshot 2",
@@ -90,19 +81,80 @@ function openArticle(url: string) {
   });
 }
 
+interface NewsCache {
+  articles: NewsArticle[];
+  timestamp: number;
+}
+
+let memoryNewsCache: NewsCache | null = null;
+const CACHE_STORAGE_KEY = "sera:minecraft_news_cache_v1";
+const NEWS_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes cache
+
+function getCachedNews(): NewsCache | null {
+  if (memoryNewsCache && memoryNewsCache.articles.length > 0) {
+    return memoryNewsCache;
+  }
+  try {
+    const raw = typeof window !== "undefined" ? localStorage.getItem(CACHE_STORAGE_KEY) : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed?.articles) && parsed.articles.length > 0) {
+        memoryNewsCache = parsed;
+        return memoryNewsCache;
+      }
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return null;
+}
+
+function setCachedNews(articles: NewsArticle[]) {
+  const cache: NewsCache = {
+    articles,
+    timestamp: Date.now(),
+  };
+  memoryNewsCache = cache;
+  try {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cache));
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function areArticlesEqual(a: NewsArticle[], b: NewsArticle[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (item, i) => item.url === b[i].url && item.title === b[i].title && item.image === b[i].image,
+  );
+}
+
 export function HomePage({
   theme,
-  instances = DEFAULT_INSTANCES,
+  instances = [],
+  onNavigateToInstances,
+  onLaunch,
 }: {
   theme: Theme;
   instances?: string[];
+  onNavigateToInstances?: () => void;
+  onLaunch?: (instanceName: string) => void;
 }) {
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedInstance, setSelectedInstance] = useState(instances[0] ?? DEFAULT_INSTANCES[0]);
+  const initialCache = getCachedNews();
+  const [articles, setArticles] = useState<NewsArticle[]>(() => initialCache?.articles ?? []);
+  const [loading, setLoading] = useState(!initialCache || initialCache.articles.length === 0);
+  const [selectedInstanceOverride, setSelectedInstance] = useState<string | null>(null);
   const [showInstanceMenu, setShowInstanceMenu] = useState(false);
   const [query, setQuery] = useState("");
   const [launching, setLaunching] = useState(false);
+
+  // Derived active selected instance
+  const selectedInstance =
+    selectedInstanceOverride && instances.includes(selectedInstanceOverride)
+      ? selectedInstanceOverride
+      : (instances[0] ?? null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -152,19 +204,31 @@ export function HomePage({
   useEffect(() => {
     let cancelled = false;
 
+    const cache = getCachedNews();
+    const isFresh = cache && Date.now() - cache.timestamp < NEWS_CACHE_TTL_MS;
+
+    // If cache is fresh and we have articles, do not refetch at all on tab switch
+    if (isFresh && cache.articles.length > 0) {
+      return;
+    }
+
     async function loadNews() {
       try {
-        setLoading(true);
+        // Only show skeleton placeholder if we have no articles to display
+        if (!cache || cache.articles.length === 0) {
+          setLoading(true);
+        }
         // routing through tauri bypasses webview origin restrictions on mojang services
         const res = await invoke<NewsResponse>("fetch_minecraft_news", { pageSize: 4 });
         if (!cancelled && res.entries && res.entries.length > 0) {
-          setArticles(res.entries);
+          setCachedNews(res.entries);
+          setArticles((prev) => (areArticlesEqual(prev, res.entries) ? prev : res.entries));
         }
       } catch (err) {
         // fallback prevents an empty broken home page if offline or services fail
         console.warn("sera: failed to load minecraft news, using fallbacks:", err);
         if (!cancelled) {
-          setArticles(FALLBACK_ARTICLES);
+          setArticles((prev) => (prev.length > 0 ? prev : FALLBACK_ARTICLES));
         }
       } finally {
         if (!cancelled) {
@@ -179,9 +243,21 @@ export function HomePage({
     };
   }, []);
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
+    if (!selectedInstance) {
+      if (onNavigateToInstances) {
+        onNavigateToInstances();
+      }
+      return;
+    }
     setLaunching(true);
-    setTimeout(() => setLaunching(false), 2000);
+    try {
+      if (onLaunch) {
+        await onLaunch(selectedInstance);
+      }
+    } finally {
+      setTimeout(() => setLaunching(false), 1500);
+    }
   };
 
   const displayedArticles =
@@ -228,8 +304,13 @@ export function HomePage({
                 background: theme.secondary,
                 border: 0,
                 color: theme.foreground,
+                cursor: instances.length === 0 ? "pointer" : undefined,
               }}
               onClick={() => {
+                if (instances.length === 0) {
+                  onNavigateToInstances?.();
+                  return;
+                }
                 setShowInstanceMenu((prev) => {
                   if (prev) setQuery("");
                   return !prev;
@@ -239,14 +320,20 @@ export function HomePage({
               aria-expanded={showInstanceMenu}
             >
               <Icon name="instance" size={16} color={theme.primary} />
-              <span className="home-instance-label">{selectedInstance}</span>
-              <motion.span
-                className="home-instance-chevron"
-                animate={{ rotate: showInstanceMenu ? 180 : 0 }}
-                transition={snappy}
-              >
-                <Icon name="chevronDown" size={14} color={theme.mutedForeground} />
-              </motion.span>
+              <span className="home-instance-label">
+                {instances.length === 0
+                  ? "No instance installed"
+                  : selectedInstance || instances[0]}
+              </span>
+              {instances.length > 0 && (
+                <motion.span
+                  className="home-instance-chevron"
+                  animate={{ rotate: showInstanceMenu ? 180 : 0 }}
+                  transition={snappy}
+                >
+                  <Icon name="chevronDown" size={14} color={theme.mutedForeground} />
+                </motion.span>
+              )}
             </button>
 
             <AnimatePresence>

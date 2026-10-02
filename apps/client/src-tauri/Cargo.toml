@@ -27,6 +27,12 @@ reqwest = { version = "0.13", features = ["json"] }
 # lists installed families on every desktop platform, so there is one call site
 # instead of a fontconfig / core-text / gdi implementation of our own
 font-kit = { version = "0.14" }
+tar = "0.4.46"
+flate2 = "1.1.10"
+zip = "8.6.0"
+sha1 = "0.11.0"
+futures = "0.3.34"
+md-5 = "0.11.0"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

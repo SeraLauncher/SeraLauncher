@@ -440,54 +440,6 @@ export function SettingsPage({
           </div>
         </Group>
 
-        {/* Minecraft Java Compatibility Matrix Card */}
-        <section className="group">
-          <div className="settings-compat-card" style={{ background: theme.card }}>
-            <div className="settings-compat-header">
-              <h3 style={{ color: theme.foreground }}>Minecraft Java Compatibility</h3>
-              <span
-                className="settings-badge"
-                style={{ background: theme.secondary, color: theme.primary }}
-              >
-                Phase 4 Auto-Downloader
-              </span>
-            </div>
-
-            <div className="settings-compat-grid">
-              <div className="settings-compat-item">
-                <span className="compat-ver" style={{ color: theme.mutedForeground }}>
-                  1.20.5 – 1.21+
-                </span>
-                <strong style={{ color: theme.foreground }}>Java 21 (LTS)</strong>
-              </div>
-              <div className="settings-compat-item">
-                <span className="compat-ver" style={{ color: theme.mutedForeground }}>
-                  1.18 – 1.20.4
-                </span>
-                <strong style={{ color: theme.foreground }}>Java 17 (LTS)</strong>
-              </div>
-              <div className="settings-compat-item">
-                <span className="compat-ver" style={{ color: theme.mutedForeground }}>
-                  1.17 – 1.17.1
-                </span>
-                <strong style={{ color: theme.foreground }}>Java 16 / 17</strong>
-              </div>
-              <div className="settings-compat-item">
-                <span className="compat-ver" style={{ color: theme.mutedForeground }}>
-                  1.16.5 &amp; older
-                </span>
-                <strong style={{ color: theme.foreground }}>Java 8 (64-bit)</strong>
-              </div>
-            </div>
-
-            <p className="settings-compat-note" style={{ color: theme.mutedForeground }}>
-              In Phase 4, SeraLauncher will automatically detect instance version requirements and
-              download any missing Java runtimes (via Adoptium Eclipse Temurin API) directly during
-              instance creation.
-            </p>
-          </div>
-        </section>
-
         <EffectiveJavaArgsModal
           isOpen={showArgsModal}
           onClose={() => setShowArgsModal(false)}

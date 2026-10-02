@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import {
   BUNDLED_FAMILY,
   DEFAULT_FONT_SIZE,
@@ -14,6 +15,12 @@ import {
   type GcPreset,
   type JavaRuntime,
   type Settings,
+  type Instance,
+  type MinecraftVersion,
+  type MinecraftVersionsResponse,
+  type PublicAccount,
+  type DeviceCodeResponse,
+  type DownloadItem,
 } from "@sera/ui";
 
 const DEFAULTS: Settings = {
@@ -127,4 +134,241 @@ export function useSettings() {
   }, []);
 
   return { settings, update, fonts, javaRuntimes, systemMemoryMb, refreshJavaRuntimes };
+}
+
+export type RunningInstanceInfo = {
+  id: string;
+  name: string;
+  mcVersion: string;
+  startedAt: number;
+};
+
+export function useInstances() {
+  const [instances, setInstances] = useState<Instance[]>([]);
+  const [versions, setVersions] = useState<MinecraftVersion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [runningInstances, setRunningInstances] = useState<RunningInstanceInfo[]>([]);
+
+  const refreshInstances = useCallback(() => {
+    invoke<Instance[]>("list_instances")
+      .then((list) => setInstances(list))
+      .catch((err) => console.warn("sera: could not list instances:", err));
+  }, []);
+
+  const refreshRunningInstances = useCallback(() => {
+    invoke<RunningInstanceInfo[]>("get_running_instances")
+      .then((res) => setRunningInstances(res))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshInstances();
+    refreshRunningInstances();
+
+    let unlistenRunning: (() => void) | null = null;
+    let unlistenInstances: (() => void) | null = null;
+
+    listen<RunningInstanceInfo[]>("running_instances_changed", (event) => {
+      setRunningInstances(event.payload);
+      refreshInstances();
+    }).then((unsub) => {
+      unlistenRunning = unsub;
+    });
+
+    listen("instances_changed", () => {
+      refreshInstances();
+    }).then((unsub) => {
+      unlistenInstances = unsub;
+    });
+
+    return () => {
+      if (unlistenRunning) unlistenRunning();
+      if (unlistenInstances) unlistenInstances();
+    };
+  }, [refreshInstances, refreshRunningInstances]);
+
+  const killInstance = useCallback(
+    async (id: string) => {
+      try {
+        await invoke("kill_instance", { id });
+        refreshRunningInstances();
+      } catch (err) {
+        console.error("Failed to kill instance:", err);
+      }
+    },
+    [refreshRunningInstances],
+  );
+
+  useEffect(() => {
+    let stale = false;
+    invoke<MinecraftVersionsResponse>("get_minecraft_versions")
+      .then((res) => {
+        if (!stale && res.versions) {
+          setVersions(res.versions);
+        }
+      })
+      .catch((err) => console.warn("sera: could not fetch mc versions:", err))
+      .finally(() => {
+        if (!stale) setLoading(false);
+      });
+    return () => {
+      stale = true;
+    };
+  }, []);
+
+  const createInstance = useCallback(
+    async (name: string, mcVersion: string, versionType: string, icon?: string | null) => {
+      // Trigger creation in background. Rust writes instance.json within 2ms and emits
+      // "instances_changed", making the instance appear in the list instantly!
+      invoke("create_instance", { name, mcVersion, versionType, icon })
+        .then(() => {
+          refreshInstances();
+        })
+        .catch((err) => {
+          console.error("Failed to create instance:", err);
+          refreshInstances();
+        });
+      refreshInstances();
+    },
+    [refreshInstances],
+  );
+
+  const deleteInstance = useCallback(
+    async (id: string) => {
+      await invoke("delete_instance", { id });
+      refreshInstances();
+    },
+    [refreshInstances],
+  );
+
+  const updateInstance = useCallback(
+    async (instance: Instance) => {
+      await invoke("update_instance", { instance });
+      refreshInstances();
+    },
+    [refreshInstances],
+  );
+
+  const openFolder = useCallback(async (id: string) => {
+    await invoke("open_instance_folder", { id });
+  }, []);
+
+  const launchInstance = useCallback(
+    async (id: string) => {
+      await invoke("launch_instance", { id });
+      refreshInstances();
+    },
+    [refreshInstances],
+  );
+
+  return {
+    instances,
+    versions,
+    loading,
+    refreshInstances,
+    createInstance,
+    deleteInstance,
+    updateInstance,
+    openFolder,
+    launchInstance,
+    runningInstances,
+    killInstance,
+    refreshRunningInstances,
+  };
+}
+export function useAccounts() {
+  const [activeAccount, setActiveAccount] = useState<PublicAccount | null>(null);
+  const [accounts, setAccounts] = useState<PublicAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refreshAccounts = useCallback(() => {
+    invoke<PublicAccount | null>("get_active_account")
+      .then((acc) => setActiveAccount(acc ?? null))
+      .catch((err) => console.warn("sera: could not get active account:", err));
+
+    invoke<PublicAccount[]>("get_all_accounts")
+      .then((list) => setAccounts(list))
+      .catch((err) => console.warn("sera: could not get all accounts:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    refreshAccounts();
+  }, [refreshAccounts]);
+
+  const selectAccount = useCallback(
+    async (id: string) => {
+      await invoke("set_active_account", { id });
+      refreshAccounts();
+    },
+    [refreshAccounts],
+  );
+
+  const removeAccount = useCallback(
+    async (id: string) => {
+      await invoke("remove_account", { id });
+      refreshAccounts();
+    },
+    [refreshAccounts],
+  );
+
+  const startMicrosoftLogin = useCallback(async () => {
+    return await invoke<DeviceCodeResponse>("start_microsoft_login");
+  }, []);
+
+  const pollMicrosoftLogin = useCallback(
+    async (deviceCode: string) => {
+      const acc = await invoke<PublicAccount>("poll_microsoft_login", { deviceCode });
+      refreshAccounts();
+      return acc;
+    },
+    [refreshAccounts],
+  );
+
+  const addOfflineAccount = useCallback(
+    async (username: string) => {
+      const acc = await invoke<PublicAccount>("add_offline_account", { username });
+      refreshAccounts();
+      return acc;
+    },
+    [refreshAccounts],
+  );
+
+  return {
+    activeAccount,
+    accounts,
+    loading,
+    refreshAccounts,
+    selectAccount,
+    removeAccount,
+    startMicrosoftLogin,
+    pollMicrosoftLogin,
+    addOfflineAccount,
+  };
+}
+
+export function useDownloads() {
+  const [downloads, setDownloads] = useState<DownloadItem[]>([]);
+
+  useEffect(() => {
+    let unlistenFn: (() => void) | null = null;
+
+    invoke<DownloadItem[]>("get_active_downloads")
+      .then((active) => {
+        if (active) setDownloads(active);
+      })
+      .catch((err) => console.warn("sera: could not get active downloads:", err));
+
+    listen<DownloadItem[]>("downloads_changed", (event) => {
+      setDownloads(event.payload ?? []);
+    }).then((unsub) => {
+      unlistenFn = unsub;
+    });
+
+    return () => {
+      if (unlistenFn) unlistenFn();
+    };
+  }, []);
+
+  return { downloads };
 }

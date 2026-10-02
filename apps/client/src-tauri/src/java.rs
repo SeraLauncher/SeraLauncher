@@ -271,12 +271,41 @@ fn candidate_paths() -> Vec<PathBuf> {
     candidates
 }
 
-/// Discovers installed Java runtimes on the machine, sorted by major version descending.
-pub fn discover_java_runtimes() -> Vec<JavaRuntime> {
+/// Discovers installed Java runtimes with support for extra runtime roots (e.g. SeraLauncher runtimes/).
+pub fn discover_java_runtimes_with_extra(extra_roots: &[PathBuf]) -> Vec<JavaRuntime> {
+    let mut candidates = candidate_paths();
+
+    for root in extra_roots {
+        if let Ok(entries) = std::fs::read_dir(root) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_dir() {
+                    candidates.push(p.join("bin").join("java"));
+                    candidates.push(p.join("bin").join("javaw.exe"));
+                    candidates.push(p.join("bin").join("java.exe"));
+                    candidates.push(p.join("Contents").join("Home").join("bin").join("java"));
+
+                    // Also search one subfolder down if archive extracted a root folder
+                    if let Ok(subs) = std::fs::read_dir(&p) {
+                        for sub in subs.flatten() {
+                            let sp = sub.path();
+                            if sp.is_dir() {
+                                candidates.push(sp.join("bin").join("java"));
+                                candidates.push(sp.join("bin").join("javaw.exe"));
+                                candidates.push(sp.join("bin").join("java.exe"));
+                                candidates.push(sp.join("Contents").join("Home").join("bin").join("java"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     let mut runtimes = Vec::new();
     let mut visited_paths = std::collections::HashSet::new();
 
-    for path in candidate_paths() {
+    for path in candidates {
         if !path.exists() {
             continue;
         }
@@ -297,6 +326,12 @@ pub fn discover_java_runtimes() -> Vec<JavaRuntime> {
     });
 
     runtimes
+}
+
+/// Discovers installed Java runtimes on the machine, sorted by major version descending.
+#[allow(dead_code)]
+pub fn discover_java_runtimes() -> Vec<JavaRuntime> {
+    discover_java_runtimes_with_extra(&[])
 }
 
 /// Returns the host machine's total physical memory in megabytes (MB).

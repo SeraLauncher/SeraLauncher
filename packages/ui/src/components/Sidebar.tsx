@@ -86,7 +86,7 @@ function NavButton({
     >
       <Icon
         name={item.icon}
-        size={22}
+        size={26}
         color={selected ? theme.sidebarPrimary : theme.mutedForeground}
       />
     </motion.button>
