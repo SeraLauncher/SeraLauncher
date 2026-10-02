@@ -1,5 +1,13 @@
 export type DownloadPhase = "java" | "client" | "libraries" | "assets";
 
+export type DownloadStatus =
+  | "downloading"
+  | "paused"
+  | "stopped"
+  | "extracting"
+  | "completed"
+  | "failed";
+
 export type DownloadItem = {
   id: string;
   title: string;
@@ -9,7 +17,7 @@ export type DownloadItem = {
   totalBytes?: number | null;
   speedBytesPerSec: number;
   progress: number; // 0.0 to 100.0
-  status: "downloading" | "extracting" | "completed" | "failed";
+  status: DownloadStatus;
   error?: string | null;
   order?: number;
 };

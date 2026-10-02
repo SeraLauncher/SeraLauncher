@@ -1,5 +1,6 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 
@@ -14,21 +15,119 @@ pub struct DownloadItem {
     pub total_bytes: Option<u64>,
     pub speed_bytes_per_sec: u64,
     pub progress: f64,       // 0.0 .. 100.0
-    pub status: String,      // "downloading" | "extracting" | "completed" | "failed"
+    pub status: String,      // "downloading" | "paused" | "stopped" | "extracting" | "completed" | "failed"
     pub error: Option<String>,
     pub order: u64,
 }
 
+#[derive(Default)]
+pub struct DownloadController {
+    pub paused: AtomicBool,
+    pub stopped: AtomicBool,
+}
+
 static ORDER_COUNTER: AtomicU64 = AtomicU64::new(1);
 static ACTIVE_DOWNLOADS: Mutex<Option<Vec<DownloadItem>>> = Mutex::new(None);
+static CONTROLLERS: Mutex<Option<HashMap<String, Arc<DownloadController>>>> = Mutex::new(None);
+
+pub fn get_or_create_controller(id: &str) -> Arc<DownloadController> {
+    let mut guard = CONTROLLERS.lock().unwrap();
+    let map = guard.get_or_insert_with(HashMap::new);
+    map.entry(id.to_string())
+        .or_insert_with(|| Arc::new(DownloadController::default()))
+        .clone()
+}
+
+pub fn is_download_paused(id: &str) -> bool {
+    if let Ok(guard) = CONTROLLERS.lock() {
+        if let Some(map) = guard.as_ref() {
+            if let Some(c) = map.get(id) {
+                return c.paused.load(Ordering::Relaxed);
+            }
+        }
+    }
+    false
+}
+
+pub fn is_download_stopped(id: &str) -> bool {
+    if let Ok(guard) = CONTROLLERS.lock() {
+        if let Some(map) = guard.as_ref() {
+            if let Some(c) = map.get(id) {
+                return c.stopped.load(Ordering::Relaxed);
+            }
+        }
+    }
+    false
+}
+
+pub fn pause_download(app: &tauri::AppHandle, id: &str) {
+    let ctrl = get_or_create_controller(id);
+    ctrl.paused.store(true, Ordering::Relaxed);
+
+    if let Ok(mut guard) = ACTIVE_DOWNLOADS.lock() {
+        if let Some(list) = guard.as_mut() {
+            if let Some(item) = list.iter_mut().find(|d| d.id == id) {
+                item.status = "paused".to_string();
+                item.speed_bytes_per_sec = 0;
+            }
+            let snapshot = list.clone();
+            let _ = app.emit("downloads_changed", snapshot);
+        }
+    }
+}
+
+pub fn resume_download(app: &tauri::AppHandle, id: &str) {
+    let ctrl = get_or_create_controller(id);
+    ctrl.paused.store(false, Ordering::Relaxed);
+
+    if let Ok(mut guard) = ACTIVE_DOWNLOADS.lock() {
+        if let Some(list) = guard.as_mut() {
+            if let Some(item) = list.iter_mut().find(|d| d.id == id) {
+                item.status = "downloading".to_string();
+            }
+            let snapshot = list.clone();
+            let _ = app.emit("downloads_changed", snapshot);
+        }
+    }
+}
+
+pub fn stop_download(app: &tauri::AppHandle, id: &str) {
+    let ctrl = get_or_create_controller(id);
+    ctrl.stopped.store(true, Ordering::Relaxed);
+    ctrl.paused.store(false, Ordering::Relaxed);
+
+    if let Ok(mut guard) = ACTIVE_DOWNLOADS.lock() {
+        if let Some(list) = guard.as_mut() {
+            if let Some(item) = list.iter_mut().find(|d| d.id == id) {
+                item.status = "stopped".to_string();
+                item.speed_bytes_per_sec = 0;
+            }
+            let snapshot = list.clone();
+            let _ = app.emit("downloads_changed", snapshot);
+        }
+    }
+}
 
 pub fn update_download_progress(app: &tauri::AppHandle, mut item: DownloadItem) {
+    if is_download_stopped(&item.id) {
+        return;
+    }
+    let paused = is_download_paused(&item.id);
+
     if let Ok(mut guard) = ACTIVE_DOWNLOADS.lock() {
         let list = guard.get_or_insert_with(Vec::new);
         if let Some(existing) = list.iter_mut().find(|d| d.id == item.id) {
             item.order = existing.order;
+            if paused {
+                item.status = "paused".to_string();
+                item.speed_bytes_per_sec = 0;
+            }
+            if existing.status == "stopped" || is_download_stopped(&item.id) {
+                item.status = "stopped".to_string();
+                item.speed_bytes_per_sec = 0;
+            }
             // Prevent progress or downloaded_bytes from jumping backwards
-            if existing.status == "downloading" && item.status == "downloading" {
+            if (existing.status == "downloading" || existing.status == "paused") && (item.status == "downloading" || item.status == "paused") {
                 if item.progress < existing.progress {
                     item.progress = existing.progress;
                 }
@@ -39,6 +138,10 @@ pub fn update_download_progress(app: &tauri::AppHandle, mut item: DownloadItem) 
             *existing = item;
         } else {
             item.order = ORDER_COUNTER.fetch_add(1, Ordering::Relaxed);
+            if paused {
+                item.status = "paused".to_string();
+                item.speed_bytes_per_sec = 0;
+            }
             list.push(item);
         }
         let snapshot = list.clone();

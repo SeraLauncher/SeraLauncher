@@ -32,6 +32,7 @@ flate2 = "1.1.10"
 zip = "8.6.0"
 sha1 = "0.11.0"
 futures = "0.3.34"
+tokio = { version = "1", features = ["time"] }
 md-5 = "0.11.0"
 
 

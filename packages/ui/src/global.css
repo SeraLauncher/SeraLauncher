@@ -3284,7 +3284,7 @@ button {
 .header-download-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 10px 12px;
   border-radius: 9px;
   border: 1px solid var(--border);
@@ -3297,6 +3297,14 @@ button {
   gap: 8px;
 }
 
+.header-download-card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
 .header-download-item-title {
   font-size: 0.82rem;
   font-weight: 600;
@@ -3305,30 +3313,48 @@ button {
   text-overflow: ellipsis;
 }
 
-.header-download-item-status {
-  font-size: 0.68rem;
+.header-download-item-subtitle {
+  font-size: 0.69rem;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
 }
 
-.header-download-card-meta {
+.header-download-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 0.69rem;
+  gap: 5px;
+  flex-shrink: 0;
 }
 
-.header-download-meta-size {
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
+.header-download-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: all 120ms ease;
 }
 
-.header-download-meta-speed {
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
+.header-download-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  filter: brightness(1.1);
+}
+
+.header-download-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
 }
 
 .header-download-progress-track {
@@ -3347,11 +3373,16 @@ button {
 .header-download-card-bottom {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  font-size: 0.7rem;
 }
 
-.header-download-meta-percent {
-  font-size: 0.7rem;
-  font-weight: 600;
+.header-download-meta-size {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-download-meta-eta {
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }

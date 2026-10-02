@@ -214,6 +214,16 @@ pub async fn install_adoptium_runtime(
         crate::downloads::fail_download(app, &task_id, &msg);
         msg
     })? {
+        if crate::downloads::is_download_stopped(&task_id) {
+            return Err("Java download cancelled".to_string());
+        }
+        while crate::downloads::is_download_paused(&task_id) {
+            if crate::downloads::is_download_stopped(&task_id) {
+                return Err("Java download cancelled".to_string());
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+
         downloaded += chunk.len() as u64;
         bytes.extend_from_slice(&chunk);
 

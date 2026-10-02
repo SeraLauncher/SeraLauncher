@@ -533,6 +533,18 @@ pub async fn install_minecraft_version(
     let _ = std::fs::create_dir_all(&natives_dir);
 
     for lib in &pkg.libraries {
+        if crate::downloads::is_download_stopped(&task_id) {
+            crate::downloads::fail_download(app, &task_id, "Download cancelled");
+            return Err("Download cancelled by user".to_string());
+        }
+        while crate::downloads::is_download_paused(&task_id) {
+            if crate::downloads::is_download_stopped(&task_id) {
+                crate::downloads::fail_download(app, &task_id, "Download cancelled");
+                return Err("Download cancelled by user".to_string());
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+
         if let Some(rules) = &lib.rules {
             if !library_rules_allow(rules) {
                 continue;
@@ -632,6 +644,18 @@ pub async fn install_minecraft_version(
         let mut current_speed = 0u64;
 
         for chunk in missing_assets.chunks(BATCH_SIZE) {
+            if crate::downloads::is_download_stopped(&task_id) {
+                crate::downloads::fail_download(app, &task_id, "Download cancelled");
+                return Err("Download cancelled by user".to_string());
+            }
+            while crate::downloads::is_download_paused(&task_id) {
+                if crate::downloads::is_download_stopped(&task_id) {
+                    crate::downloads::fail_download(app, &task_id, "Download cancelled");
+                    return Err("Download cancelled by user".to_string());
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            }
+
             let mut futures = Vec::new();
             let mut chunk_size: u64 = 0;
             for (url, target, hash, size) in chunk {

@@ -176,6 +176,21 @@ fn get_active_downloads() -> Vec<downloads::DownloadItem> {
 }
 
 #[tauri::command]
+fn pause_download(app: tauri::AppHandle, id: String) {
+    downloads::pause_download(&app, &id);
+}
+
+#[tauri::command]
+fn resume_download(app: tauri::AppHandle, id: String) {
+    downloads::resume_download(&app, &id);
+}
+
+#[tauri::command]
+fn stop_download(app: tauri::AppHandle, id: String) {
+    downloads::stop_download(&app, &id);
+}
+
+#[tauri::command]
 async fn create_instance(
     app: tauri::AppHandle,
     name: String,
@@ -466,7 +481,10 @@ pub fn run() {
             start_microsoft_login,
             poll_microsoft_login,
             add_offline_account,
-            get_active_downloads
+            get_active_downloads,
+            pause_download,
+            resume_download,
+            stop_download
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

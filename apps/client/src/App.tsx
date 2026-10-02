@@ -53,7 +53,7 @@ export default function App() {
     pollMicrosoftLogin,
     addOfflineAccount,
   } = useAccounts();
-  const { downloads } = useDownloads();
+  const { downloads, pauseDownload, resumeDownload, stopDownload } = useDownloads();
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [loginReason, setLoginReason] = useState<string | null>(null);
 
@@ -174,6 +174,9 @@ export default function App() {
               setLoginReason(null);
               setShowAccountModal(true);
             }}
+            onPauseDownload={pauseDownload}
+            onResumeDownload={resumeDownload}
+            onStopDownload={stopDownload}
           />
 
           <div className="page-viewport" style={{ background: theme.background }}>

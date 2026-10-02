@@ -370,5 +370,29 @@ export function useDownloads() {
     };
   }, []);
 
-  return { downloads };
+  const pauseDownload = useCallback(async (id: string) => {
+    try {
+      await invoke("pause_download", { id });
+    } catch (err) {
+      console.error("Failed to pause download:", err);
+    }
+  }, []);
+
+  const resumeDownload = useCallback(async (id: string) => {
+    try {
+      await invoke("resume_download", { id });
+    } catch (err) {
+      console.error("Failed to resume download:", err);
+    }
+  }, []);
+
+  const stopDownload = useCallback(async (id: string) => {
+    try {
+      await invoke("stop_download", { id });
+    } catch (err) {
+      console.error("Failed to stop download:", err);
+    }
+  }, []);
+
+  return { downloads, pauseDownload, resumeDownload, stopDownload };
 }

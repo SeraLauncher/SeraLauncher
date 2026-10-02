@@ -7,14 +7,11 @@ import { snappy } from "../motion";
 import steveGraySkin from "../assets/images/steve-gray-skin.png";
 import type { DownloadItem } from "../downloads";
 
-function formatDownloadSize(downloaded: number, total?: number | null): string | null {
-  if (!total || total <= 0) {
-    if (downloaded > 0) {
-      return `${(downloaded / (1024 * 1024)).toFixed(1)} MB`;
-    }
-    return null;
-  }
+function formatDownloadSize(downloaded: number, total?: number | null): string {
   const dlMB = (downloaded / (1024 * 1024)).toFixed(1);
+  if (!total || total <= 0) {
+    return `${dlMB} MB`;
+  }
   const totMB = (total / (1024 * 1024)).toFixed(1);
   return `${dlMB} MB / ${totMB} MB`;
 }
@@ -24,7 +21,38 @@ function formatSpeed(bytesPerSec: number): string {
   if (bytesPerSec >= 1024 * 1024) {
     return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
   }
-  return `${(bytesPerSec / 1024).toFixed(0)} KB/s`;
+  return `${Math.round(bytesPerSec / 1024)} KB/s`;
+}
+
+function formatEta(item: DownloadItem): string {
+  if (item.status === "paused") return "Paused";
+  if (item.status === "completed") return "Completed";
+  if (item.status === "extracting") return "Extracting...";
+  if (item.status === "failed") return "Failed";
+  if (item.status === "stopped") return "Cancelled";
+
+  if (item.status === "downloading") {
+    if (!item.totalBytes || item.totalBytes <= item.downloadedBytes) {
+      if (item.progress >= 99) return "< 5s remaining";
+      return "Finalizing...";
+    }
+    if (!item.speedBytesPerSec || item.speedBytesPerSec <= 0) {
+      return "Calculating...";
+    }
+    const remainingBytes = item.totalBytes - item.downloadedBytes;
+    const secondsLeft = Math.ceil(remainingBytes / item.speedBytesPerSec);
+    if (secondsLeft <= 5) return "< 5s remaining";
+    if (secondsLeft < 60) return `${secondsLeft}s remaining`;
+    if (secondsLeft < 3600) {
+      const mins = Math.floor(secondsLeft / 60);
+      const secs = secondsLeft % 60;
+      return `${mins}m ${secs}s remaining`;
+    }
+    const hours = Math.floor(secondsLeft / 3600);
+    const mins = Math.floor((secondsLeft % 3600) / 60);
+    return `${hours}h ${mins}m remaining`;
+  }
+  return "";
 }
 
 export type Account = {
@@ -124,6 +152,9 @@ export function AppHeader({
   downloads = [],
   onKillInstance,
   onAccountClick,
+  onPauseDownload,
+  onResumeDownload,
+  onStopDownload,
 }: {
   theme: Theme;
   appearance: Appearance;
@@ -133,6 +164,9 @@ export function AppHeader({
   downloads?: DownloadItem[];
   onKillInstance?: (id: string) => void;
   onAccountClick?: () => void;
+  onPauseDownload?: (id: string) => void;
+  onResumeDownload?: (id: string) => void;
+  onStopDownload?: (id: string) => void;
 }) {
   const [showDownloads, setShowDownloads] = useState(false);
   const downloadsRef = useRef<HTMLDivElement>(null);
@@ -167,12 +201,21 @@ export function AppHeader({
   }, [downloads]);
 
   const activeDownloads = sortedDownloads.filter(
+    (d: DownloadItem) =>
+      d.status === "downloading" || d.status === "paused" || d.status === "extracting",
+  );
+  const isDownloading = activeDownloads.some(
     (d: DownloadItem) => d.status === "downloading" || d.status === "extracting",
   );
-  const isDownloading = activeDownloads.length > 0;
+  const isAnyActive = activeDownloads.length > 0;
+
+  const totalSpeed = activeDownloads.reduce(
+    (sum: number, d: DownloadItem) => sum + (d.status === "downloading" ? d.speedBytesPerSec : 0),
+    0,
+  );
 
   const downloadButtonLabel = (() => {
-    if (!isDownloading) {
+    if (!isAnyActive) {
       if (sortedDownloads.some((d: DownloadItem) => d.status === "completed")) {
         return "Downloads (Done)";
       }
@@ -180,24 +223,28 @@ export function AppHeader({
     }
     if (activeDownloads.length === 1) {
       const active = activeDownloads[0];
-      const percent = Math.round(active.progress);
+      if (active.status === "paused") {
+        return `${active.phase === "java" ? "Downloading Java" : "Downloading Assets"} • Paused`;
+      }
+      const speedStr = formatSpeed(active.speedBytesPerSec);
       if (active.phase === "java") {
-        return `Downloading Java (${percent}%)`;
+        return `Downloading Java • ${speedStr}`;
       }
       if (active.phase === "assets") {
-        return `Downloading Assets (${percent}%)`;
+        return `Downloading Assets • ${speedStr}`;
       }
-      return `${active.title} (${percent}%)`;
+      return `${active.title} • ${speedStr}`;
     }
-    const avgPercent = Math.round(
-      activeDownloads.reduce((sum: number, d: DownloadItem) => sum + d.progress, 0) /
-        activeDownloads.length,
-    );
-    return `Downloading (${activeDownloads.length} tasks • ${avgPercent}%)`;
+    const allPaused = activeDownloads.every((d: DownloadItem) => d.status === "paused");
+    if (allPaused) {
+      return `Downloading (${activeDownloads.length} tasks • Paused)`;
+    }
+    const speedStr = formatSpeed(totalSpeed);
+    return `Downloading (${activeDownloads.length} tasks • ${speedStr})`;
   })();
 
   const overallProgress = (() => {
-    if (!isDownloading) return 100;
+    if (!isAnyActive) return 100;
     if (activeDownloads.length === 1) return activeDownloads[0].progress;
     return (
       activeDownloads.reduce((sum: number, d: DownloadItem) => sum + d.progress, 0) /
@@ -326,16 +373,7 @@ export function AppHeader({
                     <div className="header-download-list">
                       {sortedDownloads.map((item: DownloadItem) => {
                         const sizeLabel = formatDownloadSize(item.downloadedBytes, item.totalBytes);
-                        const speedLabel =
-                          item.status === "downloading"
-                            ? formatSpeed(item.speedBytesPerSec)
-                            : item.status === "extracting"
-                              ? "Extracting..."
-                              : item.status === "completed"
-                                ? "Completed"
-                                : item.status === "failed"
-                                  ? "Failed"
-                                  : "";
+                        const etaLabel = formatEta(item);
 
                         return (
                           <div
@@ -347,41 +385,97 @@ export function AppHeader({
                             }}
                           >
                             <div className="header-download-card-header">
-                              <span
-                                className="header-download-item-title"
-                                style={{ color: theme.foreground }}
-                              >
-                                {item.title}
-                              </span>
-                              <span
-                                className="header-download-item-status"
-                                style={{
-                                  color:
-                                    item.status === "completed"
-                                      ? theme.success
-                                      : item.status === "failed"
-                                        ? theme.destructive
-                                        : theme.primary,
-                                }}
-                              >
-                                {item.phaseLabel}
-                              </span>
-                            </div>
+                              <div className="header-download-card-title-group">
+                                <span
+                                  className="header-download-item-title"
+                                  style={{ color: theme.foreground }}
+                                >
+                                  {item.title}
+                                </span>
+                                <span
+                                  className="header-download-item-subtitle"
+                                  style={{ color: theme.mutedForeground }}
+                                >
+                                  {item.phaseLabel}
+                                </span>
+                              </div>
 
-                            {/* Top row: size on top left, speed on top right */}
-                            <div className="header-download-card-meta">
-                              <span
-                                className="header-download-meta-size"
-                                style={{ color: theme.mutedForeground }}
-                              >
-                                {sizeLabel ?? ""}
-                              </span>
-                              <span
-                                className="header-download-meta-speed"
-                                style={{ color: theme.mutedForeground }}
-                              >
-                                {speedLabel}
-                              </span>
+                              {/* Top right of the progress bar: pause and stop buttons! */}
+                              <div className="header-download-actions">
+                                {(item.status === "downloading" || item.status === "paused") && (
+                                  <>
+                                    {item.status === "downloading" ? (
+                                      <button
+                                        type="button"
+                                        className="header-download-action-btn"
+                                        onClick={() => onPauseDownload?.(item.id)}
+                                        title="Pause download"
+                                        style={{
+                                          color: theme.foreground,
+                                          borderColor: theme.border,
+                                        }}
+                                      >
+                                        <Icon name="pause" size={12} color={theme.foreground} />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="header-download-action-btn"
+                                        onClick={() => onResumeDownload?.(item.id)}
+                                        title="Resume download"
+                                        style={{
+                                          color: theme.foreground,
+                                          borderColor: theme.border,
+                                        }}
+                                      >
+                                        <Icon name="play" size={12} color={theme.foreground} />
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="header-download-action-btn"
+                                      onClick={() => onStopDownload?.(item.id)}
+                                      title="Stop download"
+                                      style={{
+                                        color: theme.destructive,
+                                        borderColor: theme.border,
+                                      }}
+                                    >
+                                      <Icon name="playerStop" size={12} color={theme.destructive} />
+                                    </button>
+                                  </>
+                                )}
+                                {item.status === "completed" && (
+                                  <span
+                                    className="header-download-status-badge"
+                                    style={{
+                                      color: theme.success,
+                                      background: "rgba(16, 185, 129, 0.12)",
+                                    }}
+                                  >
+                                    Done
+                                  </span>
+                                )}
+                                {item.status === "failed" && (
+                                  <span
+                                    className="header-download-status-badge"
+                                    style={{
+                                      color: theme.destructive,
+                                      background: "rgba(239, 68, 68, 0.12)",
+                                    }}
+                                  >
+                                    Failed
+                                  </span>
+                                )}
+                                {item.status === "stopped" && (
+                                  <span
+                                    className="header-download-status-badge"
+                                    style={{ color: theme.mutedForeground, background: theme.card }}
+                                  >
+                                    Cancelled
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
                             {/* Progress bar */}
@@ -398,18 +492,35 @@ export function AppHeader({
                                       ? theme.destructive
                                       : item.status === "completed"
                                         ? theme.success
-                                        : theme.primary,
+                                        : item.status === "paused"
+                                          ? "rgba(245, 158, 11, 0.9)"
+                                          : theme.primary,
                                 }}
                               />
                             </div>
 
-                            {/* Bottom row: percentage at the bottom of the progress bar */}
+                            {/* Bottom row: Megabyte calculation under progress bar on left, ETA on right (percentage removed) */}
                             <div className="header-download-card-bottom">
                               <span
-                                className="header-download-meta-percent"
-                                style={{ color: theme.foreground }}
+                                className="header-download-meta-size"
+                                style={{ color: theme.mutedForeground }}
                               >
-                                {Math.round(item.progress)}%
+                                {sizeLabel}
+                              </span>
+                              <span
+                                className="header-download-meta-eta"
+                                style={{
+                                  color:
+                                    item.status === "paused"
+                                      ? "rgba(245, 158, 11, 1)"
+                                      : item.status === "completed"
+                                        ? theme.success
+                                        : item.status === "failed"
+                                          ? theme.destructive
+                                          : theme.mutedForeground,
+                                }}
+                              >
+                                {etaLabel}
                               </span>
                             </div>
                           </div>
