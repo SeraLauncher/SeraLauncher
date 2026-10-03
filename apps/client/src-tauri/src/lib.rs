@@ -254,6 +254,24 @@ fn add_offline_account(
 }
 
 #[tauri::command]
+async fn login_elyby(
+    app: tauri::AppHandle,
+    username: String,
+    password: String,
+) -> Result<auth::PublicAccountInfo, String> {
+    auth::login_elyby(&app, &username, &password).await
+}
+
+#[tauri::command]
+async fn login_littleskin(
+    app: tauri::AppHandle,
+    username: String,
+    password: String,
+) -> Result<auth::PublicAccountInfo, String> {
+    auth::login_littleskin(&app, &username, &password).await
+}
+
+#[tauri::command]
 fn get_running_instances() -> Vec<minecraft::RunningInstanceInfo> {
     minecraft::list_running_instances()
 }
@@ -481,6 +499,8 @@ pub fn run() {
             start_microsoft_login,
             poll_microsoft_login,
             add_offline_account,
+            login_elyby,
+            login_littleskin,
             get_active_downloads,
             pause_download,
             resume_download,

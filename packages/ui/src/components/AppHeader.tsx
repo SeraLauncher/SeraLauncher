@@ -99,7 +99,44 @@ export function MinecraftHead({
   size?: number;
   isGray?: boolean;
 }) {
+  const currentSource = `${username ?? ""}-${skinUrl ?? ""}-${avatarUrl ?? ""}`;
+  const [prevSource, setPrevSource] = useState(currentSource);
   const [loadFailed, setLoadFailed] = useState(false);
+
+  if (prevSource !== currentSource) {
+    setPrevSource(currentSource);
+    setLoadFailed(false);
+  }
+
+  // check if url is a 2d pre-rendered head rather than a 64x64 skin texture sheet
+  const isDirectAvatar = Boolean(
+    avatarUrl || (skinUrl && (skinUrl.includes("/avatar") || skinUrl.includes("avatarUrl"))),
+  );
+
+  const effectiveAvatar = avatarUrl ?? (isDirectAvatar ? skinUrl : undefined);
+  const headSrc =
+    effectiveAvatar ?? `https://mc-heads.net/avatar/${encodeURIComponent(username ?? "Steve")}/32`;
+
+  if (isDirectAvatar || loadFailed) {
+    return (
+      <img
+        src={headSrc}
+        alt={username ?? "Steve"}
+        width={size}
+        height={size}
+        loading="lazy"
+        onError={() => setLoadFailed(true)}
+        style={{
+          width: size,
+          height: size,
+          flexShrink: 0,
+          imageRendering: "pixelated",
+          filter: isGray ? "grayscale(100%)" : "none",
+          display: "block",
+        }}
+      />
+    );
+  }
 
   // default to the official grayscale steve texture when no specific skin/user is given
   const isDefaultTexture = !username && !avatarUrl && !skinUrl;
@@ -127,13 +164,18 @@ export function MinecraftHead({
           filter: isGray ? "grayscale(100%)" : "none",
           display: "inline-block",
         }}
-      />
+      >
+        {/* hidden preloader to catch 404s on background-image and fall back to rendered avatar */}
+        <img
+          src={activeSkin}
+          alt=""
+          aria-hidden="true"
+          style={{ display: "none" }}
+          onError={() => setLoadFailed(true)}
+        />
+      </div>
     );
   }
-
-  // player head endpoint for usernames or custom avatar URLs
-  const headSrc =
-    avatarUrl ?? `https://mc-heads.net/avatar/${encodeURIComponent(username ?? "Steve")}/32`;
 
   return (
     <img

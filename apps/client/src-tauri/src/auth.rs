@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::paths::accounts_file_path;
 
-pub const MS_CLIENT_ID: &str = "c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb";
+pub const MS_CLIENT_ID: &str = "b7fd5c17-f26e-47c5-9a41-5d9fa68b5a4b";
 
 fn default_account_type() -> String {
     "microsoft".to_string()
@@ -27,7 +27,7 @@ pub struct DeviceCodeResponse {
 pub struct StoredAccount {
     pub id: String,
     #[serde(default = "default_account_type")]
-    pub account_type: String, // "microsoft" or "offline"
+    pub account_type: String, // "microsoft", "offline", "elyby", "littleskin"
     pub username: String,
     pub uuid: String,
     pub skin_url: Option<String>,
@@ -35,6 +35,10 @@ pub struct StoredAccount {
     pub microsoft_refresh_token: Option<String>,
     #[serde(default)]
     pub minecraft_access_token: Option<String>,
+    #[serde(default)]
+    pub client_token: Option<String>,
+    #[serde(default)]
+    pub auth_server_url: Option<String>,
     #[serde(default)]
     pub expires_at: Option<u64>,
 }
@@ -55,6 +59,49 @@ pub struct PublicAccountInfo {
     pub uuid: String,
     pub skin_url: Option<String>,
     pub is_active: bool,
+}
+
+
+/// Standardises a 32-hex character Yggdrasil UUID into standard 8-4-4-4-12 hyphenated format.
+pub fn format_uuid_with_dashes(raw: &str) -> String {
+    let clean = raw.replace('-', "");
+    if clean.len() == 32 {
+        format!(
+            "{}-{}-{}-{}-{}",
+            &clean[0..8],
+            &clean[8..12],
+            &clean[12..16],
+            &clean[16..20],
+            &clean[20..32]
+        )
+    } else {
+        raw.to_string()
+    }
+}
+
+/// Generates a unique client token for Yggdrasil authentication requests.
+pub fn generate_client_token() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(1);
+    let count = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let pid = std::process::id();
+
+    let mut hasher = Md5::new();
+    hasher.update(format!("sera-client-token:{}:{}:{}", now, pid, count).as_bytes());
+    let bytes = hasher.finalize();
+
+    format!(
+        "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+        bytes[0], bytes[1], bytes[2], bytes[3],
+        bytes[4], bytes[5],
+        bytes[6], bytes[7],
+        bytes[8], bytes[9],
+        bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+    )
 }
 
 impl StoredAccount {
@@ -115,6 +162,8 @@ pub fn add_offline_account(
         skin_url: None,
         microsoft_refresh_token: None,
         minecraft_access_token: None,
+        client_token: None,
+        auth_server_url: None,
         expires_at: None,
     };
 
@@ -206,7 +255,12 @@ pub fn set_active_account_by_id(app: &tauri::AppHandle, id: &str) -> Result<(), 
 // =========================================================================
 
 pub async fn start_device_code_flow() -> Result<DeviceCodeResponse, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.4")
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
     let body_str = format!("client_id={}&scope=XboxLive.signin%20offline_access", MS_CLIENT_ID);
 
     let res = client
@@ -215,7 +269,14 @@ pub async fn start_device_code_flow() -> Result<DeviceCodeResponse, String> {
         .body(body_str)
         .send()
         .await
-        .map_err(|e| format!("Failed to initiate Microsoft device code login: {}", e))?;
+        .map_err(|e| {
+            let err_str = e.to_string();
+            if err_str.contains("error sending request") || err_str.contains("dns") || err_str.contains("timeout") {
+                "Could not connect to Microsoft login service. Please check your internet connection and try again.".to_string()
+            } else {
+                format!("Failed to connect to Microsoft: {}", e)
+            }
+        })?;
 
     if !res.status().is_success() {
         return Err("Microsoft device code request returned non-success status.".into());
@@ -411,13 +472,42 @@ async fn authenticate_minecraft_chain(
         .await
         .map_err(|e| format!("XSTS authorization request failed: {}", e))?;
 
-    if !xsts_res.status().is_success() {
-        return Err("Failed to obtain XSTS token from Xbox Live.".into());
+    let xsts_status = xsts_res.status();
+    let xsts_raw = xsts_res.text().await.map_err(|e| format!("Failed to read XSTS response: {}", e))?;
+
+    if !xsts_status.is_success() {
+        #[derive(Deserialize)]
+        struct XstsErrorPayload {
+            #[serde(rename = "XErr")]
+            x_err: Option<u64>,
+            #[serde(rename = "Message")]
+            message: Option<String>,
+        }
+        if let Ok(err_data) = serde_json::from_str::<XstsErrorPayload>(&xsts_raw) {
+            match err_data.x_err {
+                Some(2148916233) => {
+                    return Err("This Microsoft account does not have an Xbox profile. Please visit xbox.com to create an Xbox account, then sign in again.".into());
+                }
+                Some(2148916235) => {
+                    return Err("Xbox Live is currently unavailable in your region.".into());
+                }
+                Some(2148916238) => {
+                    return Err("Child account detected. An adult must add this account to a Microsoft Family to permit multiplayer games.".into());
+                }
+                Some(code) => {
+                    return Err(format!("Xbox Live error ({})", code));
+                }
+                None => {
+                    if let Some(msg) = err_data.message {
+                        return Err(msg);
+                    }
+                }
+            }
+        }
+        return Err("Failed to obtain XSTS token from Xbox Live. Please check your Xbox account status.".into());
     }
 
-    let xsts_data: XboxLiveAuthResponse = xsts_res
-        .json()
-        .await
+    let xsts_data: XboxLiveAuthResponse = serde_json::from_str(&xsts_raw)
         .map_err(|e| format!("Failed to parse XSTS token response: {}", e))?;
 
     let xsts_token = xsts_data.token;
@@ -500,6 +590,8 @@ async fn authenticate_minecraft_chain(
         skin_url,
         microsoft_refresh_token: Some(ms_refresh_token.to_string()),
         minecraft_access_token: Some(mc_login.access_token),
+        client_token: None,
+        auth_server_url: None,
         expires_at: Some(now_epoch + mc_login.expires_in),
     })
 }
@@ -519,9 +611,21 @@ pub async fn get_valid_active_account(app: &tauri::AppHandle) -> Result<StoredAc
         .position(|a| a.id == active_id)
         .ok_or("Active account could not be found.")?;
 
-    let account = &db.accounts[index];
+    let mut account = db.accounts[index].clone();
     if account.account_type == "offline" {
-        return Ok(account.clone());
+        return Ok(account);
+    }
+
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.4")
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    if account.account_type == "elyby" || account.account_type == "littleskin" {
+        validate_and_refresh_yggdrasil(&client, &mut account).await?;
+        db.accounts[index] = account.clone();
+        let _ = save_account_database(app, &db);
+        return Ok(account);
     }
 
     let now = SystemTime::now()
@@ -532,7 +636,7 @@ pub async fn get_valid_active_account(app: &tauri::AppHandle) -> Result<StoredAc
     let expires_at = account.expires_at.unwrap_or(0);
     // If still valid for at least 5 minutes, use as is
     if expires_at > now + 300 {
-        return Ok(account.clone());
+        return Ok(account);
     }
 
     let refresh_token = account
@@ -541,7 +645,6 @@ pub async fn get_valid_active_account(app: &tauri::AppHandle) -> Result<StoredAc
         .ok_or("Microsoft account is missing refresh token")?;
 
     // Refresh using Microsoft refresh token
-    let client = reqwest::Client::new();
     let body_str = format!(
         "client_id={}&grant_type=refresh_token&refresh_token={}",
         MS_CLIENT_ID, refresh_token
@@ -573,4 +676,447 @@ pub async fn get_valid_active_account(app: &tauri::AppHandle) -> Result<StoredAc
     let _ = save_account_database(app, &db);
 
     Ok(updated_account)
+}
+
+// =========================================================================
+// Ely.by and LittleSkin (Yggdrasil) Authentication Pipeline
+// =========================================================================
+
+pub const ELYBY_AUTH_URL: &str = "https://authserver.ely.by/auth/authenticate";
+pub const ELYBY_REFRESH_URL: &str = "https://authserver.ely.by/auth/refresh";
+pub const ELYBY_VALIDATE_URL: &str = "https://authserver.ely.by/auth/validate";
+pub const ELYBY_SERVER_URL: &str = "https://authserver.ely.by";
+
+pub const LITTLESKIN_AUTH_URL: &str = "https://littleskin.cn/api/yggdrasil/authserver/authenticate";
+pub const LITTLESKIN_REFRESH_URL: &str = "https://littleskin.cn/api/yggdrasil/authserver/refresh";
+pub const LITTLESKIN_VALIDATE_URL: &str = "https://littleskin.cn/api/yggdrasil/authserver/validate";
+pub const LITTLESKIN_SERVER_URL: &str = "https://littleskin.cn/api/yggdrasil";
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct YggdrasilAgent<'a> {
+    name: &'a str,
+    version: u32,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct YggdrasilAuthRequest<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    agent: Option<YggdrasilAgent<'a>>,
+    username: &'a str,
+    password: &'a str,
+    client_token: &'a str,
+    request_user: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct YggdrasilRefreshRequest<'a> {
+    access_token: &'a str,
+    client_token: &'a str,
+    request_user: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct YggdrasilValidateRequest<'a> {
+    access_token: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    client_token: Option<&'a str>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct YggdrasilProfile {
+    id: String,
+    name: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct YggdrasilAuthResponse {
+    access_token: String,
+    client_token: Option<String>,
+    selected_profile: Option<YggdrasilProfile>,
+    #[serde(default)]
+    available_profiles: Vec<YggdrasilProfile>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct YggdrasilErrorResponse {
+    error: Option<String>,
+    error_message: Option<String>,
+}
+
+
+fn base64_decode(input: &str) -> Option<Vec<u8>> {
+    let mut out = Vec::new();
+    let mut buf: u32 = 0;
+    let mut bits = 0;
+    for &b in input.as_bytes() {
+        let val = match b {
+            b'A'..=b'Z' => b - b'A',
+            b'a'..=b'z' => b - b'a' + 26,
+            b'0'..=b'9' => b - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            b'=' | b' ' | b'\r' | b'\n' => continue,
+            _ => return None,
+        };
+        buf = (buf << 6) | (val as u32);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((buf >> bits) as u8);
+        }
+    }
+    Some(out)
+}
+
+/// Resolves real 64x64 skin texture from a Yggdrasil profile's textures property
+async fn fetch_yggdrasil_skin_texture(client: &reqwest::Client, profile_url: &str) -> Option<String> {
+    #[derive(Deserialize)]
+    struct ProfileProperty {
+        name: String,
+        value: String,
+    }
+    #[derive(Deserialize)]
+    struct ProfileResponse {
+        properties: Option<Vec<ProfileProperty>>,
+    }
+    #[derive(Deserialize)]
+    struct TexturesMap {
+        #[serde(rename = "SKIN")]
+        skin: Option<TextureSkinItem>,
+    }
+    #[derive(Deserialize)]
+    struct TextureSkinItem {
+        url: String,
+    }
+    #[derive(Deserialize)]
+    struct TexturesEnvelope {
+        textures: Option<TexturesMap>,
+    }
+
+    let res = client.get(profile_url).send().await.ok()?;
+    if !res.status().is_success() {
+        return None;
+    }
+
+    let data: ProfileResponse = res.json().await.ok()?;
+    for prop in data.properties.unwrap_or_default() {
+        if prop.name == "textures" {
+            let bytes = base64_decode(&prop.value)?;
+            let text = String::from_utf8(bytes).ok()?;
+            let envelope: TexturesEnvelope = serde_json::from_str(&text).ok()?;
+            if let Some(tex) = envelope.textures {
+                if let Some(skin) = tex.skin {
+                    if !skin.url.is_empty() {
+                        return Some(skin.url);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn parse_yggdrasil_error(status: reqwest::StatusCode, body: &str) -> String {
+    if let Ok(err_data) = serde_json::from_str::<YggdrasilErrorResponse>(body) {
+        if let Some(msg) = err_data.error_message {
+            return msg;
+        }
+        if let Some(err) = err_data.error {
+            return err;
+        }
+    }
+    format!("Server returned HTTP status {}", status)
+}
+
+/// Authenticates a user against Ely.by and saves the account in accounts.json.
+pub async fn login_elyby(
+    app: &tauri::AppHandle,
+    raw_username: &str,
+    raw_password: &str,
+) -> Result<PublicAccountInfo, String> {
+    let username = raw_username.trim();
+    let password = raw_password.trim();
+
+    if username.is_empty() {
+        return Err("Username or email cannot be empty.".to_string());
+    }
+    if password.is_empty() {
+        return Err("Password cannot be empty.".to_string());
+    }
+
+    let client_token = generate_client_token();
+    let req_body = YggdrasilAuthRequest {
+        agent: None,
+        username,
+        password,
+        client_token: &client_token,
+        request_user: true,
+    };
+
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.4")
+        .build()
+        .map_err(|e| format!("HTTP client error: {}", e))?;
+
+    let res = client
+        .post(ELYBY_AUTH_URL)
+        .json(&req_body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to connect to Ely.by auth server: {}", e))?;
+
+    let status = res.status();
+    let body_text = res.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+
+    if !status.is_success() {
+        return Err(parse_yggdrasil_error(status, &body_text));
+    }
+
+    let auth_data: YggdrasilAuthResponse = serde_json::from_str(&body_text)
+        .map_err(|e| format!("Failed to parse Ely.by auth response: {}", e))?;
+
+    let profile = auth_data
+        .selected_profile
+        .or_else(|| auth_data.available_profiles.into_iter().next())
+        .ok_or("No Minecraft profile found for this Ely.by account.")?;
+
+    let formatted_uuid = format_uuid_with_dashes(&profile.id);
+    let account_id = format!("elyby-{}", formatted_uuid);
+    let raw_uuid = profile.id.replace('-', "");
+    let profile_url = format!("https://authserver.ely.by/session/profile/{}", raw_uuid);
+    let skin_url = fetch_yggdrasil_skin_texture(&client, &profile_url).await;
+
+    let now_epoch = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let account = StoredAccount {
+        id: account_id.clone(),
+        account_type: "elyby".to_string(),
+        username: profile.name,
+        uuid: formatted_uuid.clone(),
+        skin_url,
+        microsoft_refresh_token: None,
+        minecraft_access_token: Some(auth_data.access_token),
+        client_token: Some(auth_data.client_token.unwrap_or(client_token)),
+        auth_server_url: Some(ELYBY_SERVER_URL.to_string()),
+        expires_at: Some(now_epoch + 86400 * 7),
+    };
+
+    let mut db = load_account_database(app);
+    db.accounts.retain(|a| a.uuid != formatted_uuid);
+    db.active_account_id = Some(account_id);
+    let public_info = account.to_public(true);
+    db.accounts.push(account);
+
+    save_account_database(app, &db)?;
+
+    Ok(public_info)
+}
+
+/// Authenticates a user against LittleSkin Yggdrasil API and saves the account in accounts.json.
+pub async fn login_littleskin(
+    app: &tauri::AppHandle,
+    raw_username: &str,
+    raw_password: &str,
+) -> Result<PublicAccountInfo, String> {
+    let username = raw_username.trim();
+    let password = raw_password.trim();
+
+    if username.is_empty() {
+        return Err("Email or player name cannot be empty.".to_string());
+    }
+    if password.is_empty() {
+        return Err("Password cannot be empty.".to_string());
+    }
+
+    let client_token = generate_client_token();
+    let req_body = YggdrasilAuthRequest {
+        agent: Some(YggdrasilAgent {
+            name: "Minecraft",
+            version: 1,
+        }),
+        username,
+        password,
+        client_token: &client_token,
+        request_user: true,
+    };
+
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.4")
+        .build()
+        .map_err(|e| format!("HTTP client error: {}", e))?;
+
+    let res = client
+        .post(LITTLESKIN_AUTH_URL)
+        .json(&req_body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to connect to LittleSkin auth server: {}", e))?;
+
+    let status = res.status();
+    let body_text = res.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+
+    if !status.is_success() {
+        return Err(parse_yggdrasil_error(status, &body_text));
+    }
+
+    let auth_data: YggdrasilAuthResponse = serde_json::from_str(&body_text)
+        .map_err(|e| format!("Failed to parse LittleSkin auth response: {}", e))?;
+
+    let profile = auth_data
+        .selected_profile
+        .or_else(|| auth_data.available_profiles.into_iter().next())
+        .ok_or("No character profile selected on this LittleSkin account.")?;
+
+    let formatted_uuid = format_uuid_with_dashes(&profile.id);
+    let account_id = format!("littleskin-{}", formatted_uuid);
+    let raw_uuid = profile.id.replace('-', "");
+    let profile_url = format!("https://littleskin.cn/api/yggdrasil/sessionserver/session/minecraft/profile/{}", raw_uuid);
+    let skin_url = fetch_yggdrasil_skin_texture(&client, &profile_url).await;
+
+    let now_epoch = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let account = StoredAccount {
+        id: account_id.clone(),
+        account_type: "littleskin".to_string(),
+        username: profile.name,
+        uuid: formatted_uuid.clone(),
+        skin_url,
+        microsoft_refresh_token: None,
+        minecraft_access_token: Some(auth_data.access_token),
+        client_token: Some(auth_data.client_token.unwrap_or(client_token)),
+        auth_server_url: Some(LITTLESKIN_SERVER_URL.to_string()),
+        expires_at: Some(now_epoch + 86400 * 7),
+    };
+
+    let mut db = load_account_database(app);
+    db.accounts.retain(|a| a.uuid != formatted_uuid);
+    db.active_account_id = Some(account_id);
+    let public_info = account.to_public(true);
+    db.accounts.push(account);
+
+    save_account_database(app, &db)?;
+
+    Ok(public_info)
+}
+
+async fn validate_and_refresh_yggdrasil(
+    client: &reqwest::Client,
+    account: &mut StoredAccount,
+) -> Result<(), String> {
+    let access_token = match &account.minecraft_access_token {
+        Some(t) => t.clone(),
+        None => return Err("Account has no active session token. Please log in again.".to_string()),
+    };
+    let client_token = account.client_token.clone().unwrap_or_default();
+
+    let validate_url = if account.account_type == "elyby" {
+        ELYBY_VALIDATE_URL
+    } else {
+        LITTLESKIN_VALIDATE_URL
+    };
+
+    let refresh_url = if account.account_type == "elyby" {
+        ELYBY_REFRESH_URL
+    } else {
+        LITTLESKIN_REFRESH_URL
+    };
+
+    // 1. Check validity first
+    let val_body = YggdrasilValidateRequest {
+        access_token: &access_token,
+        client_token: if client_token.is_empty() { None } else { Some(&client_token) },
+    };
+
+    let val_res = client.post(validate_url).json(&val_body).send().await;
+    if let Ok(res) = val_res {
+        if res.status().is_success() || res.status() == reqwest::StatusCode::NO_CONTENT {
+            // Token is still valid!
+            return Ok(());
+        }
+    }
+
+    // 2. Refresh token if validation failed
+    let ref_body = YggdrasilRefreshRequest {
+        access_token: &access_token,
+        client_token: &client_token,
+        request_user: true,
+    };
+
+    let ref_res = client
+        .post(refresh_url)
+        .json(&ref_body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to refresh session: {}", e))?;
+
+    let status = ref_res.status();
+    let body = ref_res.text().await.map_err(|e| format!("Failed to read refresh response: {}", e))?;
+
+    if !status.is_success() {
+        return Err(format!("Session expired: {}", parse_yggdrasil_error(status, &body)));
+    }
+
+    let auth_data: YggdrasilAuthResponse = serde_json::from_str(&body)
+        .map_err(|e| format!("Failed to parse refresh response: {}", e))?;
+
+    account.minecraft_access_token = Some(auth_data.access_token);
+    if let Some(ct) = auth_data.client_token {
+        account.client_token = Some(ct);
+    }
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    account.expires_at = Some(now + 86400 * 7);
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn uuid_with_dashes_normalizes_correctly() {
+        let raw = "c36a9fb64f2a41ff90bdae7cc92031eb";
+        let dashed = format_uuid_with_dashes(raw);
+        assert_eq!(dashed, "c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb");
+
+        // Already dashed strings remain unchanged
+        assert_eq!(format_uuid_with_dashes(&dashed), dashed);
+    }
+
+    #[test]
+    fn parses_yggdrasil_error_cleanly() {
+        let err_json = r#"{"error":"ForbiddenOperationException","errorMessage":"Invalid credentials."}"#;
+        let msg = parse_yggdrasil_error(reqwest::StatusCode::FORBIDDEN, err_json);
+        assert_eq!(msg, "Invalid credentials.");
+    }
+
+    #[test]
+    fn backward_compatible_deserialization() {
+        let old_json = r#"{
+            "id": "test-id",
+            "accountType": "offline",
+            "username": "Steve",
+            "uuid": "00000000-0000-0000-0000-000000000000",
+            "skinUrl": null
+        }"#;
+        let account: StoredAccount = serde_json::from_str(old_json).expect("should deserialize");
+        assert_eq!(account.client_token, None);
+        assert_eq!(account.auth_server_url, None);
+    }
 }

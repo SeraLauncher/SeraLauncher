@@ -1,3 +1,20 @@
+import {
+  FaDiscord,
+  FaGithub,
+  FaInstagram,
+  FaMicrosoft,
+  FaPatreon,
+  FaReddit,
+  FaSteam,
+  FaTelegram,
+  FaTiktok,
+  FaTwitch,
+  FaTwitter,
+  FaXTwitter,
+  FaYoutube,
+} from "react-icons/fa6";
+export * from "react-icons/fa6";
+
 /** Icons from tabler (MIT).
  *
  *  Inlined as path data so they resolve `currentColor` from this document, which is
@@ -69,6 +86,18 @@ const paths = {
     "M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0",
     "M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6",
   ],
+  eyeOff: [
+    "M10.585 10.587a2 2 0 0 0 2.829 2.828",
+    "M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87",
+    "M3 3l18 18",
+  ],
+  globe: [
+    "M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0",
+    "M3.6 9h16.8",
+    "M3.6 15h16.8",
+    "M11.5 3a17 17 0 0 0 0 18",
+    "M12.5 3a17 17 0 0 1 0 18",
+  ],
   x: ["M18 6l-12 12", "M6 6l12 12"],
   copy: [
     "M8 8m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z",
@@ -107,9 +136,68 @@ const paths = {
   ],
 } as const;
 
-export type Icon = keyof typeof paths;
+export const socialIcons = {
+  discord: FaDiscord,
+  github: FaGithub,
+  instagram: FaInstagram,
+  microsoft: FaMicrosoft,
+  youtube: FaYoutube,
+  xTwitter: FaXTwitter,
+  twitter: FaTwitter,
+  twitch: FaTwitch,
+  reddit: FaReddit,
+  tiktok: FaTiktok,
+  telegram: FaTelegram,
+  steam: FaSteam,
+  patreon: FaPatreon,
+} as const;
 
-export function Icon({ name, size = 20, color }: { name: Icon; size?: number; color: string }) {
+export type SocialIconName = keyof typeof socialIcons;
+
+/** Social icon component rendered from Font Awesome 6 */
+export function SocialIcon({
+  name,
+  size = 20,
+  color = "currentColor",
+  className,
+  title,
+}: {
+  name: SocialIconName;
+  size?: number;
+  color?: string;
+  className?: string;
+  title?: string;
+}) {
+  const Component = socialIcons[name];
+  return (
+    <Component size={size} color={color} className={className} title={title} aria-hidden="true" />
+  );
+}
+
+export type TablerIcon = keyof typeof paths;
+export type Icon = TablerIcon | SocialIconName;
+
+/** Unified Icon component: renders Tabler stroked geometry or Font Awesome 6 social icons */
+export function Icon({
+  name,
+  size = 20,
+  color,
+  className,
+}: {
+  name: Icon;
+  size?: number;
+  color: string;
+  className?: string;
+}) {
+  if (name in socialIcons) {
+    const SocialComp = socialIcons[name as SocialIconName];
+    return <SocialComp size={size} color={color} className={className} aria-hidden="true" />;
+  }
+
+  const tablerName = name as TablerIcon;
+  const pathList = paths[tablerName];
+  if (!pathList) return null;
+
   return (
     <svg
       width={size}
@@ -120,9 +208,10 @@ export function Icon({ name, size = 20, color }: { name: Icon; size?: number; co
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
+      className={className}
       aria-hidden="true"
     >
-      {paths[name].map((d) => (
+      {pathList.map((d) => (
         <path key={d} d={d} />
       ))}
     </svg>

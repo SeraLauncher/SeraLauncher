@@ -1,4 +1,4 @@
-export type AccountType = "microsoft" | "offline";
+export type AccountType = "microsoft" | "offline" | "elyby" | "littleskin";
 
 export type PublicAccount = {
   id: string;

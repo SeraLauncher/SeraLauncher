@@ -52,6 +52,8 @@ export default function App() {
     startMicrosoftLogin,
     pollMicrosoftLogin,
     addOfflineAccount,
+    loginElyBy,
+    loginLittleSkin,
   } = useAccounts();
   const { downloads, pauseDownload, resumeDownload, stopDownload } = useDownloads();
   const {
@@ -324,6 +326,8 @@ export default function App() {
         onSelectAccount={selectAccount}
         onRemoveAccount={removeAccount}
         onAddOfflineAccount={addOfflineAccount}
+        onLoginElyBy={loginElyBy}
+        onLoginLittleSkin={loginLittleSkin}
         onStartDeviceFlow={startMicrosoftLogin}
         onPollDeviceFlow={pollMicrosoftLogin}
         onOpenUrl={async (url) => {

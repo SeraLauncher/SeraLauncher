@@ -4,7 +4,81 @@ import { Icon } from "./Icon";
 import { MinecraftHead } from "./AppHeader";
 import { Modal } from "./ui/modal";
 import type { Theme } from "../theme";
-import type { DeviceCodeResponse, PublicAccount } from "../account";
+import type { AccountType, DeviceCodeResponse, PublicAccount } from "../account";
+
+interface AccountBadgeConfig {
+  label: string;
+  bg: string;
+  color: string;
+}
+
+const FAVICON_CACHE = new Set<string>();
+
+function ProviderFavicon({
+  url,
+  fallbackIcon,
+  size = 14,
+}: {
+  url: string;
+  fallbackIcon: "globe" | "palette";
+  size?: number;
+}) {
+  const [loaded, setLoaded] = useState(() => FAVICON_CACHE.has(url));
+  const [failed, setFailed] = useState(false);
+
+  if (failed || (!loaded && !FAVICON_CACHE.has(url))) {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", position: "relative" }}>
+        <Icon name={fallbackIcon} size={size} color="currentColor" />
+        <img
+          src={url}
+          alt=""
+          aria-hidden="true"
+          style={{ display: "none" }}
+          onLoad={() => {
+            FAVICON_CACHE.add(url);
+            setLoaded(true);
+          }}
+          onError={() => setFailed(true)}
+        />
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={url}
+      alt=""
+      width={size}
+      height={size}
+      style={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        borderRadius: 2,
+        objectFit: "contain",
+      }}
+      onError={() => {
+        FAVICON_CACHE.delete(url);
+        setFailed(true);
+      }}
+    />
+  );
+}
+
+function getBadgeConfig(type: AccountType | undefined, theme: Theme): AccountBadgeConfig {
+  switch (type) {
+    case "microsoft":
+      return { label: "Microsoft", bg: "rgba(239, 68, 68, 0.15)", color: "#ef4444" };
+    case "elyby":
+      return { label: "Ely.by", bg: "rgba(16, 185, 129, 0.15)", color: "#10b981" };
+    case "littleskin":
+      return { label: "LittleSkin", bg: "rgba(14, 165, 233, 0.15)", color: "#0ea5e9" };
+    case "offline":
+    default:
+      return { label: "Offline", bg: "rgba(120, 120, 120, 0.18)", color: theme.mutedForeground };
+  }
+}
 
 function AccountModalDialog({
   onClose,
@@ -14,6 +88,8 @@ function AccountModalDialog({
   onSelectAccount,
   onRemoveAccount,
   onAddOfflineAccount,
+  onLoginElyBy,
+  onLoginLittleSkin,
   onStartDeviceFlow,
   onPollDeviceFlow,
   onOpenUrl,
@@ -26,13 +102,15 @@ function AccountModalDialog({
   onSelectAccount?: (id: string) => void;
   onRemoveAccount?: (id: string) => void;
   onAddOfflineAccount?: (username: string) => Promise<PublicAccount>;
+  onLoginElyBy?: (username: string, password: string) => Promise<PublicAccount>;
+  onLoginLittleSkin?: (username: string, password: string) => Promise<PublicAccount>;
   onStartDeviceFlow: () => Promise<DeviceCodeResponse>;
   onPollDeviceFlow: (deviceCode: string) => Promise<PublicAccount>;
   onOpenUrl?: (url: string) => void;
   loginReason?: string | null;
 }) {
   const [mode, setMode] = useState<"view" | "login">(account ? "view" : "login");
-  const [authType, setAuthType] = useState<"microsoft" | "offline">("microsoft");
+  const [authType, setAuthType] = useState<AccountType>("microsoft");
 
   // Microsoft flow state
   const [deviceData, setDeviceData] = useState<DeviceCodeResponse | null>(null);
@@ -45,6 +123,20 @@ function AccountModalDialog({
   const [offlineName, setOfflineName] = useState("");
   const [offlineError, setOfflineError] = useState<string | null>(null);
   const [offlineBusy, setOfflineBusy] = useState(false);
+
+  // Ely.by flow state
+  const [elyUsername, setElyUsername] = useState("");
+  const [elyPassword, setElyPassword] = useState("");
+  const [elyShowPassword, setElyShowPassword] = useState(false);
+  const [elyError, setElyError] = useState<string | null>(null);
+  const [elyBusy, setElyBusy] = useState(false);
+
+  // LittleSkin flow state
+  const [littleUsername, setLittleUsername] = useState("");
+  const [littlePassword, setLittlePassword] = useState("");
+  const [littleShowPassword, setLittleShowPassword] = useState(false);
+  const [littleError, setLittleError] = useState<string | null>(null);
+  const [littleBusy, setLittleBusy] = useState(false);
 
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isPollingRef = useRef(false);
@@ -95,6 +187,8 @@ function AccountModalDialog({
             return;
           }
           stopPolling();
+          // Auto-close the code page and return to sign-in view so user doesn't have to close modal
+          setDeviceData(null);
           if (errMsg.includes("code_expired")) {
             setErrorMsg("The code has expired. Please try again.");
           } else if (errMsg.includes("authorization_declined")) {
@@ -142,6 +236,62 @@ function AccountModalDialog({
     }
   };
 
+  const handleLoginElyBy = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const user = elyUsername.trim();
+    const pass = elyPassword.trim();
+    if (!user) {
+      setElyError("Please enter your Ely.by username or email.");
+      return;
+    }
+    if (!pass) {
+      setElyError("Please enter your Ely.by password.");
+      return;
+    }
+
+    if (!onLoginElyBy) return;
+
+    setElyBusy(true);
+    setElyError(null);
+    try {
+      await onLoginElyBy(user, pass);
+      setElyBusy(false);
+      onClose();
+    } catch (err: unknown) {
+      setElyBusy(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      setElyError(msg);
+    }
+  };
+
+  const handleLoginLittleSkin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const user = littleUsername.trim();
+    const pass = littlePassword.trim();
+    if (!user) {
+      setLittleError("Please enter your LittleSkin email or player name.");
+      return;
+    }
+    if (!pass) {
+      setLittleError("Please enter your LittleSkin password.");
+      return;
+    }
+
+    if (!onLoginLittleSkin) return;
+
+    setLittleBusy(true);
+    setLittleError(null);
+    try {
+      await onLoginLittleSkin(user, pass);
+      setLittleBusy(false);
+      onClose();
+    } catch (err: unknown) {
+      setLittleBusy(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      setLittleError(msg);
+    }
+  };
+
   const handleCopy = () => {
     if (!deviceData?.userCode) return;
     navigator.clipboard.writeText(deviceData.userCode);
@@ -151,12 +301,15 @@ function AccountModalDialog({
 
   const handleOpenBrowser = () => {
     if (!deviceData?.verificationUri) return;
+    handleCopy();
     if (onOpenUrl) {
       onOpenUrl(deviceData.verificationUri);
     } else {
       window.open(deviceData.verificationUri, "_blank");
     }
   };
+
+  const activeBadge = getBadgeConfig(account?.accountType, theme);
 
   const modalFooter =
     mode === "login" ? (
@@ -223,7 +376,7 @@ function AccountModalDialog({
       onClose={onClose}
       theme={theme}
       title={mode === "login" ? "Minecraft account" : "Account Management"}
-      maxWidth={440}
+      maxWidth={460}
       footer={modalFooter}
     >
       {loginReason === "launch_required" && mode === "login" && (
@@ -244,8 +397,34 @@ function AccountModalDialog({
                 setAuthType("microsoft");
               }}
             >
-              <Icon name="brandWindows" size={14} color="currentColor" />
-              <span>Microsoft Account</span>
+              <Icon name="microsoft" size={13} color="currentColor" />
+              <span>Microsoft</span>
+            </button>
+            <button
+              type="button"
+              className={`account-type-tab ${authType === "elyby" ? "active" : ""}`}
+              onClick={() => {
+                stopPolling();
+                setAuthType("elyby");
+              }}
+            >
+              <ProviderFavicon url="https://ely.by/favicon.ico" fallbackIcon="globe" size={13} />
+              <span>Ely.by</span>
+            </button>
+            <button
+              type="button"
+              className={`account-type-tab ${authType === "littleskin" ? "active" : ""}`}
+              onClick={() => {
+                stopPolling();
+                setAuthType("littleskin");
+              }}
+            >
+              <ProviderFavicon
+                url="https://littleskin.cn/favicon.png"
+                fallbackIcon="palette"
+                size={13}
+              />
+              <span>LittleSkin</span>
             </button>
             <button
               type="button"
@@ -255,26 +434,13 @@ function AccountModalDialog({
                 setAuthType("offline");
               }}
             >
-              <Icon name="user" size={14} color="currentColor" />
-              <span>Offline Account</span>
+              <Icon name="user" size={13} color="currentColor" />
+              <span>Offline</span>
             </button>
           </div>
 
           {authType === "offline" ? (
             <div className="account-offline-flow">
-              <div
-                className="account-offline-preview"
-                style={{ background: theme.secondary, borderColor: theme.border }}
-              >
-                <MinecraftHead username={offlineName.trim() || "Steve"} size={44} />
-                <div className="account-offline-info">
-                  <span className="account-offline-name">{offlineName.trim() || "Player"}</span>
-                  <span className="account-offline-sub" style={{ color: theme.mutedForeground }}>
-                    Offline Mode • No Microsoft login required
-                  </span>
-                </div>
-              </div>
-
               <form onSubmit={handleCreateOfflineAccount} className="account-offline-form">
                 <div
                   style={{
@@ -318,103 +484,380 @@ function AccountModalDialog({
                   style={{
                     background: theme.primary,
                     color: theme.primaryForeground,
-                    width: "100%",
                     marginTop: "4px",
                   }}
                 >
-                  <Icon name="user" size={14} color="currentColor" />
-                  <span>{offlineBusy ? "Adding..." : "Use Offline Account"}</span>
+                  {offlineBusy ? "Adding Account..." : "Use Offline Account"}
                 </button>
               </form>
             </div>
-          ) : (
-            <>
-              {loadingCode ? (
-                <div className="account-loading-box">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                  >
-                    <Icon name="loader" size={22} color={theme.foreground} />
-                  </motion.div>
-                  <span className="account-loading-text">Connecting to Microsoft...</span>
+          ) : authType === "elyby" ? (
+            <div className="account-offline-flow">
+              <form onSubmit={handleLoginElyBy} className="account-offline-form">
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                    textAlign: "left",
+                  }}
+                >
+                  <label style={{ fontSize: "0.82rem", fontWeight: 500, color: theme.foreground }}>
+                    Username or Email
+                  </label>
+                  <input
+                    type="text"
+                    className="modal-text-input"
+                    placeholder="username or email"
+                    value={elyUsername}
+                    onChange={(e) => {
+                      setElyUsername(e.target.value);
+                      if (elyError) setElyError(null);
+                    }}
+                    autoFocus
+                    style={{
+                      background: theme.sidebarAccent,
+                      borderColor: elyError ? theme.destructive : theme.border,
+                      color: theme.foreground,
+                    }}
+                  />
                 </div>
-              ) : errorMsg ? (
-                <div className="account-error-box">
-                  <span className="account-error-text">{errorMsg}</span>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                    textAlign: "left",
+                  }}
+                >
+                  <label style={{ fontSize: "0.82rem", fontWeight: 500, color: theme.foreground }}>
+                    Password
+                  </label>
+                  <div className="password-input-wrapper">
+                    <input
+                      type={elyShowPassword ? "text" : "password"}
+                      className="modal-text-input"
+                      placeholder="password"
+                      value={elyPassword}
+                      onChange={(e) => {
+                        setElyPassword(e.target.value);
+                        if (elyError) setElyError(null);
+                      }}
+                      style={{
+                        background: theme.sidebarAccent,
+                        borderColor: elyError ? theme.destructive : theme.border,
+                        color: theme.foreground,
+                        paddingRight: "36px",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setElyShowPassword(!elyShowPassword)}
+                      tabIndex={-1}
+                      style={{ color: theme.mutedForeground }}
+                    >
+                      <Icon
+                        name={elyShowPassword ? "eyeOff" : "eye"}
+                        size={15}
+                        color="currentColor"
+                      />
+                    </button>
+                  </div>
+                  {elyError && (
+                    <span style={{ fontSize: "0.75rem", color: theme.destructive }}>
+                      {elyError}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  className="account-primary-btn"
+                  disabled={elyBusy || !elyUsername.trim() || !elyPassword.trim()}
+                  style={{
+                    background: theme.primary,
+                    color: theme.primaryForeground,
+                    marginTop: "4px",
+                  }}
+                >
+                  {elyBusy ? "Signing in..." : "Sign in with Ely.by"}
+                </button>
+
+                <div className="account-register-hint">
+                  <span style={{ color: theme.mutedForeground }}>
+                    Don't have an Ely.by account?
+                  </span>{" "}
                   <button
                     type="button"
-                    className="account-primary-btn"
-                    onClick={handleStartMicrosoftLogin}
-                    style={{ background: theme.primary, color: theme.primaryForeground }}
+                    className="account-register-link"
+                    onClick={() => {
+                      if (onOpenUrl) onOpenUrl("https://ely.by");
+                      else window.open("https://ely.by", "_blank");
+                    }}
+                    style={{ color: theme.primary }}
                   >
-                    <Icon name="refresh" size={14} color="currentColor" />
-                    Try Again
+                    <span>Register at ely.by</span>
+                    <Icon name="externalLink" size={11} color="currentColor" />
                   </button>
                 </div>
-              ) : deviceData ? (
-                <div className="account-code-flow">
-                  <p className="account-instructions">
-                    To sign in, visit the Microsoft link and enter the code below:
-                  </p>
+              </form>
+            </div>
+          ) : authType === "littleskin" ? (
+            <div className="account-offline-flow">
+              <form onSubmit={handleLoginLittleSkin} className="account-offline-form">
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                    textAlign: "left",
+                  }}
+                >
+                  <label style={{ fontSize: "0.82rem", fontWeight: 500, color: theme.foreground }}>
+                    Email or Character Name
+                  </label>
+                  <input
+                    type="text"
+                    className="modal-text-input"
+                    placeholder="email or character name"
+                    value={littleUsername}
+                    onChange={(e) => {
+                      setLittleUsername(e.target.value);
+                      if (littleError) setLittleError(null);
+                    }}
+                    autoFocus
+                    style={{
+                      background: theme.sidebarAccent,
+                      borderColor: littleError ? theme.destructive : theme.border,
+                      color: theme.foreground,
+                    }}
+                  />
+                </div>
 
-                  <div
-                    className="account-code-card"
-                    style={{ background: theme.secondary, borderColor: theme.border }}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                    textAlign: "left",
+                  }}
+                >
+                  <label style={{ fontSize: "0.82rem", fontWeight: 500, color: theme.foreground }}>
+                    Password
+                  </label>
+                  <div className="password-input-wrapper">
+                    <input
+                      type={littleShowPassword ? "text" : "password"}
+                      className="modal-text-input"
+                      placeholder="password"
+                      value={littlePassword}
+                      onChange={(e) => {
+                        setLittlePassword(e.target.value);
+                        if (littleError) setLittleError(null);
+                      }}
+                      style={{
+                        background: theme.sidebarAccent,
+                        borderColor: littleError ? theme.destructive : theme.border,
+                        color: theme.foreground,
+                        paddingRight: "36px",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setLittleShowPassword(!littleShowPassword)}
+                      tabIndex={-1}
+                      style={{ color: theme.mutedForeground }}
+                    >
+                      <Icon
+                        name={littleShowPassword ? "eyeOff" : "eye"}
+                        size={15}
+                        color="currentColor"
+                      />
+                    </button>
+                  </div>
+                  {littleError && (
+                    <span style={{ fontSize: "0.75rem", color: theme.destructive }}>
+                      {littleError}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  className="account-primary-btn"
+                  disabled={littleBusy || !littleUsername.trim() || !littlePassword.trim()}
+                  style={{
+                    background: theme.primary,
+                    color: theme.primaryForeground,
+                    marginTop: "4px",
+                  }}
+                >
+                  {littleBusy ? "Signing in..." : "Sign in with LittleSkin"}
+                </button>
+
+                <div className="account-register-hint">
+                  <span style={{ color: theme.mutedForeground }}>
+                    Don't have a LittleSkin account?
+                  </span>{" "}
+                  <button
+                    type="button"
+                    className="account-register-link"
+                    onClick={() => {
+                      if (onOpenUrl) onOpenUrl("https://littleskin.cn");
+                      else window.open("https://littleskin.cn", "_blank");
+                    }}
+                    style={{ color: theme.primary }}
                   >
-                    <span className="account-code-value">{deviceData.userCode}</span>
-                    <button
-                      type="button"
-                      className="account-copy-btn"
-                      onClick={handleCopy}
-                      title="Copy code to clipboard"
-                    >
-                      <Icon name={copied ? "check" : "copy"} size={14} color="currentColor" />
-                      <span>{copied ? "Copied!" : "Copy"}</span>
-                    </button>
-                  </div>
-
-                  <div className="account-flow-actions">
-                    <button
-                      type="button"
-                      className="account-primary-btn"
-                      onClick={handleOpenBrowser}
-                      style={{ background: theme.primary, color: theme.primaryForeground }}
-                    >
-                      <Icon name="externalLink" size={15} color="currentColor" />
-                      <span>Open Microsoft Page</span>
-                    </button>
-                  </div>
-
-                  <div className="account-polling-indicator">
+                    <span>Register at littleskin.cn</span>
+                    <Icon name="externalLink" size={11} color="currentColor" />
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : !deviceData ? (
+            <div className="account-ms-start">
+              <button
+                type="button"
+                className="account-primary-btn"
+                onClick={handleStartMicrosoftLogin}
+                disabled={loadingCode}
+                style={{
+                  background: theme.primary,
+                  color: theme.primaryForeground,
+                  width: "100%",
+                }}
+              >
+                {loadingCode ? (
+                  <>
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      style={{ display: "inline-flex" }}
                     >
-                      <Icon name="loader" size={13} color={theme.mutedForeground} />
+                      <Icon name="refresh" size={16} color="currentColor" />
                     </motion.div>
-                    <span style={{ color: theme.mutedForeground }}>
-                      {pollingStatus ?? "Waiting for confirmation in your browser..."}
-                    </span>
+                    <span>Connecting to Microsoft...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon name="microsoft" size={16} color="currentColor" />
+                    <span>Sign in with Microsoft</span>
+                  </>
+                )}
+              </button>
+
+              {errorMsg && (
+                <div className="account-error-box">
+                  <Icon name="alertCircle" size={16} color="#ef4444" />
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    <span className="account-error-message">{errorMsg}</span>
+                    {errorMsg.includes("xbox.com") && (
+                      <button
+                        type="button"
+                        className="account-register-link"
+                        onClick={() => {
+                          if (onOpenUrl) onOpenUrl("https://www.xbox.com");
+                          else window.open("https://www.xbox.com", "_blank");
+                        }}
+                        style={{
+                          color: "#ffffff",
+                          fontWeight: 600,
+                          alignSelf: "flex-start",
+                          marginTop: "2px",
+                        }}
+                      >
+                        <span>Open xbox.com</span>
+                        <Icon name="externalLink" size={12} color="currentColor" />
+                      </button>
+                    )}
                   </div>
                 </div>
-              ) : (
-                <div className="account-start-box">
-                  <p className="account-instructions">
-                    Sign in with your Microsoft account to play Minecraft Java Edition.
-                  </p>
-                  <button
-                    type="button"
-                    className="account-primary-btn"
-                    onClick={handleStartMicrosoftLogin}
-                    style={{ background: theme.primary, color: theme.primaryForeground }}
-                  >
-                    <Icon name="brandWindows" size={15} color="currentColor" />
-                    <span>Sign in with Microsoft</span>
-                  </button>
+              )}
+
+              <div className="account-register-hint">
+                <span style={{ color: theme.mutedForeground }}>
+                  Don't have a Minecraft account?
+                </span>{" "}
+                <button
+                  type="button"
+                  className="account-register-link"
+                  onClick={() => {
+                    const buyUrl =
+                      "https://www.minecraft.net/store/minecraft-java-bedrock-edition-pc";
+                    if (onOpenUrl) onOpenUrl(buyUrl);
+                    else window.open(buyUrl, "_blank");
+                  }}
+                  style={{ color: theme.primary }}
+                >
+                  <span>Buy Minecraft</span>
+                  <Icon name="externalLink" size={11} color="currentColor" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="account-ms-code-flow">
+              <p className="account-desc-text-sm" style={{ color: theme.mutedForeground }}>
+                Enter this code in your browser to sign in:
+              </p>
+
+              <div
+                className="account-code-card"
+                style={{ background: theme.secondary, borderColor: theme.border }}
+              >
+                <span className="account-user-code">{deviceData.userCode}</span>
+                <button
+                  type="button"
+                  className="account-copy-btn"
+                  onClick={handleCopy}
+                  style={{
+                    background: copied ? theme.success : theme.primary,
+                    color: theme.primaryForeground,
+                  }}
+                >
+                  <Icon name={copied ? "check" : "copy"} size={12} color="currentColor" />
+                  <span>{copied ? "Copied" : "Copy"}</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="account-primary-btn account-browser-btn"
+                onClick={handleOpenBrowser}
+                style={{ background: theme.primary, color: theme.primaryForeground }}
+              >
+                <Icon name="externalLink" size={14} color="currentColor" />
+                <span>Open Microsoft Page</span>
+              </button>
+
+              <div className="account-poll-status" style={{ color: theme.mutedForeground }}>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                  style={{ display: "inline-flex" }}
+                >
+                  <Icon name="refresh" size={13} color="currentColor" />
+                </motion.div>
+                <span>{pollingStatus}</span>
+              </div>
+
+              {errorMsg && (
+                <div className="account-error-box">
+                  <Icon name="alertCircle" size={16} color="#ef4444" />
+                  <span className="account-error-message">{errorMsg}</span>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       ) : (
@@ -425,7 +868,7 @@ function AccountModalDialog({
               style={{ background: theme.secondary, borderColor: theme.border }}
             >
               <MinecraftHead
-                username={account.username}
+                username={account.accountType === "offline" ? undefined : account.username}
                 skinUrl={account.skinUrl ?? undefined}
                 size={44}
               />
@@ -435,15 +878,11 @@ function AccountModalDialog({
                   <span
                     className="account-type-badge"
                     style={{
-                      background:
-                        account.accountType === "offline"
-                          ? "rgba(120, 120, 120, 0.18)"
-                          : "rgba(16, 185, 129, 0.15)",
-                      color:
-                        account.accountType === "offline" ? theme.mutedForeground : theme.success,
+                      background: activeBadge.bg,
+                      color: activeBadge.color,
                     }}
                   >
-                    {account.accountType === "offline" ? "Offline" : "Microsoft"}
+                    {activeBadge.label}
                   </span>
                   <span
                     className="account-active-badge"
@@ -467,60 +906,56 @@ function AccountModalDialog({
               <span className="account-section-title">Other Accounts</span>
               {accounts
                 .filter((a) => a.id !== account?.id)
-                .map((other) => (
-                  <div
-                    key={other.id}
-                    className="account-other-item"
-                    style={{ background: theme.secondary, borderColor: theme.border }}
-                  >
-                    <div className="account-other-left">
-                      <MinecraftHead
-                        username={other.username}
-                        skinUrl={other.skinUrl ?? undefined}
-                        size={34}
-                      />
-                      <div className="account-other-info">
-                        <div className="account-other-name-row">
-                          <span className="account-other-name">{other.username}</span>
-                          <span
-                            className="account-type-badge"
-                            style={{
-                              background:
-                                other.accountType === "offline"
-                                  ? "rgba(120, 120, 120, 0.18)"
-                                  : "rgba(16, 185, 129, 0.15)",
-                              color:
-                                other.accountType === "offline"
-                                  ? theme.mutedForeground
-                                  : theme.success,
-                            }}
-                          >
-                            {other.accountType === "offline" ? "Offline" : "Microsoft"}
-                          </span>
+                .map((other) => {
+                  const badge = getBadgeConfig(other.accountType, theme);
+                  return (
+                    <div
+                      key={other.id}
+                      className="account-other-item"
+                      style={{ background: theme.secondary, borderColor: theme.border }}
+                    >
+                      <div className="account-other-left">
+                        <MinecraftHead
+                          username={other.accountType === "offline" ? undefined : other.username}
+                          skinUrl={other.skinUrl ?? undefined}
+                          size={34}
+                        />
+                        <div className="account-other-info">
+                          <div className="account-other-name-row">
+                            <span className="account-other-name">{other.username}</span>
+                            <span
+                              className="account-type-badge"
+                              style={{
+                                background: badge.bg,
+                                color: badge.color,
+                              }}
+                            >
+                              {badge.label}
+                            </span>
+                          </div>
+                          <span className="account-other-uuid">{other.uuid}</span>
                         </div>
-                        <span className="account-other-uuid">{other.uuid}</span>
+                      </div>
+                      <div className="account-other-actions">
+                        <button
+                          type="button"
+                          className="account-action-sm-btn"
+                          onClick={() => onSelectAccount?.(other.id)}
+                        >
+                          Switch
+                        </button>
+                        <button
+                          type="button"
+                          className="account-remove-icon-btn"
+                          onClick={() => onRemoveAccount?.(other.id)}
+                          title={`Remove ${other.username}`}
+                        >
+                          <Icon name="trash" size={14} color={theme.destructive} />
+                        </button>
                       </div>
                     </div>
-                    <div className="account-other-actions">
-                      <button
-                        type="button"
-                        className="account-action-sm-btn"
-                        onClick={() => onSelectAccount?.(other.id)}
-                      >
-                        Switch
-                      </button>
-                      <button
-                        type="button"
-                        className="account-delete-sm-btn"
-                        onClick={() => onRemoveAccount?.(other.id)}
-                        aria-label={`Remove ${other.username}`}
-                        title={`Remove ${other.username}`}
-                      >
-                        <Icon name="trash" size={14} color={theme.destructive} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           )}
         </div>
@@ -538,6 +973,8 @@ export function AccountModal({
   onSelectAccount,
   onRemoveAccount,
   onAddOfflineAccount,
+  onLoginElyBy,
+  onLoginLittleSkin,
   onStartDeviceFlow,
   onPollDeviceFlow,
   onOpenUrl,
@@ -551,6 +988,8 @@ export function AccountModal({
   onSelectAccount?: (id: string) => void;
   onRemoveAccount?: (id: string) => void;
   onAddOfflineAccount?: (username: string) => Promise<PublicAccount>;
+  onLoginElyBy?: (username: string, password: string) => Promise<PublicAccount>;
+  onLoginLittleSkin?: (username: string, password: string) => Promise<PublicAccount>;
   onStartDeviceFlow: () => Promise<DeviceCodeResponse>;
   onPollDeviceFlow: (deviceCode: string) => Promise<PublicAccount>;
   onOpenUrl?: (url: string) => void;
@@ -567,6 +1006,8 @@ export function AccountModal({
       onSelectAccount={onSelectAccount}
       onRemoveAccount={onRemoveAccount}
       onAddOfflineAccount={onAddOfflineAccount}
+      onLoginElyBy={onLoginElyBy}
+      onLoginLittleSkin={onLoginLittleSkin}
       onStartDeviceFlow={onStartDeviceFlow}
       onPollDeviceFlow={onPollDeviceFlow}
       onOpenUrl={onOpenUrl}

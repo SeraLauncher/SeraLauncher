@@ -335,6 +335,24 @@ export function useAccounts() {
     [refreshAccounts],
   );
 
+  const loginElyBy = useCallback(
+    async (username: string, password: string) => {
+      const acc = await invoke<PublicAccount>("login_elyby", { username, password });
+      refreshAccounts();
+      return acc;
+    },
+    [refreshAccounts],
+  );
+
+  const loginLittleSkin = useCallback(
+    async (username: string, password: string) => {
+      const acc = await invoke<PublicAccount>("login_littleskin", { username, password });
+      refreshAccounts();
+      return acc;
+    },
+    [refreshAccounts],
+  );
+
   return {
     activeAccount,
     accounts,
@@ -345,6 +363,8 @@ export function useAccounts() {
     startMicrosoftLogin,
     pollMicrosoftLogin,
     addOfflineAccount,
+    loginElyBy,
+    loginLittleSkin,
   };
 }
 

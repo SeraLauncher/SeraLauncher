@@ -2218,6 +2218,8 @@ button {
   gap: 14px;
   max-height: 70vh;
   overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .modal-field {
@@ -2734,21 +2736,6 @@ button {
   opacity: 0.8;
 }
 
-.account-error-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  width: 100%;
-}
-
-.account-error-text {
-  font-size: 0.82rem;
-  color: #ef4444;
-  line-height: 1.4;
-}
-
 .account-instructions {
   font-size: 0.85rem;
   margin: 0 0 10px 0;
@@ -2976,23 +2963,36 @@ button {
   border-radius: 8px;
   gap: 4px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .account-type-tab {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   height: 28px;
   border-radius: 6px;
   border: none;
   background: transparent;
   color: var(--muted-foreground);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.account-type-tab svg,
+.account-type-tab img {
+  flex-shrink: 0;
+}
+
+.account-type-tab span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .account-type-tab:hover {
@@ -3545,4 +3545,185 @@ button {
 .header-download-meta-eta {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.password-toggle-btn:hover {
+  color: var(--foreground);
+}
+
+.account-register-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+.account-register-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.account-ms-start {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.account-ms-code-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.account-desc-text-sm {
+  font-size: 0.78rem;
+  margin: 0 0 2px 0;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.account-error-box {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.16);
+  color: #fca5a5;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.account-error-box svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.account-error-message {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #fca5a5;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.account-step-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.account-step-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-step-number {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.account-step-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.account-code-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.account-user-code {
+  font-family: monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.account-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.account-browser-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.account-poll-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  padding: 6px 0;
 }

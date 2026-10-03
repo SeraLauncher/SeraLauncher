@@ -324,3 +324,63 @@ pub async fn install_adoptium_runtime_with_instance(
 
     res
 }
+
+/// Ensures authlib-injector.jar exists in the shared libraries directory.
+/// If missing or outdated, downloads it from the official release metadata API.
+pub async fn ensure_authlib_injector(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let lib_dir = crate::paths::libraries_dir(app)?;
+    let target_jar = lib_dir.join("authlib-injector.jar");
+
+    let is_valid = target_jar.is_file()
+        && std::fs::metadata(&target_jar)
+            .map(|m| m.len() > 100_000)
+            .unwrap_or(false);
+
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.4")
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    // Official authlib-injector artifact metadata API
+    let metadata_url = "https://authlib-injector.yushi.moe/artifact/latest.json";
+    let meta_res = client.get(metadata_url).send().await;
+
+    #[derive(serde::Deserialize)]
+    struct ArtifactInfo {
+        build_number: u32,
+        download_url: String,
+        version: String,
+    }
+
+    if let Ok(res) = meta_res {
+        if res.status().is_success() {
+            if let Ok(info) = res.json::<ArtifactInfo>().await {
+                let marker_file = lib_dir.join(format!("authlib-injector-{}.version", info.build_number));
+                if is_valid && marker_file.exists() {
+                    return Ok(target_jar);
+                }
+
+                let temp_jar = lib_dir.join("authlib-injector.tmp");
+                let jar_res = client.get(&info.download_url).send().await;
+                if let Ok(jres) = jar_res {
+                    if jres.status().is_success() {
+                        if let Ok(bytes) = jres.bytes().await {
+                            if std::fs::write(&temp_jar, &bytes).is_ok() {
+                                let _ = std::fs::rename(&temp_jar, &target_jar);
+                                let _ = std::fs::write(marker_file, info.version);
+                                return Ok(target_jar);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if is_valid {
+        Ok(target_jar)
+    } else {
+        Err("Failed to download authlib-injector and no cached version is available. Check your internet connection.".to_string())
+    }
+}

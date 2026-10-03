@@ -841,6 +841,19 @@ pub async fn launch_minecraft_instance(
         }
     }
 
+    // Injects authlib-injector Java agent for Ely.by and LittleSkin accounts
+    if account.account_type == "elyby" || account.account_type == "littleskin" {
+        let authlib_jar = crate::downloader::ensure_authlib_injector(app).await?;
+        let auth_server = account.auth_server_url.as_deref().unwrap_or_else(|| {
+            if account.account_type == "elyby" {
+                crate::auth::ELYBY_SERVER_URL
+            } else {
+                crate::auth::LITTLESKIN_SERVER_URL
+            }
+        });
+        cmd_args.push(format!("-javaagent:{}={}", authlib_jar.to_string_lossy(), auth_server));
+    }
+
     cmd_args.push("-cp".to_string());
     cmd_args.push(classpath_str);
     cmd_args.push(pkg.main_class.clone());
@@ -849,13 +862,17 @@ pub async fn launch_minecraft_instance(
     let game_dir = inst_dir.join(".minecraft");
     let assets_root = assets_dir(app)?;
 
-    let (access_token, user_type) = if account.account_type == "offline" {
-        ("0".to_string(), "legacy".to_string())
-    } else {
-        (
+    let (access_token, user_type) = match account.account_type.as_str() {
+        "offline" => ("0".to_string(), "legacy".to_string()),
+        "microsoft" => (
             account.minecraft_access_token.clone().unwrap_or_else(|| "0".to_string()),
             "msa".to_string(),
-        )
+        ),
+        "elyby" | "littleskin" => (
+            account.minecraft_access_token.clone().unwrap_or_else(|| "0".to_string()),
+            "mojang".to_string(),
+        ),
+        _ => ("0".to_string(), "legacy".to_string()),
     };
 
     if let Some(mc_args) = &pkg.minecraft_arguments {
