@@ -1897,7 +1897,6 @@ button {
 }
 
 .instance-modern-card:hover {
-  transform: translateY(-2px);
   border-color: var(--primary);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
@@ -3749,4 +3748,502 @@ button {
   display: block;
   outline: none;
   cursor: default;
+}
+
+/* =========================================================================
+   Instance Management View Styles
+   ========================================================================= */
+
+.instance-mgmt-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* =========================================================================
+   Instance Logs Viewer (matching screenshot 15)
+   ========================================================================= */
+
+.instance-logs-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.instance-logs-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.instance-logs-search-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 60%, var(--background));
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.instance-logs-search-wrap:focus-within {
+  border-color: var(--primary);
+}
+
+.instance-logs-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--foreground);
+  font-size: 0.84rem;
+  outline: none;
+}
+
+.instance-logs-search-input::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.75;
+}
+
+.instance-logs-type-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 60%, var(--background));
+  color: var(--foreground);
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.instance-logs-type-btn:hover {
+  border-color: var(--primary);
+}
+
+.instance-logs-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.instance-logs-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.instance-logs-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.instance-logs-filter-pill:hover {
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+
+.instance-logs-filter-pill.active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #10b981;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.instance-logs-filter-pill.active.error {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.instance-logs-filter-pill.active.warn {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.instance-logs-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.12s ease;
+}
+
+.instance-logs-expand-btn:hover {
+  color: var(--foreground);
+}
+
+.instance-logs-screen {
+  width: 100%;
+  min-height: 400px;
+  max-height: 520px;
+  background: var(--sidebar);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.instance-logs-widget.expanded {
+  position: fixed;
+  inset: 28px;
+  width: auto;
+  z-index: 100;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+  box-sizing: border-box;
+}
+
+.instance-logs-widget.expanded .instance-logs-screen {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+}
+
+.instance-logs-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 99;
+}
+
+.instance-logs-console-pre {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #e5e7eb;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.instance-log-row {
+  display: block;
+}
+
+.instance-log-row.error {
+  color: #fca5a5;
+}
+
+.instance-log-row.warn {
+  color: #fcd34d;
+}
+
+.instance-log-row.info {
+  color: #93c5fd;
+}
+
+/* Overview Header Banner matching reference screenshot */
+.instance-overview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.instance-overview-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.instance-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.instance-banner-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    transform 0.1s ease;
+}
+
+.instance-banner-play-btn:hover {
+  opacity: 0.92;
+  transform: scale(1.02);
+}
+
+.instance-banner-dots-wrap {
+  position: relative;
+}
+
+.instance-banner-dots-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.instance-banner-dots-btn:hover {
+  border-color: var(--foreground);
+  color: var(--foreground);
+  background: var(--sidebar-accent);
+}
+
+.instance-banner-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 170px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.instance-banner-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+
+.instance-banner-dropdown-item:hover {
+  background: var(--sidebar-accent);
+}
+
+.instance-overview-art {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.instance-overview-art .instance-block-img {
+  width: 76%;
+  height: 76%;
+}
+
+.instance-overview-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.instance-overview-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--foreground);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.instance-overview-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.instance-overview-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.instance-overview-meta-dot {
+  opacity: 0.45;
+  font-size: 0.75rem;
+}
+
+/* Action button bar */
+.instance-overview-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.instance-overview-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.instance-overview-play-btn:hover {
+  opacity: 0.92;
+}
+
+.instance-overview-sub-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.instance-overview-sub-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Generic Panel for Mods, Resourcepacks, Shaders, Screenshots */
+.instance-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.instance-tab-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.instance-tab-panel-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.instance-tab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 36px 16px;
+  gap: 10px;
+  color: var(--muted-foreground);
+  font-size: 0.88rem;
+}
+
+.instance-tab-empty p {
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* Settings tab inside Management */
+.instance-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
 }

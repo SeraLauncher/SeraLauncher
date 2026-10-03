@@ -124,3 +124,87 @@ export function PageHeader({
     </div>
   );
 }
+
+export type InstanceRailTab =
+  | "overview"
+  | "mods"
+  | "resourcepacks"
+  | "shaders"
+  | "screenshots"
+  | "settings";
+
+export interface InstanceRailNavItem {
+  id: InstanceRailTab;
+  label: string;
+  icon: IconName;
+}
+
+export const INSTANCE_RAIL_TABS: readonly InstanceRailNavItem[] = [
+  { id: "overview", label: "Overview", icon: "layoutDashboard" },
+  { id: "mods", label: "Mods", icon: "puzzle" },
+  { id: "resourcepacks", label: "Resource Pack", icon: "palette" },
+  { id: "shaders", label: "Shaders", icon: "wand" },
+  { id: "screenshots", label: "Screenshots", icon: "photo" },
+  { id: "settings", label: "Settings", icon: "settings" },
+];
+
+/** Contents of the open rail when an instance is being managed:
+ *  provides category tabs and a back button to return to the instance list. */
+export function InstanceRailNav({
+  tabs = INSTANCE_RAIL_TABS,
+  activeTab,
+  onSelectTab,
+  theme,
+  onBack,
+}: {
+  tabs?: readonly InstanceRailNavItem[];
+  activeTab: InstanceRailTab;
+  onSelectTab: (tab: InstanceRailTab) => void;
+  theme: Theme;
+  onBack: () => void;
+}) {
+  return (
+    <div className="rail-contents">
+      <div className="rail-nav">
+        {tabs.map((tab) => {
+          const active = tab.id === activeTab;
+          return (
+            <motion.button
+              key={tab.id}
+              type="button"
+              className={`rail-nav-item ${active ? "active" : ""}`}
+              onClick={() => onSelectTab(tab.id)}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }}
+              transition={railLabel}
+              style={{
+                background: active ? theme.sidebarAccent : "transparent",
+                color: active ? theme.sidebarPrimary : theme.mutedForeground,
+              }}
+            >
+              <Icon name={tab.icon} size={18} color="currentColor" />
+              <span className="rail-nav-label" style={{ fontWeight: active ? 600 : 500 }}>
+                {tab.label}
+              </span>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      <motion.button
+        type="button"
+        onClick={onBack}
+        className="back"
+        style={{ color: theme.mutedForeground }}
+        initial={{ opacity: 0, x: -6 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -6 }}
+        transition={railLabel}
+      >
+        <Icon name="arrowLeft" size={18} color={theme.mutedForeground} />
+        <span>Instances</span>
+      </motion.button>
+    </div>
+  );
+}

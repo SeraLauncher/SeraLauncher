@@ -30,3 +30,37 @@ export type MinecraftVersionsResponse = {
   };
   versions: MinecraftVersion[];
 };
+
+export type InstanceManagementTab =
+  | "overview"
+  | "mods"
+  | "resourcepacks"
+  | "shaders"
+  | "screenshots"
+  | "settings";
+
+export function formatPlayTime(seconds?: number | null): string {
+  if (!seconds || seconds <= 0) {
+    return "Never played";
+  }
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+  return `${hours}h ${remainingMinutes}m`;
+}
+
+export type RunningInstanceInfo = {
+  id: string;
+  name: string;
+  mcVersion: string;
+  startedAt: number;
+};

@@ -12,6 +12,8 @@ import {
   RailLogo,
   SettingsPage,
   SettingsRailNav,
+  InstanceRailNav,
+  type InstanceManagementTab,
   fade,
   fontFamily,
   pageFade,
@@ -82,9 +84,11 @@ export default function App() {
 
   const [page, setPage] = useState(0);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
+  const [managingInstanceId, setManagingInstanceId] = useState<string | null>(null);
+  const [instanceTab, setInstanceTab] = useState<InstanceManagementTab>("overview");
 
   const theme = themes[settings.appearance];
-  const open = page === SETTINGS;
+  const isRailOpen = page === SETTINGS || (page === 1 && Boolean(managingInstanceId));
 
   // the favicon follows the shell, the same pair the rail picks between
   useEffect(() => {
@@ -127,7 +131,7 @@ export default function App() {
             coming back narrows it, and the page beside it never moves */}
         <motion.nav
           className="rail"
-          animate={{ width: open ? OPEN_WIDTH : RAIL_WIDTH }}
+          animate={{ width: isRailOpen ? OPEN_WIDTH : RAIL_WIDTH }}
           transition={rail}
           style={{ background: theme.sidebar }}
         >
@@ -136,7 +140,7 @@ export default function App() {
           <div className="rail-brand">
             <RailLogo appearance={settings.appearance} />
             <AnimatePresence>
-              {open && (
+              {isRailOpen && (
                 <motion.div
                   key="wordmark"
                   className="rail-wordmark-wrapper"
@@ -157,18 +161,39 @@ export default function App() {
           </div>
 
           <AnimatePresence mode="wait" initial={false}>
-            {open ? (
-              <motion.div key="open" {...pageFade} transition={fade} className="rail-inner">
-                <SettingsRailNav
-                  activeTab={settingsTab}
-                  onSelectTab={setSettingsTab}
-                  theme={theme}
-                  onBack={() => setPage(0)}
-                />
+            {isRailOpen ? (
+              <motion.div
+                key={page === 1 ? `instance-rail-${managingInstanceId}` : "settings-rail"}
+                {...pageFade}
+                transition={fade}
+                className="rail-inner"
+              >
+                {page === 1 && managingInstanceId ? (
+                  <InstanceRailNav
+                    activeTab={instanceTab}
+                    onSelectTab={setInstanceTab}
+                    theme={theme}
+                    onBack={() => setManagingInstanceId(null)}
+                  />
+                ) : (
+                  <SettingsRailNav
+                    activeTab={settingsTab}
+                    onSelectTab={setSettingsTab}
+                    theme={theme}
+                    onBack={() => setPage(0)}
+                  />
+                )}
               </motion.div>
             ) : (
               <motion.div key="icons" {...pageFade} transition={fade} className="rail-inner">
-                <RailIcons selected={page} onSelect={setPage} theme={theme} />
+                <RailIcons
+                  selected={page}
+                  onSelect={(p) => {
+                    setManagingInstanceId(null);
+                    setPage(p);
+                  }}
+                  theme={theme}
+                />
               </motion.div>
             )}
           </AnimatePresence>
@@ -207,8 +232,17 @@ export default function App() {
 
           <div className="page-viewport" style={{ background: theme.background }}>
             <AnimatePresence mode="wait" initial={false}>
-              <motion.main key={NAV[page].label} {...pageFade} transition={fade} className="page">
-                {open ? (
+              <motion.main
+                key={
+                  page === 1 && managingInstanceId
+                    ? `instance-${managingInstanceId}-${instanceTab}`
+                    : NAV[page].label
+                }
+                {...pageFade}
+                transition={fade}
+                className="page"
+              >
+                {page === SETTINGS ? (
                   <SettingsPage
                     activeTab={settingsTab}
                     settings={settings}
@@ -251,6 +285,12 @@ export default function App() {
                     instances={instances}
                     versions={versions}
                     javaRuntimes={javaRuntimes as any}
+                    managingInstanceId={managingInstanceId}
+                    onSelectManagingInstanceId={setManagingInstanceId}
+                    activeManagementTab={instanceTab}
+                    onSelectManagementTab={setInstanceTab}
+                    runningInstances={runningInstances}
+                    onKillInstance={killInstance}
                     onCreateInstance={async (name, mcVersion, versionType, icon) => {
                       const histId = `inst-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
                       try {

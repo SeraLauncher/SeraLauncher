@@ -258,3 +258,4 @@ mod tests {
         assert_eq!(slugify("My Cool Instance"), "my-cool-instance");
     }
 }
+

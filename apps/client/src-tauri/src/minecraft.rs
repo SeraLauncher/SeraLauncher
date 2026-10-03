@@ -19,7 +19,37 @@ pub struct RunningInstanceInfo {
 
 struct ActiveInstance {
     pub info: RunningInstanceInfo,
+    pub pid: u32,
     pub child: Arc<Mutex<Option<std::process::Child>>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstanceLogPayload {
+    pub id: String,
+    pub line: String,
+}
+
+static ACTIVE_SESSION_LOG_PATHS: Mutex<Option<HashMap<String, PathBuf>>> = Mutex::new(None);
+
+pub fn get_instance_session_logs(_app: &tauri::AppHandle, id: &str) -> Option<String> {
+    let path_opt = {
+        if let Ok(guard) = ACTIVE_SESSION_LOG_PATHS.lock() {
+            guard.as_ref().and_then(|m| m.get(id).cloned())
+        } else {
+            None
+        }
+    };
+
+    if let Some(path) = path_opt {
+        if path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                return Some(content);
+            }
+        }
+    }
+
+    None
 }
 
 static RUNNING_INSTANCES: Mutex<Option<HashMap<String, ActiveInstance>>> = Mutex::new(None);
@@ -39,9 +69,35 @@ pub fn terminate_running_instance(id: &str) -> Result<(), String> {
     if let Ok(mut guard) = RUNNING_INSTANCES.lock() {
         if let Some(map) = guard.as_mut() {
             if let Some(active) = map.remove(id) {
+                let pid = active.pid;
+                let mut killed = false;
+
+                // 1. Kill via Child handle if still present
                 if let Ok(mut child_lock) = active.child.lock() {
                     if let Some(mut child) = child_lock.take() {
                         let _ = child.kill();
+                        let _ = child.wait();
+                        killed = true;
+                    }
+                }
+
+                // 2. Direct OS kill fallback only if child handle was already gone
+                if !killed {
+                    #[cfg(unix)]
+                    {
+                        let _ = std::process::Command::new("kill")
+                            .args(&["-9", &pid.to_string()])
+                            .stdout(std::process::Stdio::null())
+                            .stderr(std::process::Stdio::null())
+                            .status();
+                    }
+                    #[cfg(windows)]
+                    {
+                        let _ = std::process::Command::new("taskkill")
+                            .args(&["/F", "/PID", &pid.to_string()])
+                            .stdout(std::process::Stdio::null())
+                            .stderr(std::process::Stdio::null())
+                            .status();
                     }
                 }
             }
@@ -730,8 +786,9 @@ pub async fn install_minecraft_version_with_instance(
             }
         }
 
-        crate::downloads::finish_download(app, &task_id);
     }
+
+    crate::downloads::finish_download(app, &task_id);
 
     Ok(pkg)
 }
@@ -912,20 +969,89 @@ pub async fn launch_minecraft_instance(
         cmd_args.push(instance.version_type.clone());
     }
 
-    // 7. Spawn Process
+    // Ensure any install task is marked finished
+    let mc_task_id = format!("mc-{}", instance.mc_version);
+    crate::downloads::finish_download(app, &mc_task_id);
+
+    // 7. Spawn Process with piped stdout/stderr and dedicated session log file
     let mut command = std::process::Command::new(&java_exec);
     command.args(&cmd_args);
     command.current_dir(&game_dir);
+    command.stdout(std::process::Stdio::piped());
+    command.stderr(std::process::Stdio::piped());
 
-    let child = command
+    let mut child = command
         .spawn()
         .map_err(|e| format!("Failed to launch Minecraft ({}) with {}: {}", instance.name, java_exec, e))?;
 
-    let child_arc = Arc::new(Mutex::new(Some(child)));
+    let pid = child.id();
     let now_epoch = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
+
+    // Create a new dedicated session log file for this run: <instance_dir>/session-logs/session-<timestamp>.log
+    let session_logs_dir = inst_dir.join("session-logs");
+    let _ = std::fs::create_dir_all(&session_logs_dir);
+    let session_log_file_name = format!("session-{}.log", now_epoch);
+    let session_log_path = session_logs_dir.join(&session_log_file_name);
+
+    let session_file = std::fs::File::create(&session_log_path)
+        .map_err(|e| format!("Failed to create session log file: {}", e))?;
+    let session_writer = Arc::new(Mutex::new(std::io::BufWriter::new(session_file)));
+
+    // Register this new session log file as the active session log for this instance
+    if let Ok(mut guard) = ACTIVE_SESSION_LOG_PATHS.lock() {
+        let map = guard.get_or_insert_with(HashMap::new);
+        map.insert(instance.id.clone(), session_log_path.clone());
+    }
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+
+    // Stream stdout directly into the session log file and emit to the app UI
+    if let Some(out) = stdout {
+        let app_out = app.clone();
+        let inst_id_out = instance.id.clone();
+        let writer_out = session_writer.clone();
+        std::thread::spawn(move || {
+            use std::io::{BufRead, BufReader, Write};
+            let reader = BufReader::new(out);
+            for line in reader.lines().flatten() {
+                if let Ok(mut w) = writer_out.lock() {
+                    let _ = writeln!(w, "{}", line);
+                    let _ = w.flush();
+                }
+                let _ = app_out.emit("instance_log_line", InstanceLogPayload {
+                    id: inst_id_out.clone(),
+                    line,
+                });
+            }
+        });
+    }
+
+    // Stream stderr directly into the session log file and emit to the app UI
+    if let Some(err) = stderr {
+        let app_err = app.clone();
+        let inst_id_err = instance.id.clone();
+        let writer_err = session_writer.clone();
+        std::thread::spawn(move || {
+            use std::io::{BufRead, BufReader, Write};
+            let reader = BufReader::new(err);
+            for line in reader.lines().flatten() {
+                if let Ok(mut w) = writer_err.lock() {
+                    let _ = writeln!(w, "{}", line);
+                    let _ = w.flush();
+                }
+                let _ = app_err.emit("instance_log_line", InstanceLogPayload {
+                    id: inst_id_err.clone(),
+                    line,
+                });
+            }
+        });
+    }
+
+    let child_arc = Arc::new(Mutex::new(Some(child)));
 
     let info = RunningInstanceInfo {
         id: instance.id.clone(),
@@ -939,26 +1065,39 @@ pub async fn launch_minecraft_instance(
         let map = guard.get_or_insert_with(HashMap::new);
         map.insert(instance.id.clone(), ActiveInstance {
             info,
+            pid,
             child: child_arc.clone(),
         });
     }
 
     let _ = app.emit("running_instances_changed", list_running_instances());
 
-    // Watch child process in background thread
+    // Watch child process in background without taking ownership of child handle
     let app_clone = app.clone();
     let inst_id_clone = instance.id.clone();
     std::thread::spawn(move || {
-        let child_opt = {
-            if let Ok(mut lock) = child_arc.lock() {
-                lock.take()
-            } else {
-                None
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            let exited = {
+                if let Ok(mut lock) = child_arc.lock() {
+                    if let Some(child) = lock.as_mut() {
+                        match child.try_wait() {
+                            Ok(Some(_status)) => true,
+                            Ok(None) => false,
+                            Err(_) => true,
+                        }
+                    } else {
+                        true
+                    }
+                } else {
+                    true
+                }
+            };
+            if exited {
+                break;
             }
-        };
-        if let Some(mut c) = child_opt {
-            let _ = c.wait();
         }
+
         if let Ok(mut guard) = RUNNING_INSTANCES.lock() {
             if let Some(map) = guard.as_mut() {
                 map.remove(&inst_id_clone);

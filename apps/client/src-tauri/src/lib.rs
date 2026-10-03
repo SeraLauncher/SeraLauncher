@@ -272,6 +272,13 @@ async fn login_littleskin(
 }
 
 #[tauri::command]
+async fn refresh_account_skins(
+    app: tauri::AppHandle,
+) -> Result<Option<auth::PublicAccountInfo>, String> {
+    auth::refresh_account_skins(&app).await
+}
+
+#[tauri::command]
 async fn fetch_skin_as_data_url(url: String) -> Result<String, String> {
     let client = reqwest::Client::builder()
         .user_agent("SeraLauncher/0.1.4")
@@ -330,6 +337,11 @@ fn kill_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
 #[tauri::command]
 async fn launch_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
     minecraft::launch_minecraft_instance(&app, &id).await
+}
+
+#[tauri::command]
+fn get_instance_logs(app: tauri::AppHandle, id: String) -> Result<String, String> {
+    Ok(minecraft::get_instance_session_logs(&app, &id).unwrap_or_default())
 }
 
 #[tauri::command]
@@ -530,6 +542,7 @@ pub fn run() {
             create_instance,
             delete_instance,
             update_instance,
+            get_instance_logs,
             open_instance_folder,
             get_instance_path,
             launch_instance,
@@ -544,6 +557,7 @@ pub fn run() {
             add_offline_account,
             login_elyby,
             login_littleskin,
+            refresh_account_skins,
             fetch_skin_as_data_url,
             get_active_downloads,
             pause_download,

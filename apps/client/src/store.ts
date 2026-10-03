@@ -295,6 +295,19 @@ export function useAccounts() {
 
   useEffect(() => {
     refreshAccounts();
+
+    // Background skin checker: syncs latest skins from provider session servers
+    invoke<PublicAccount | null>("refresh_account_skins")
+      .then((updatedActive) => {
+        if (updatedActive) {
+          setActiveAccount(updatedActive);
+        }
+        // Refresh all accounts list to reflect any updated skin URLs
+        invoke<PublicAccount[]>("get_all_accounts")
+          .then((list) => setAccounts(list))
+          .catch(() => {});
+      })
+      .catch((err) => console.warn("sera: could not refresh account skins:", err));
   }, [refreshAccounts]);
 
   const selectAccount = useCallback(

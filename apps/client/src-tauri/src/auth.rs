@@ -935,6 +935,53 @@ pub async fn login_elyby(
 }
 
 /// Authenticates a user against LittleSkin Yggdrasil API and saves the account in accounts.json.
+
+/// Automatically refreshes skin URLs for all stored online accounts (Ely.by, LittleSkin, Microsoft).
+/// Queries provider public session profile endpoints and extracts the latest skin texture.
+pub async fn refresh_account_skins(app: &tauri::AppHandle) -> Result<Option<PublicAccountInfo>, String> {
+    let mut db = load_account_database(app);
+    if db.accounts.is_empty() {
+        return Ok(None);
+    }
+
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.4")
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    let mut changed = false;
+
+    for account in &mut db.accounts {
+        let raw_uuid = account.uuid.replace('-', "");
+        let profile_url = match account.account_type.as_str() {
+            "elyby" => Some(format!("https://authserver.ely.by/session/profile/{}", raw_uuid)),
+            "littleskin" => Some(format!("https://littleskin.cn/api/yggdrasil/sessionserver/session/minecraft/profile/{}", raw_uuid)),
+            "microsoft" => Some(format!("https://sessionserver.mojang.com/session/minecraft/profile/{}", raw_uuid)),
+            _ => None,
+        };
+
+        if let Some(url) = profile_url {
+            if let Some(new_skin) = fetch_yggdrasil_skin_texture(&client, &url).await {
+                if account.skin_url.as_deref() != Some(&new_skin) {
+                    account.skin_url = Some(new_skin);
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    if changed {
+        save_account_database(app, &db)?;
+    }
+
+    let active_id = db.active_account_id.as_deref();
+    let active_info = db.accounts.iter().find(|a| Some(a.id.as_str()) == active_id || active_id.is_none())
+        .map(|a| a.to_public(true));
+
+    Ok(active_info)
+}
+
 pub async fn login_littleskin(
     app: &tauri::AppHandle,
     raw_username: &str,
