@@ -1095,6 +1095,471 @@ function InstanceManagementView({
 
   const loaderLabel = `${instance.versionType === "snapshot" ? "Snapshot" : "Vanilla"} ${instance.mcVersion}`;
 
+  if (activeTab === "settings") {
+    return (
+      <main className="settings">
+        <h1 className="settings-title" style={{ color: theme.foreground }}>
+          Instance Settings
+        </h1>
+
+        <section className="group">
+          <form onSubmit={handleSaveSettings}>
+            <div className="box">
+              {/* Row 1: Block icon on left with random at bottom, and instance name input with label to its right */}
+              <div className="row" style={{ padding: "12px 0" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "14px",
+                    alignItems: "flex-start",
+                    width: "100%",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                      alignItems: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      className="instance-card-art"
+                      style={{
+                        width: "54px",
+                        height: "54px",
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        background: `linear-gradient(180deg, ${currentGradient.top} 0%, ${currentGradient.bottom} 100%)`,
+                        flexShrink: 0,
+                      }}
+                      onClick={() => setShowIconPicker(!showIconPicker)}
+                      title="Change block or background color"
+                    >
+                      <img
+                        src={getBlockIconSrc(selectedBlock)}
+                        alt="Instance icon"
+                        className="instance-block-img"
+                        style={{ width: "72%", height: "72%" }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      style={{
+                        background: "transparent",
+                        border: 0,
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        color: theme.primary,
+                        cursor: "pointer",
+                        padding: "0 2px",
+                      }}
+                      onClick={handleRandomizeIcon}
+                      title="Pick random icon"
+                    >
+                      Random
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      flex: 1,
+                      minWidth: 0,
+                      paddingTop: "2px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        color: theme.foreground,
+                        lineHeight: 1.15,
+                      }}
+                    >
+                      Instance Name
+                    </span>
+                    <input
+                      type="text"
+                      className="settings-input"
+                      style={{
+                        background: theme.secondary,
+                        color: theme.foreground,
+                        border: 0,
+                        width: "100%",
+                        height: "38px",
+                        fontSize: "0.92rem",
+                        fontWeight: 600,
+                      }}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Instance name"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Optional Icon Picker Dropdown */}
+              {showIconPicker && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    padding: "12px",
+                    margin: "6px 0 10px",
+                    borderRadius: "8px",
+                    background: theme.secondary,
+                    border: `1px solid ${theme.border}`,
+                  }}
+                >
+                  <div className="icon-picker-tabs">
+                    <button
+                      type="button"
+                      className={`icon-picker-tab-btn ${iconPickerTab === "blocks" ? "active" : ""}`}
+                      onClick={() => setIconPickerTab("blocks")}
+                    >
+                      Block icon ({BLOCK_ICON_KEYS.length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`icon-picker-tab-btn ${iconPickerTab === "colors" ? "active" : ""}`}
+                      onClick={() => setIconPickerTab("colors")}
+                    >
+                      Background color ({PASTEL_GRADIENTS.length})
+                    </button>
+                  </div>
+
+                  {iconPickerTab === "blocks" ? (
+                    <div
+                      className="block-picker-grid"
+                      style={{ background: "transparent", border: "none", padding: 0 }}
+                    >
+                      {BLOCK_ICON_KEYS.map((k) => (
+                        <button
+                          key={k}
+                          type="button"
+                          className={`block-picker-item ${selectedBlock === k ? "selected" : ""}`}
+                          onClick={() => setSelectedBlock(k)}
+                          title={k.replace(/_/g, " ")}
+                        >
+                          <img src={getBlockIconSrc(k)} alt={k} className="block-picker-img" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      className="gradient-picker-grid"
+                      style={{ background: "transparent", border: "none", padding: 0 }}
+                    >
+                      {PASTEL_GRADIENTS.map((g) => (
+                        <button
+                          key={g.name}
+                          type="button"
+                          className={`gradient-picker-item ${selectedGradientName === g.name ? "selected" : ""}`}
+                          onClick={() => setSelectedGradientName(g.name)}
+                          title={g.name}
+                        >
+                          <div
+                            className="gradient-swatch-circle"
+                            style={{
+                              background: `linear-gradient(180deg, ${g.top} 0%, ${g.bottom} 100%)`,
+                            }}
+                          />
+                          <span className="gradient-swatch-name">{g.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Row 2: Java Executable */}
+              <div className="row">
+                <div className="row-label">
+                  <span className="row-title" style={{ color: theme.foreground }}>
+                    Java Executable
+                    {onRefreshJava && (
+                      <button
+                        type="button"
+                        onClick={onRefreshJava}
+                        title="Rescan system for installed Java runtimes"
+                        aria-label="Rescan system for installed Java runtimes"
+                        style={{ color: theme.mutedForeground }}
+                      >
+                        <Icon name="refresh" size={16} color={theme.mutedForeground} />
+                      </button>
+                    )}
+                  </span>
+                  <span className="row-hint" style={{ color: theme.mutedForeground }}>
+                    {customJava
+                      ? `Custom: ${customJava}`
+                      : javaRuntimes.length > 0
+                        ? `Auto-detected: Java ${javaRuntimes[0].majorVersion} (${javaRuntimes[0].version})`
+                        : `Requires Java ${instance.javaVersionRequired} (managed runtime will be used)`}
+                  </span>
+                </div>
+
+                <div className="row-control">
+                  <div className="settings-java-control">
+                    <Dropdown
+                      className="dropdown-wide"
+                      value={selectedJavaOption}
+                      options={javaOptions}
+                      theme={theme}
+                      onChange={(option) => {
+                        if (option === "AUTO") {
+                          setCustomPathMode(false);
+                          setCustomJava("");
+                        } else if (option === "CUSTOM") {
+                          setCustomPathMode(true);
+                        } else {
+                          setCustomPathMode(false);
+                          setCustomJava(option);
+                        }
+                      }}
+                      render={(option) => {
+                        if (option === "AUTO") {
+                          const top = javaRuntimes[0];
+                          return top
+                            ? `Auto-detect (Java ${top.majorVersion})`
+                            : "Auto-detect (Managed runtime)";
+                        }
+                        if (option === "CUSTOM") {
+                          return "Custom path...";
+                        }
+                        const match = javaRuntimes.find((r) => r.path === option);
+                        if (match) {
+                          return `Java ${match.majorVersion} (${match.is64Bit ? "64-bit" : "32-bit"}) · ${match.version}`;
+                        }
+                        return option;
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Java Path Row if in custom path mode */}
+              {customPathMode && (
+                <div className="settings-custom-path-row">
+                  <input
+                    type="text"
+                    className="settings-input"
+                    style={{
+                      background: theme.secondary,
+                      color: theme.foreground,
+                      border: 0,
+                    }}
+                    value={customJava}
+                    placeholder="e.g. /usr/lib/jvm/java-21-openjdk/bin/java or C:\Program Files\Java\...\javaw.exe"
+                    onChange={(e) => setCustomJava(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {/* Row 3: Memory Allocation */}
+              <div className="row">
+                <div className="row-label">
+                  <span className="row-title" style={{ color: theme.foreground }}>
+                    Memory Allocation
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMinMemory(DEFAULT_MIN_MEMORY);
+                        setMaxMemory(DEFAULT_MAX_MEMORY);
+                      }}
+                      title="Reset memory allocation"
+                      aria-label="Reset memory allocation"
+                      style={{ color: theme.mutedForeground }}
+                    >
+                      <Icon name="reset" size={16} color={theme.mutedForeground} />
+                    </button>
+                  </span>
+                  <span className="row-hint" style={{ color: theme.mutedForeground }}>
+                    Minimum (-Xms) and Maximum (-Xmx) heap size. Host: ~
+                    {(systemMemoryMb / 1024).toFixed(1)} GB RAM
+                  </span>
+                </div>
+
+                <div className="row-control">
+                  <div className="settings-memory-panel">
+                    {/* Preset buttons */}
+                    <div className="settings-chips">
+                      {MEMORY_PRESETS.map((p) => {
+                        const isActive = maxMemory === p.value;
+                        return (
+                          <button
+                            key={p.value}
+                            type="button"
+                            className={`settings-chip ${isActive ? "active" : ""}`}
+                            style={{
+                              background: isActive ? theme.primary : theme.secondary,
+                              color: isActive ? theme.primaryForeground : theme.foreground,
+                            }}
+                            onClick={() => {
+                              const newMax = p.value;
+                              const newMin = Math.min(minMemory, newMax);
+                              setMaxMemory(newMax);
+                              setMinMemory(newMin);
+                            }}
+                          >
+                            {p.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Max RAM slider */}
+                    <div className="settings-slider-wrapper">
+                      <div className="settings-slider-label">
+                        <span style={{ color: theme.mutedForeground }}>Maximum RAM:</span>
+                        <strong style={{ color: theme.foreground }}>
+                          {(maxMemory / 1024).toFixed(1)} GB ({maxMemory} MB)
+                        </strong>
+                      </div>
+                      <input
+                        type="range"
+                        className="settings-slider"
+                        min={1024}
+                        max={maxSliderLimit}
+                        step={512}
+                        value={maxMemory}
+                        style={{
+                          background: `linear-gradient(to right, ${theme.primary} 0%, ${theme.primary} ${maxRamPercent}%, ${theme.secondary} ${maxRamPercent}%, ${theme.secondary} 100%)`,
+                        }}
+                        onChange={(e) => {
+                          const newMax = Number(e.target.value);
+                          const newMin = Math.min(minMemory, newMax);
+                          setMaxMemory(newMax);
+                          setMinMemory(newMin);
+                        }}
+                      />
+                    </div>
+
+                    {/* Min RAM slider */}
+                    <div className="settings-slider-wrapper">
+                      <div className="settings-slider-label">
+                        <span style={{ color: theme.mutedForeground }}>Minimum RAM:</span>
+                        <strong style={{ color: theme.foreground }}>
+                          {(minMemory / 1024).toFixed(1)} GB ({minMemory} MB)
+                        </strong>
+                      </div>
+                      <input
+                        type="range"
+                        className="settings-slider"
+                        min={512}
+                        max={maxMemory}
+                        step={256}
+                        value={minMemory}
+                        style={{
+                          background: `linear-gradient(to right, ${theme.primary} 0%, ${theme.primary} ${minRamPercent}%, ${theme.secondary} ${minRamPercent}%, ${theme.secondary} 100%)`,
+                        }}
+                        onChange={(e) => {
+                          const newMin = Number(e.target.value);
+                          setMinMemory(newMin);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 4: Custom Java Arguments */}
+              <div className="settings-block-row">
+                <div className="settings-block-header">
+                  <div className="row-label">
+                    <span className="row-title" style={{ color: theme.foreground }}>
+                      Custom Java Arguments
+                      <span className="row-actions">
+                        <button
+                          type="button"
+                          onClick={() => setJvmArgs("")}
+                          title="Clear custom Java arguments"
+                          aria-label="Clear custom Java arguments"
+                          style={{ color: theme.mutedForeground }}
+                        >
+                          <Icon name="reset" size={16} color={theme.mutedForeground} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowArgsModal(true)}
+                          title="View effective Java arguments"
+                          aria-label="View effective Java arguments"
+                          style={{ color: theme.mutedForeground }}
+                        >
+                          <Icon name="eye" size={16} color={theme.mutedForeground} />
+                        </button>
+                      </span>
+                    </span>
+                    <span className="row-hint" style={{ color: theme.mutedForeground }}>
+                      Additional custom arguments appended to the launch command
+                    </span>
+                  </div>
+                </div>
+
+                <textarea
+                  className="settings-textarea settings-mono"
+                  rows={3}
+                  style={{
+                    background: theme.secondary,
+                    color: theme.foreground,
+                    border: 0,
+                  }}
+                  value={jvmArgs}
+                  placeholder="e.g. -Dsun.rmi.dgc.server.gcInterval=2147483646 -XX:+UseStringDeduplication"
+                  onChange={(e) => setJvmArgs(e.target.value)}
+                />
+              </div>
+
+              {/* Action buttons: Inside the box */}
+              <div className="instance-settings-actions">
+                {savedSuccess && (
+                  <span
+                    style={{
+                      fontSize: "0.82rem",
+                      color: theme.success,
+                      fontWeight: 500,
+                      marginRight: "auto",
+                    }}
+                  >
+                    Settings saved!
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="instance-delete-btn"
+                  onClick={onDelete}
+                  disabled={saveBusy}
+                  title="Delete this instance"
+                >
+                  Delete Instance
+                </button>
+                <button
+                  type="submit"
+                  className="instance-save-btn"
+                  style={{ background: theme.primary, color: theme.primaryForeground }}
+                  disabled={saveBusy}
+                >
+                  {saveBusy ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <EffectiveJavaArgsModal
+          isOpen={showArgsModal}
+          onClose={() => setShowArgsModal(false)}
+          settings={previewSettings}
+          theme={theme}
+        />
+      </main>
+    );
+  }
+
   return (
     <div className="instance-page-container">
       <div className="instance-mgmt-container">
@@ -1399,472 +1864,6 @@ function InstanceManagementView({
               <Icon name="photo" size={32} color={theme.mutedForeground} />
               <p>In-game screenshots taken with the F2 key are saved directly in this folder.</p>
             </div>
-          </div>
-        )}
-
-        {activeTab === "settings" && (
-          <div className="settings w-full min-h-full">
-            <form
-              onSubmit={handleSaveSettings}
-              className="w-full max-w-[620px] mx-auto flex flex-col gap-6"
-            >
-              <h1
-                className="settings-title text-2xl font-bold tracking-tight text-left w-full m-0"
-                style={{ color: theme.foreground, textAlign: "left" }}
-              >
-                Instance Settings
-              </h1>
-              <div className="px-4.5 py-1 bg-card rounded-xl border border-border/50 w-full box">
-                {/* Row 1: Block icon on left with random at bottom, and instance name input with label to its right */}
-                <div className="row" style={{ padding: "12px 0" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "14px",
-                      alignItems: "flex-start",
-                      width: "100%",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "4px",
-                        alignItems: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <div
-                        className="instance-card-art"
-                        style={{
-                          width: "54px",
-                          height: "54px",
-                          borderRadius: "10px",
-                          cursor: "pointer",
-                          background: `linear-gradient(180deg, ${currentGradient.top} 0%, ${currentGradient.bottom} 100%)`,
-                          flexShrink: 0,
-                        }}
-                        onClick={() => setShowIconPicker(!showIconPicker)}
-                        title="Change block or background color"
-                      >
-                        <img
-                          src={getBlockIconSrc(selectedBlock)}
-                          alt="Instance icon"
-                          className="instance-block-img"
-                          style={{ width: "72%", height: "72%" }}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        style={{
-                          background: "transparent",
-                          border: 0,
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                          color: theme.primary,
-                          cursor: "pointer",
-                          padding: "0 2px",
-                        }}
-                        onClick={handleRandomizeIcon}
-                        title="Pick random icon"
-                      >
-                        Random
-                      </button>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "6px",
-                        flex: 1,
-                        minWidth: 0,
-                        paddingTop: "2px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: "0.82rem",
-                          fontWeight: 600,
-                          color: theme.foreground,
-                          lineHeight: 1.15,
-                        }}
-                      >
-                        Instance Name
-                      </span>
-                      <input
-                        type="text"
-                        className="settings-input"
-                        style={{
-                          background: theme.secondary,
-                          color: theme.foreground,
-                          border: 0,
-                          width: "100%",
-                          height: "38px",
-                          fontSize: "0.92rem",
-                          fontWeight: 600,
-                        }}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Instance name"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Optional Icon Picker Dropdown */}
-                {showIconPicker && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                      padding: "12px",
-                      margin: "6px 0 10px",
-                      borderRadius: "8px",
-                      background: theme.secondary,
-                      border: `1px solid ${theme.border}`,
-                    }}
-                  >
-                    <div className="icon-picker-tabs">
-                      <button
-                        type="button"
-                        className={`icon-picker-tab-btn ${iconPickerTab === "blocks" ? "active" : ""}`}
-                        onClick={() => setIconPickerTab("blocks")}
-                      >
-                        Block icon ({BLOCK_ICON_KEYS.length})
-                      </button>
-                      <button
-                        type="button"
-                        className={`icon-picker-tab-btn ${iconPickerTab === "colors" ? "active" : ""}`}
-                        onClick={() => setIconPickerTab("colors")}
-                      >
-                        Background color ({PASTEL_GRADIENTS.length})
-                      </button>
-                    </div>
-
-                    {iconPickerTab === "blocks" ? (
-                      <div
-                        className="block-picker-grid"
-                        style={{ background: "transparent", border: "none", padding: 0 }}
-                      >
-                        {BLOCK_ICON_KEYS.map((k) => (
-                          <button
-                            key={k}
-                            type="button"
-                            className={`block-picker-item ${selectedBlock === k ? "selected" : ""}`}
-                            onClick={() => setSelectedBlock(k)}
-                            title={k.replace(/_/g, " ")}
-                          >
-                            <img src={getBlockIconSrc(k)} alt={k} className="block-picker-img" />
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div
-                        className="gradient-picker-grid"
-                        style={{ background: "transparent", border: "none", padding: 0 }}
-                      >
-                        {PASTEL_GRADIENTS.map((g) => (
-                          <button
-                            key={g.name}
-                            type="button"
-                            className={`gradient-picker-item ${selectedGradientName === g.name ? "selected" : ""}`}
-                            onClick={() => setSelectedGradientName(g.name)}
-                            title={g.name}
-                          >
-                            <div
-                              className="gradient-swatch-circle"
-                              style={{
-                                background: `linear-gradient(180deg, ${g.top} 0%, ${g.bottom} 100%)`,
-                              }}
-                            />
-                            <span className="gradient-swatch-name">{g.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Row 2: Java Executable */}
-                <div className="row">
-                  <div className="row-label">
-                    <span className="row-title" style={{ color: theme.foreground }}>
-                      Java Executable
-                      {onRefreshJava && (
-                        <button
-                          type="button"
-                          onClick={onRefreshJava}
-                          title="Rescan system for installed Java runtimes"
-                          aria-label="Rescan system for installed Java runtimes"
-                          style={{ color: theme.mutedForeground }}
-                        >
-                          <Icon name="refresh" size={16} color={theme.mutedForeground} />
-                        </button>
-                      )}
-                    </span>
-                    <span className="row-hint" style={{ color: theme.mutedForeground }}>
-                      {customJava
-                        ? `Custom: ${customJava}`
-                        : javaRuntimes.length > 0
-                          ? `Auto-detected: Java ${javaRuntimes[0].majorVersion} (${javaRuntimes[0].version})`
-                          : `Requires Java ${instance.javaVersionRequired} (managed runtime will be used)`}
-                    </span>
-                  </div>
-
-                  <div className="row-control">
-                    <div className="settings-java-control">
-                      <Dropdown
-                        className="dropdown-wide"
-                        value={selectedJavaOption}
-                        options={javaOptions}
-                        theme={theme}
-                        onChange={(option) => {
-                          if (option === "AUTO") {
-                            setCustomPathMode(false);
-                            setCustomJava("");
-                          } else if (option === "CUSTOM") {
-                            setCustomPathMode(true);
-                          } else {
-                            setCustomPathMode(false);
-                            setCustomJava(option);
-                          }
-                        }}
-                        render={(option) => {
-                          if (option === "AUTO") {
-                            const top = javaRuntimes[0];
-                            return top
-                              ? `Auto-detect (Java ${top.majorVersion})`
-                              : "Auto-detect (Managed runtime)";
-                          }
-                          if (option === "CUSTOM") {
-                            return "Custom path...";
-                          }
-                          const match = javaRuntimes.find((r) => r.path === option);
-                          if (match) {
-                            return `Java ${match.majorVersion} (${match.is64Bit ? "64-bit" : "32-bit"}) · ${match.version}`;
-                          }
-                          return option;
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Custom Java Path Row if in custom path mode */}
-                {customPathMode && (
-                  <div className="settings-custom-path-row">
-                    <input
-                      type="text"
-                      className="settings-input"
-                      style={{
-                        background: theme.secondary,
-                        color: theme.foreground,
-                        border: 0,
-                      }}
-                      value={customJava}
-                      placeholder="e.g. /usr/lib/jvm/java-21-openjdk/bin/java or C:\Program Files\Java\...\javaw.exe"
-                      onChange={(e) => setCustomJava(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                {/* Row 3: Memory Allocation */}
-                <div className="row">
-                  <div className="row-label">
-                    <span className="row-title" style={{ color: theme.foreground }}>
-                      Memory Allocation
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMinMemory(DEFAULT_MIN_MEMORY);
-                          setMaxMemory(DEFAULT_MAX_MEMORY);
-                        }}
-                        title="Reset memory allocation"
-                        aria-label="Reset memory allocation"
-                        style={{ color: theme.mutedForeground }}
-                      >
-                        <Icon name="reset" size={16} color={theme.mutedForeground} />
-                      </button>
-                    </span>
-                    <span className="row-hint" style={{ color: theme.mutedForeground }}>
-                      Minimum (-Xms) and Maximum (-Xmx) heap size. Host: ~
-                      {(systemMemoryMb / 1024).toFixed(1)} GB RAM
-                    </span>
-                  </div>
-
-                  <div className="row-control">
-                    <div className="settings-memory-panel">
-                      {/* Preset buttons */}
-                      <div className="settings-chips">
-                        {MEMORY_PRESETS.map((p) => {
-                          const isActive = maxMemory === p.value;
-                          return (
-                            <button
-                              key={p.value}
-                              type="button"
-                              className={`settings-chip ${isActive ? "active" : ""}`}
-                              style={{
-                                background: isActive ? theme.primary : theme.secondary,
-                                color: isActive ? theme.primaryForeground : theme.foreground,
-                              }}
-                              onClick={() => {
-                                const newMax = p.value;
-                                const newMin = Math.min(minMemory, newMax);
-                                setMaxMemory(newMax);
-                                setMinMemory(newMin);
-                              }}
-                            >
-                              {p.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Max RAM slider */}
-                      <div className="settings-slider-wrapper">
-                        <div className="settings-slider-label">
-                          <span style={{ color: theme.mutedForeground }}>Maximum RAM:</span>
-                          <strong style={{ color: theme.foreground }}>
-                            {(maxMemory / 1024).toFixed(1)} GB ({maxMemory} MB)
-                          </strong>
-                        </div>
-                        <input
-                          type="range"
-                          className="settings-slider"
-                          min={1024}
-                          max={maxSliderLimit}
-                          step={512}
-                          value={maxMemory}
-                          style={{
-                            background: `linear-gradient(to right, ${theme.primary} 0%, ${theme.primary} ${maxRamPercent}%, ${theme.secondary} ${maxRamPercent}%, ${theme.secondary} 100%)`,
-                          }}
-                          onChange={(e) => {
-                            const newMax = Number(e.target.value);
-                            const newMin = Math.min(minMemory, newMax);
-                            setMaxMemory(newMax);
-                            setMinMemory(newMin);
-                          }}
-                        />
-                      </div>
-
-                      {/* Min RAM slider */}
-                      <div className="settings-slider-wrapper">
-                        <div className="settings-slider-label">
-                          <span style={{ color: theme.mutedForeground }}>Minimum RAM:</span>
-                          <strong style={{ color: theme.foreground }}>
-                            {(minMemory / 1024).toFixed(1)} GB ({minMemory} MB)
-                          </strong>
-                        </div>
-                        <input
-                          type="range"
-                          className="settings-slider"
-                          min={512}
-                          max={maxMemory}
-                          step={256}
-                          value={minMemory}
-                          style={{
-                            background: `linear-gradient(to right, ${theme.primary} 0%, ${theme.primary} ${minRamPercent}%, ${theme.secondary} ${minRamPercent}%, ${theme.secondary} 100%)`,
-                          }}
-                          onChange={(e) => {
-                            const newMin = Number(e.target.value);
-                            setMinMemory(newMin);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 4: Custom Java Arguments */}
-                <div className="settings-block-row">
-                  <div className="settings-block-header">
-                    <div className="row-label">
-                      <span className="row-title" style={{ color: theme.foreground }}>
-                        Custom Java Arguments
-                        <span className="row-actions">
-                          <button
-                            type="button"
-                            onClick={() => setJvmArgs("")}
-                            title="Clear custom Java arguments"
-                            aria-label="Clear custom Java arguments"
-                            style={{ color: theme.mutedForeground }}
-                          >
-                            <Icon name="reset" size={16} color={theme.mutedForeground} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setShowArgsModal(true)}
-                            title="View effective Java arguments"
-                            aria-label="View effective Java arguments"
-                            style={{ color: theme.mutedForeground }}
-                          >
-                            <Icon name="eye" size={16} color={theme.mutedForeground} />
-                          </button>
-                        </span>
-                      </span>
-                      <span className="row-hint" style={{ color: theme.mutedForeground }}>
-                        Additional custom arguments appended to the launch command
-                      </span>
-                    </div>
-                  </div>
-
-                  <textarea
-                    className="settings-textarea settings-mono"
-                    rows={3}
-                    style={{
-                      background: theme.secondary,
-                      color: theme.foreground,
-                      border: 0,
-                    }}
-                    value={jvmArgs}
-                    placeholder="e.g. -Dsun.rmi.dgc.server.gcInterval=2147483646 -XX:+UseStringDeduplication"
-                    onChange={(e) => setJvmArgs(e.target.value)}
-                  />
-                </div>
-
-                {/* Action buttons: Inside the box */}
-                <div className="instance-settings-actions">
-                  {savedSuccess && (
-                    <span
-                      style={{
-                        fontSize: "0.82rem",
-                        color: theme.success,
-                        fontWeight: 500,
-                        marginRight: "auto",
-                      }}
-                    >
-                      Settings saved!
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="instance-delete-btn"
-                    onClick={onDelete}
-                    disabled={saveBusy}
-                    title="Delete this instance"
-                  >
-                    Delete Instance
-                  </button>
-                  <button
-                    type="submit"
-                    className="instance-save-btn"
-                    style={{ background: theme.primary, color: theme.primaryForeground }}
-                    disabled={saveBusy}
-                  >
-                    {saveBusy ? "Saving..." : "Save Changes"}
-                  </button>
-                </div>
-              </div>
-            </form>
-
-            <EffectiveJavaArgsModal
-              isOpen={showArgsModal}
-              onClose={() => setShowArgsModal(false)}
-              settings={previewSettings}
-              theme={theme}
-            />
           </div>
         )}
       </div>
