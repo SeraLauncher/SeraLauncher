@@ -411,6 +411,16 @@ pub async fn install_minecraft_version(
     mc_version: &str,
     instance_dir: &Path,
 ) -> Result<VersionPackage, String> {
+    install_minecraft_version_with_instance(app, mc_version, instance_dir, None, None).await
+}
+
+pub async fn install_minecraft_version_with_instance(
+    app: &tauri::AppHandle,
+    mc_version: &str,
+    instance_dir: &Path,
+    instance_name: Option<&str>,
+    instance_icon: Option<&str>,
+) -> Result<VersionPackage, String> {
     let client = reqwest::Client::builder()
         .user_agent("SeraLauncher/0.1.4")
         .build()
@@ -421,7 +431,7 @@ pub async fn install_minecraft_version(
     // 0. Immediately signal download manager that Minecraft is installing!
     crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
         id: task_id.clone(),
-        title: format!("Minecraft {}", mc_version),
+        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {}", mc_version)),
         phase: "client".to_string(),
         phase_label: format!("Preparing Minecraft {}", mc_version),
         downloaded_bytes: 0,
@@ -431,12 +441,14 @@ pub async fn install_minecraft_version(
         status: "downloading".to_string(),
         error: None,
         order: 0,
+        instance_name: instance_name.map(|n| n.to_string()),
+        instance_icon: instance_icon.map(|i| i.to_string()),
     });
 
     // 1. Fetch Version Manifest to find the version URL
     crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
         id: task_id.clone(),
-        title: format!("Minecraft {}", mc_version),
+        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {}", mc_version)),
         phase: "client".to_string(),
         phase_label: "Resolving Version Manifest".to_string(),
         downloaded_bytes: 0,
@@ -446,6 +458,8 @@ pub async fn install_minecraft_version(
         status: "downloading".to_string(),
         error: None,
         order: 0,
+        instance_name: instance_name.map(|n| n.to_string()),
+        instance_icon: instance_icon.map(|i| i.to_string()),
     });
     let manifest = fetch_minecraft_versions().await?;
     let entry = manifest
@@ -488,7 +502,7 @@ pub async fn install_minecraft_version(
     let client_size = pkg.downloads.client.size;
     crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
         id: task_id.clone(),
-        title: format!("Minecraft {}", mc_version),
+        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {}", mc_version)),
         phase: "client".to_string(),
         phase_label: format!("Downloading Minecraft {} Client", mc_version),
         downloaded_bytes: 0,
@@ -498,6 +512,8 @@ pub async fn install_minecraft_version(
         status: "downloading".to_string(),
         error: None,
         order: 0,
+        instance_name: instance_name.map(|n| n.to_string()),
+        instance_icon: instance_icon.map(|i| i.to_string()),
     });
 
     download_file_with_verify(
@@ -515,7 +531,7 @@ pub async fn install_minecraft_version(
     // 3. Download Libraries and Extract Natives
     crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
         id: task_id.clone(),
-        title: format!("Minecraft {}", mc_version),
+        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {}", mc_version)),
         phase: "libraries".to_string(),
         phase_label: "Downloading Libraries & Natives".to_string(),
         downloaded_bytes: client_size,
@@ -525,6 +541,8 @@ pub async fn install_minecraft_version(
         status: "downloading".to_string(),
         error: None,
         order: 0,
+        instance_name: instance_name.map(|n| n.to_string()),
+        instance_icon: instance_icon.map(|i| i.to_string()),
     });
 
     let libs_base = libraries_dir(app)?;
@@ -625,7 +643,7 @@ pub async fn install_minecraft_version(
     if !missing_assets.is_empty() {
         crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
             id: task_id.clone(),
-            title: format!("Minecraft {} Assets", mc_version),
+            title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {} Assets", mc_version)),
             phase: "assets".to_string(),
             phase_label: format!("Downloading Minecraft {} Assets", mc_version),
             downloaded_bytes: 0,
@@ -635,6 +653,8 @@ pub async fn install_minecraft_version(
             status: "downloading".to_string(),
             error: None,
             order: 0,
+            instance_name: instance_name.map(|n| n.to_string()),
+            instance_icon: instance_icon.map(|i| i.to_string()),
         });
 
         const BATCH_SIZE: usize = 32;
@@ -694,7 +714,7 @@ pub async fn install_minecraft_version(
 
                 crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
                     id: task_id.clone(),
-                    title: format!("Minecraft {} Assets", mc_version),
+                    title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {} Assets", mc_version)),
                     phase: "assets".to_string(),
                     phase_label: format!("Downloading Minecraft {} Assets", mc_version),
                     downloaded_bytes: downloaded_asset_size,
@@ -704,6 +724,8 @@ pub async fn install_minecraft_version(
                     status: "downloading".to_string(),
                     error: None,
                     order: 0,
+                    instance_name: instance_name.map(|n| n.to_string()),
+                    instance_icon: instance_icon.map(|i| i.to_string()),
                 });
             }
         }

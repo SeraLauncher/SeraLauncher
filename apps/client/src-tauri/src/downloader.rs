@@ -139,6 +139,15 @@ pub async fn install_adoptium_runtime(
     app: &tauri::AppHandle,
     major_version: u32,
 ) -> Result<JavaRuntime, String> {
+    install_adoptium_runtime_with_instance(app, major_version, None, None).await
+}
+
+pub async fn install_adoptium_runtime_with_instance(
+    app: &tauri::AppHandle,
+    major_version: u32,
+    instance_name: Option<&str>,
+    instance_icon: Option<&str>,
+) -> Result<JavaRuntime, String> {
     let base_dir = runtimes_dir(app)?;
     let target_dir = base_dir.join(format!("java-{}", major_version));
 
@@ -186,7 +195,7 @@ pub async fn install_adoptium_runtime(
 
     crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
         id: task_id.clone(),
-        title: format!("Java {} Runtime", major_version),
+        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Java {} Runtime", major_version)),
         phase: "java".to_string(),
         phase_label: format!("Downloading Java {} Runtime", major_version),
         downloaded_bytes: 0,
@@ -196,6 +205,8 @@ pub async fn install_adoptium_runtime(
         status: "downloading".to_string(),
         error: None,
         order: 0,
+        instance_name: instance_name.map(|n| n.to_string()),
+        instance_icon: instance_icon.map(|i| i.to_string()),
     });
 
     let mut response = response;
@@ -243,7 +254,7 @@ pub async fn install_adoptium_runtime(
 
             crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
                 id: task_id.clone(),
-                title: format!("Java {} Runtime", major_version),
+                title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Java {} Runtime", major_version)),
                 phase: "java".to_string(),
                 phase_label: format!("Downloading Java {} Runtime", major_version),
                 downloaded_bytes: downloaded,
@@ -253,13 +264,15 @@ pub async fn install_adoptium_runtime(
                 status: "downloading".to_string(),
                 error: None,
                 order: 0,
+                instance_name: instance_name.map(|n| n.to_string()),
+                instance_icon: instance_icon.map(|i| i.to_string()),
             });
         }
     }
 
     crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
         id: task_id.clone(),
-        title: format!("Java {} Runtime", major_version),
+        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Java {} Runtime", major_version)),
         phase: "java".to_string(),
         phase_label: format!("Extracting Java {} Runtime", major_version),
         downloaded_bytes: downloaded,
@@ -269,6 +282,8 @@ pub async fn install_adoptium_runtime(
         status: "extracting".to_string(),
         error: None,
         order: 0,
+        instance_name: instance_name.map(|n| n.to_string()),
+        instance_icon: instance_icon.map(|i| i.to_string()),
     });
 
     let temp_extract_dir = base_dir.join(format!("java-{}-download-tmp", major_version));

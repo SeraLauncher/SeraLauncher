@@ -22,7 +22,7 @@ import {
   type SettingsTab,
 } from "@sera/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useSettings, useInstances, useAccounts, useDownloads } from "./store";
+import { useSettings, useInstances, useAccounts, useDownloads, useDownloadHistory } from "./store";
 
 /** the settings item is last in NAV, so its index is the settings page */
 const SETTINGS = NAV.length - 1;
@@ -54,6 +54,27 @@ export default function App() {
     addOfflineAccount,
   } = useAccounts();
   const { downloads, pauseDownload, resumeDownload, stopDownload } = useDownloads();
+  const {
+    history: downloadHistory,
+    addHistoryItem,
+    removeHistoryItem,
+    clearAllHistory,
+  } = useDownloadHistory(instances);
+
+  const handleStopDownload = async (id: string) => {
+    const item = downloads.find((d) => d.id === id);
+    await stopDownload(id);
+    if (item) {
+      addHistoryItem({
+        id: `stop-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        instanceName: item.instanceName || item.title,
+        instanceIcon: item.instanceIcon,
+        status: "canceled",
+        timestamp: Date.now(),
+      });
+    }
+  };
+
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [loginReason, setLoginReason] = useState<string | null>(null);
 
@@ -174,9 +195,12 @@ export default function App() {
               setLoginReason(null);
               setShowAccountModal(true);
             }}
+            downloadHistory={downloadHistory}
             onPauseDownload={pauseDownload}
             onResumeDownload={resumeDownload}
-            onStopDownload={stopDownload}
+            onStopDownload={handleStopDownload}
+            onDeleteHistoryItem={removeHistoryItem}
+            onClearAllHistory={clearAllHistory}
           />
 
           <div className="page-viewport" style={{ background: theme.background }}>
@@ -224,7 +248,30 @@ export default function App() {
                     versions={versions}
                     javaRuntimes={javaRuntimes as any}
                     onCreateInstance={async (name, mcVersion, versionType, icon) => {
-                      await createInstance(name, mcVersion, versionType, icon);
+                      const histId = `inst-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+                      try {
+                        await createInstance(name, mcVersion, versionType, icon);
+                        addHistoryItem({
+                          id: histId,
+                          instanceName: name,
+                          instanceIcon: icon,
+                          mcVersion,
+                          status: "completed",
+                          timestamp: Date.now(),
+                        });
+                      } catch (err) {
+                        const isCancelled =
+                          typeof err === "string" &&
+                          (err.includes("cancel") || err.includes("stopped"));
+                        addHistoryItem({
+                          id: histId,
+                          instanceName: name,
+                          instanceIcon: icon,
+                          mcVersion,
+                          status: isCancelled ? "canceled" : "failed",
+                          timestamp: Date.now(),
+                        });
+                      }
                       refreshJavaRuntimes();
                     }}
                     onDeleteInstance={deleteInstance}

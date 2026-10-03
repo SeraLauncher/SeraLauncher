@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
-use crate::downloader::install_adoptium_runtime;
 use crate::java::{discover_java_runtimes_with_extra, required_java_version};
 use crate::paths::{instances_dir, runtimes_dir};
 
@@ -141,13 +140,24 @@ pub async fn create_instance(
         }
     });
 
-    let java_path = if let Some(found) = matching_runtime {
-        found.path.clone()
+    let java_res: Result<String, String> = if let Some(found) = matching_runtime {
+        Ok(found.path.clone())
     } else {
-        // Auto-install required Java via Adoptium
-        let installed = install_adoptium_runtime(app, req_java).await?;
-        installed.path
+        match crate::downloader::install_adoptium_runtime_with_instance(
+            app,
+            req_java,
+            Some(&instance.name),
+            instance.icon.as_deref(),
+        ).await {
+            Ok(installed) => Ok(installed.path),
+            Err(e) => {
+                let _ = std::fs::remove_dir_all(&candidate_dir);
+                let _ = app.emit("instances_changed", ());
+                return Err(e);
+            }
+        }
     };
+    let java_path = java_res?;
 
     instance.custom_java_path = Some(java_path);
     if let Ok(updated_json) = serde_json::to_string_pretty(&instance) {
@@ -156,7 +166,17 @@ pub async fn create_instance(
     let _ = app.emit("instances_changed", ());
 
     // 3. Download Minecraft version, libraries, assets & natives for this instance
-    let _ = crate::minecraft::install_minecraft_version(app, &instance.mc_version, &candidate_dir).await?;
+    if let Err(e) = crate::minecraft::install_minecraft_version_with_instance(
+        app,
+        &instance.mc_version,
+        &candidate_dir,
+        Some(&instance.name),
+        instance.icon.as_deref(),
+    ).await {
+        let _ = std::fs::remove_dir_all(&candidate_dir);
+        let _ = app.emit("instances_changed", ());
+        return Err(e);
+    }
     let _ = app.emit("instances_changed", ());
 
     Ok(instance)

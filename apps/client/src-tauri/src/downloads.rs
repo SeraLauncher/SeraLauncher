@@ -18,6 +18,10 @@ pub struct DownloadItem {
     pub status: String,      // "downloading" | "paused" | "stopped" | "extracting" | "completed" | "failed"
     pub error: Option<String>,
     pub order: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instance_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instance_icon: Option<String>,
 }
 
 #[derive(Default)]
@@ -98,10 +102,7 @@ pub fn stop_download(app: &tauri::AppHandle, id: &str) {
 
     if let Ok(mut guard) = ACTIVE_DOWNLOADS.lock() {
         if let Some(list) = guard.as_mut() {
-            if let Some(item) = list.iter_mut().find(|d| d.id == id) {
-                item.status = "stopped".to_string();
-                item.speed_bytes_per_sec = 0;
-            }
+            list.retain(|d| d.id != id);
             let snapshot = list.clone();
             let _ = app.emit("downloads_changed", snapshot);
         }
@@ -118,6 +119,12 @@ pub fn update_download_progress(app: &tauri::AppHandle, mut item: DownloadItem) 
         let list = guard.get_or_insert_with(Vec::new);
         if let Some(existing) = list.iter_mut().find(|d| d.id == item.id) {
             item.order = existing.order;
+            if item.instance_name.is_none() {
+                item.instance_name = existing.instance_name.clone();
+            }
+            if item.instance_icon.is_none() {
+                item.instance_icon = existing.instance_icon.clone();
+            }
             if paused {
                 item.status = "paused".to_string();
                 item.speed_bytes_per_sec = 0;
@@ -151,37 +158,12 @@ pub fn update_download_progress(app: &tauri::AppHandle, mut item: DownloadItem) 
 
 pub fn finish_download(app: &tauri::AppHandle, id: &str) {
     if let Ok(mut guard) = ACTIVE_DOWNLOADS.lock() {
-        let list = guard.get_or_insert_with(Vec::new);
-        if let Some(item) = list.iter_mut().find(|d| d.id == id) {
-            item.status = "completed".to_string();
-            item.progress = 100.0;
-            item.speed_bytes_per_sec = 0;
-            if item.phase == "java" {
-                item.phase_label = "Java Runtime Installed".to_string();
-            } else {
-                item.phase_label = "Assets Downloaded".to_string();
-            }
-            if let Some(tot) = item.total_bytes {
-                item.downloaded_bytes = tot;
-            }
+        if let Some(list) = guard.as_mut() {
+            list.retain(|d| d.id != id);
+            let snapshot = list.clone();
+            let _ = app.emit("downloads_changed", snapshot);
         }
-        let snapshot = list.clone();
-        let _ = app.emit("downloads_changed", snapshot);
     }
-
-    // Keep completed downloads visible for 60 seconds so users can see full history
-    let app_handle = app.clone();
-    let id_str = id.to_string();
-    tauri::async_runtime::spawn_blocking(move || {
-        std::thread::sleep(std::time::Duration::from_secs(60));
-        if let Ok(mut guard) = ACTIVE_DOWNLOADS.lock() {
-            if let Some(list) = guard.as_mut() {
-                list.retain(|d| d.id != id_str);
-                let snapshot = list.clone();
-                let _ = app_handle.emit("downloads_changed", snapshot);
-            }
-        }
-    });
 }
 
 pub fn fail_download(app: &tauri::AppHandle, id: &str, error: &str) {

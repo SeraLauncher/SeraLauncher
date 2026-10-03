@@ -21,6 +21,7 @@ import {
   type PublicAccount,
   type DeviceCodeResponse,
   type DownloadItem,
+  type DownloadHistoryItem,
 } from "@sera/ui";
 
 const DEFAULTS: Settings = {
@@ -395,4 +396,114 @@ export function useDownloads() {
   }, []);
 
   return { downloads, pauseDownload, resumeDownload, stopDownload };
+}
+
+const DOWNLOAD_HISTORY_STORAGE_KEY = "sera_download_history";
+
+export function useDownloadHistory(instances: Instance[] = []) {
+  const [history, setHistory] = useState<DownloadHistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(DOWNLOAD_HISTORY_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+
+  // Listen for storage / custom event sync
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem(DOWNLOAD_HISTORY_STORAGE_KEY);
+        if (saved) {
+          setHistory(JSON.parse(saved));
+        } else {
+          setHistory([]);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener("storage", handleSync);
+    window.addEventListener("sera_download_history_changed", handleSync);
+    return () => {
+      window.removeEventListener("storage", handleSync);
+      window.removeEventListener("sera_download_history_changed", handleSync);
+    };
+  }, []);
+
+  // When instances arrive, if history in localStorage is completely uninitialized, seed once
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DOWNLOAD_HISTORY_STORAGE_KEY);
+      if (!saved && instances.length > 0) {
+        const initial: DownloadHistoryItem[] = instances.map((inst, idx) => {
+          const ts = inst.createdAt
+            ? parseInt(inst.createdAt, 10) * 1000
+            : Date.now() - (idx + 1) * 3600 * 1000;
+          return {
+            id: `seed-${inst.id}`,
+            instanceName: inst.name,
+            instanceIcon: inst.icon,
+            mcVersion: inst.mcVersion,
+            status: "completed",
+            timestamp: ts,
+          };
+        });
+        localStorage.setItem(DOWNLOAD_HISTORY_STORAGE_KEY, JSON.stringify(initial));
+        window.dispatchEvent(new Event("sera_download_history_changed"));
+      }
+    } catch {
+      // ignore
+    }
+  }, [instances]);
+
+  const addHistoryItem = useCallback((item: DownloadHistoryItem) => {
+    setHistory((prev) => {
+      const filtered = prev.filter(
+        (h) =>
+          h.id !== item.id &&
+          h.instanceName.trim().toLowerCase() !== item.instanceName.trim().toLowerCase(),
+      );
+      const next = [item, ...filtered].slice(0, 50);
+      try {
+        localStorage.setItem(DOWNLOAD_HISTORY_STORAGE_KEY, JSON.stringify(next));
+      } catch (err) {
+        console.warn("Failed to persist download history:", err);
+      }
+      return next;
+    });
+  }, []);
+
+  const removeHistoryItem = useCallback((id: string) => {
+    setHistory((prev) => {
+      const next = prev.filter((h) => h.id !== id);
+      try {
+        localStorage.setItem(DOWNLOAD_HISTORY_STORAGE_KEY, JSON.stringify(next));
+      } catch (err) {
+        console.warn("Failed to update download history:", err);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearAllHistory = useCallback(() => {
+    setHistory([]);
+    try {
+      localStorage.removeItem(DOWNLOAD_HISTORY_STORAGE_KEY);
+    } catch (err) {
+      console.warn("Failed to clear download history:", err);
+    }
+  }, []);
+
+  return {
+    history,
+    addHistoryItem,
+    removeHistoryItem,
+    clearAllHistory,
+  };
 }

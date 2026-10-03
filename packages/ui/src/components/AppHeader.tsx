@@ -5,7 +5,8 @@ import type { Appearance } from "../settings";
 import type { Theme } from "../theme";
 import { snappy } from "../motion";
 import steveGraySkin from "../assets/images/steve-gray-skin.png";
-import type { DownloadItem } from "../downloads";
+import type { DownloadHistoryItem, DownloadItem } from "../downloads";
+import { getBlockIconSrc, getPastelGradientForInstance, parseInstanceIcon } from "../blocks";
 
 function formatDownloadSize(downloaded: number, total?: number | null): string {
   const dlMB = (downloaded / (1024 * 1024)).toFixed(1);
@@ -22,6 +23,17 @@ function formatSpeed(bytesPerSec: number): string {
     return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
   }
   return `${Math.round(bytesPerSec / 1024)} KB/s`;
+}
+
+function formatTimeAgo(timestamp: number): string {
+  const diffSec = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}h ago`;
+  const diffDay = Math.floor(diffHour / 24);
+  return `${diffDay}d ago`;
 }
 
 function formatEta(item: DownloadItem): string {
@@ -152,9 +164,12 @@ export function AppHeader({
   downloads = [],
   onKillInstance,
   onAccountClick,
+  downloadHistory = [],
   onPauseDownload,
   onResumeDownload,
   onStopDownload,
+  onDeleteHistoryItem,
+  onClearAllHistory,
 }: {
   theme: Theme;
   appearance: Appearance;
@@ -162,13 +177,17 @@ export function AppHeader({
   account?: Account | null;
   runningInstances?: RunningTaskInstance[];
   downloads?: DownloadItem[];
+  downloadHistory?: DownloadHistoryItem[];
   onKillInstance?: (id: string) => void;
   onAccountClick?: () => void;
   onPauseDownload?: (id: string) => void;
   onResumeDownload?: (id: string) => void;
   onStopDownload?: (id: string) => void;
+  onDeleteHistoryItem?: (id: string) => void;
+  onClearAllHistory?: () => void;
 }) {
   const [showDownloads, setShowDownloads] = useState(false);
+  const [showComplete, setShowComplete] = useState(true);
   const downloadsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -298,7 +317,7 @@ export function AppHeader({
         <div className="header-download-wrapper" ref={downloadsRef}>
           <button
             type="button"
-            className="header-download-btn"
+            className={`header-download-btn ${!isAnyActive ? "header-download-btn-icon-only" : ""}`}
             style={{
               background: theme.background,
               color: isDownloading ? theme.foreground : theme.mutedForeground,
@@ -306,14 +325,22 @@ export function AppHeader({
             onClick={() => setShowDownloads((prev) => !prev)}
             aria-haspopup="dialog"
             aria-expanded={showDownloads}
-            title={isDownloading ? activeDownloads[0]?.phaseLabel : "Downloads"}
+            title={
+              isAnyActive
+                ? (activeDownloads[0]?.phaseLabel ?? "Downloading...")
+                : sortedDownloads.some((d: DownloadItem) => d.status === "completed")
+                  ? "Downloads (Done)"
+                  : "Downloads"
+            }
           >
             <Icon
               name="download"
               size={13}
               color={isDownloading ? theme.primary : theme.mutedForeground}
             />
-            <span className="header-download-btn-label">{downloadButtonLabel}</span>
+            {isAnyActive && (
+              <span className="header-download-btn-label">{downloadButtonLabel}</span>
+            )}
 
             {/* Live progress line along the bottom of the button/icon */}
             {isDownloading && (
@@ -346,32 +373,24 @@ export function AppHeader({
                   style={{ borderColor: theme.border }}
                 >
                   <span className="header-download-popover-title">Downloads</span>
-                  <span
-                    className="header-download-badge"
-                    style={{
-                      background: isDownloading ? "rgba(16, 185, 129, 0.15)" : theme.secondary,
-                      color: isDownloading ? theme.success : theme.mutedForeground,
-                    }}
-                  >
-                    {isDownloading
-                      ? `${
-                          downloads.filter(
-                            (d) => d.status === "downloading" || d.status === "extracting",
-                          ).length
-                        } active`
-                      : "Idle"}
-                  </span>
+                  {activeDownloads.length > 0 && (
+                    <span
+                      className="header-download-badge"
+                      style={{
+                        background: "rgba(16, 185, 129, 0.15)",
+                        color: theme.success,
+                      }}
+                    >
+                      {activeDownloads.length} active
+                    </span>
+                  )}
                 </div>
 
-                <div className="header-download-popover-body">
-                  {sortedDownloads.length === 0 ? (
-                    <div className="header-download-empty" style={{ color: theme.mutedForeground }}>
-                      <Icon name="download" size={20} color={theme.mutedForeground} />
-                      <span>No active downloads</span>
-                    </div>
-                  ) : (
+                {/* Active Downloads Section (if any active) */}
+                {activeDownloads.length > 0 && (
+                  <div className="header-download-active-section">
                     <div className="header-download-list">
-                      {sortedDownloads.map((item: DownloadItem) => {
+                      {activeDownloads.map((item: DownloadItem) => {
                         const sizeLabel = formatDownloadSize(item.downloadedBytes, item.totalBytes);
                         const etaLabel = formatEta(item);
 
@@ -400,7 +419,7 @@ export function AppHeader({
                                 </span>
                               </div>
 
-                              {/* Top right of the progress bar: pause and stop buttons! */}
+                              {/* Action buttons (Pause/Resume & Cancel) */}
                               <div className="header-download-actions">
                                 {(item.status === "downloading" || item.status === "paused") && (
                                   <>
@@ -412,7 +431,7 @@ export function AppHeader({
                                         title="Pause download"
                                         style={{
                                           color: theme.foreground,
-                                          borderColor: theme.border,
+                                          background: theme.border,
                                         }}
                                       >
                                         <Icon name="pause" size={12} color={theme.foreground} />
@@ -425,7 +444,7 @@ export function AppHeader({
                                         title="Resume download"
                                         style={{
                                           color: theme.foreground,
-                                          borderColor: theme.border,
+                                          background: theme.border,
                                         }}
                                       >
                                         <Icon name="play" size={12} color={theme.foreground} />
@@ -435,45 +454,15 @@ export function AppHeader({
                                       type="button"
                                       className="header-download-action-btn"
                                       onClick={() => onStopDownload?.(item.id)}
-                                      title="Stop download"
+                                      title="Cancel download"
                                       style={{
-                                        color: theme.destructive,
-                                        borderColor: theme.border,
+                                        color: theme.foreground,
+                                        background: theme.border,
                                       }}
                                     >
-                                      <Icon name="playerStop" size={12} color={theme.destructive} />
+                                      <Icon name="x" size={12} color={theme.foreground} />
                                     </button>
                                   </>
-                                )}
-                                {item.status === "completed" && (
-                                  <span
-                                    className="header-download-status-badge"
-                                    style={{
-                                      color: theme.success,
-                                      background: "rgba(16, 185, 129, 0.12)",
-                                    }}
-                                  >
-                                    Done
-                                  </span>
-                                )}
-                                {item.status === "failed" && (
-                                  <span
-                                    className="header-download-status-badge"
-                                    style={{
-                                      color: theme.destructive,
-                                      background: "rgba(239, 68, 68, 0.12)",
-                                    }}
-                                  >
-                                    Failed
-                                  </span>
-                                )}
-                                {item.status === "stopped" && (
-                                  <span
-                                    className="header-download-status-badge"
-                                    style={{ color: theme.mutedForeground, background: theme.card }}
-                                  >
-                                    Cancelled
-                                  </span>
                                 )}
                               </div>
                             </div>
@@ -499,7 +488,7 @@ export function AppHeader({
                               />
                             </div>
 
-                            {/* Bottom row: Megabyte calculation under progress bar on left, ETA on right (percentage removed) */}
+                            {/* Bottom row: Megabyte calculation under progress bar on left, ETA on right */}
                             <div className="header-download-card-bottom">
                               <span
                                 className="header-download-meta-size"
@@ -527,130 +516,251 @@ export function AppHeader({
                         );
                       })}
                     </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <div className="header-task-wrapper" ref={tasksRef}>
-          <button
-            type="button"
-            className="header-task-pill"
-            style={{
-              background: theme.background,
-              color: runningCount > 0 ? theme.foreground : theme.mutedForeground,
-            }}
-            onClick={() => setShowTasks((prev) => !prev)}
-            aria-haspopup="dialog"
-            aria-expanded={showTasks}
-          >
-            <div className="header-task-dot-wrapper">
-              {runningCount > 0 && (
-                <span className="header-task-dot-pulse" style={{ background: theme.success }} />
-              )}
-              <span
-                className="header-task-dot"
-                style={{
-                  background: runningCount > 0 ? theme.success : theme.mutedForeground,
-                  opacity: runningCount > 0 ? 1 : 0.45,
-                }}
-              />
-            </div>
-            <span className="header-task-label">{runningText}</span>
-            <motion.span
-              className="header-task-chevron"
-              animate={{ rotate: showTasks ? 180 : 0 }}
-              transition={snappy}
-            >
-              <Icon name="chevronDown" size={13} color={theme.mutedForeground} />
-            </motion.span>
-          </button>
-
-          <AnimatePresence>
-            {showTasks && (
-              <motion.div
-                key="task-popover"
-                className="header-task-popover"
-                initial={{ opacity: 0, scale: 0.96, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                transition={snappy}
-                style={{
-                  background: theme.card,
-                  borderColor: theme.border,
-                }}
-              >
-                <div className="header-task-popover-header" style={{ borderColor: theme.border }}>
-                  <span className="header-task-popover-title">Running Tasks</span>
-                  <span
-                    className="header-task-badge"
-                    style={{
-                      background: runningCount > 0 ? theme.success : theme.secondary,
-                      color: runningCount > 0 ? "#ffffff" : theme.mutedForeground,
-                    }}
-                  >
-                    {runningCount}
-                  </span>
-                </div>
-
-                {runningCount === 0 ? (
-                  <div className="header-task-empty" style={{ color: theme.mutedForeground }}>
-                    No instance running
-                  </div>
-                ) : (
-                  <div className="header-task-list">
-                    {runningInstances.map((inst) => (
-                      <div
-                        key={inst.id}
-                        className="header-task-item"
-                        style={{ background: theme.secondary }}
-                      >
-                        <div className="header-task-item-left">
-                          <span
-                            className="header-task-status-dot"
-                            style={{ background: theme.success }}
-                          />
-                          <div className="header-task-item-info">
-                            <span
-                              className="header-task-item-name"
-                              style={{ color: theme.foreground }}
-                            >
-                              {inst.name}
-                            </span>
-                            {inst.mcVersion && (
-                              <span
-                                className="header-task-item-ver"
-                                style={{ color: theme.mutedForeground }}
-                              >
-                                {inst.mcVersion}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {onKillInstance && (
-                          <button
-                            type="button"
-                            className="header-task-kill-btn"
-                            title="Stop instance"
-                            aria-label={`Stop ${inst.name}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onKillInstance(inst.id);
-                            }}
-                          >
-                            <Icon name="x" size={13} color={theme.mutedForeground} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
                   </div>
                 )}
+
+                {/* Download History Section ("Complete") */}
+                <div className="header-download-history-section">
+                  <div className="header-download-history-header">
+                    <button
+                      type="button"
+                      className="header-download-history-toggle"
+                      onClick={() => setShowComplete((prev) => !prev)}
+                      style={{ color: theme.foreground }}
+                    >
+                      <motion.span
+                        animate={{ rotate: showComplete ? 0 : -90 }}
+                        transition={snappy}
+                        style={{ display: "inline-flex" }}
+                      >
+                        <Icon name="chevronDown" size={13} color={theme.mutedForeground} />
+                      </motion.span>
+                      <span>Complete</span>
+                    </button>
+
+                    {downloadHistory.length > 0 && (
+                      <button
+                        type="button"
+                        className="header-download-history-clear-btn"
+                        onClick={onClearAllHistory}
+                        style={{ color: theme.mutedForeground }}
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+
+                  <AnimatePresence initial={false}>
+                    {showComplete && (
+                      <motion.div
+                        key="complete-history-list"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={snappy}
+                        className="header-download-history-list"
+                      >
+                        {downloadHistory.length === 0 ? (
+                          <div
+                            className="header-download-history-empty"
+                            style={{ color: theme.mutedForeground }}
+                          >
+                            No download history
+                          </div>
+                        ) : (
+                          downloadHistory.map((item) => {
+                            const { blockKey } = parseInstanceIcon(
+                              item.instanceIcon,
+                              item.instanceName,
+                            );
+                            const gradient = getPastelGradientForInstance(
+                              item.instanceName,
+                              item.instanceIcon,
+                            );
+                            const iconSrc = getBlockIconSrc(blockKey);
+                            const statusLabel =
+                              item.status === "completed"
+                                ? "New instance"
+                                : item.status === "canceled"
+                                  ? "Canceled"
+                                  : "Failed";
+
+                            return (
+                              <div key={item.id} className="header-download-history-item">
+                                <div
+                                  className="header-download-history-icon-badge"
+                                  style={{
+                                    background: `linear-gradient(135deg, ${gradient.top}, ${gradient.bottom})`,
+                                  }}
+                                >
+                                  <img
+                                    src={iconSrc}
+                                    alt=""
+                                    className="header-download-history-icon-img"
+                                  />
+                                </div>
+
+                                <div className="header-download-history-info">
+                                  <span
+                                    className="header-download-history-name"
+                                    style={{ color: theme.foreground }}
+                                  >
+                                    {item.instanceName}
+                                  </span>
+                                  <div
+                                    className="header-download-history-sub"
+                                    style={{ color: theme.mutedForeground }}
+                                  >
+                                    <span>{formatTimeAgo(item.timestamp)}</span>
+                                    <span className="header-download-history-dot">•</span>
+                                    <span>{statusLabel}</span>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  className="header-download-history-trash-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteHistoryItem?.(item.id);
+                                  }}
+                                  title="Remove from history"
+                                  aria-label={`Remove ${item.instanceName} from history`}
+                                >
+                                  <Icon name="trash" size={14} color={theme.mutedForeground} />
+                                </button>
+                              </div>
+                            );
+                          })
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        {(!isAnyActive || runningCount > 0) && (
+          <div className="header-task-wrapper" ref={tasksRef}>
+            <button
+              type="button"
+              className="header-task-pill"
+              style={{
+                background: theme.background,
+                color: runningCount > 0 ? theme.foreground : theme.mutedForeground,
+              }}
+              onClick={() => setShowTasks((prev) => !prev)}
+              aria-haspopup="dialog"
+              aria-expanded={showTasks}
+            >
+              <div className="header-task-dot-wrapper">
+                {runningCount > 0 && (
+                  <span className="header-task-dot-pulse" style={{ background: theme.success }} />
+                )}
+                <span
+                  className="header-task-dot"
+                  style={{
+                    background: runningCount > 0 ? theme.success : theme.mutedForeground,
+                    opacity: runningCount > 0 ? 1 : 0.45,
+                  }}
+                />
+              </div>
+              <span className="header-task-label">{runningText}</span>
+              <motion.span
+                className="header-task-chevron"
+                animate={{ rotate: showTasks ? 180 : 0 }}
+                transition={snappy}
+              >
+                <Icon name="chevronDown" size={13} color={theme.mutedForeground} />
+              </motion.span>
+            </button>
+
+            <AnimatePresence>
+              {showTasks && (
+                <motion.div
+                  key="task-popover"
+                  className="header-task-popover"
+                  initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                  transition={snappy}
+                  style={{
+                    background: theme.card,
+                    borderColor: theme.border,
+                  }}
+                >
+                  <div className="header-task-popover-header" style={{ borderColor: theme.border }}>
+                    <span className="header-task-popover-title">Running Tasks</span>
+                    <span
+                      className="header-task-badge"
+                      style={{
+                        background: runningCount > 0 ? theme.success : theme.secondary,
+                        color: runningCount > 0 ? "#ffffff" : theme.mutedForeground,
+                      }}
+                    >
+                      {runningCount}
+                    </span>
+                  </div>
+
+                  {runningCount === 0 ? (
+                    <div className="header-task-empty" style={{ color: theme.mutedForeground }}>
+                      No instance running
+                    </div>
+                  ) : (
+                    <div className="header-task-list">
+                      {runningInstances.map((inst) => (
+                        <div
+                          key={inst.id}
+                          className="header-task-item"
+                          style={{ background: theme.secondary }}
+                        >
+                          <div className="header-task-item-left">
+                            <span
+                              className="header-task-status-dot"
+                              style={{ background: theme.success }}
+                            />
+                            <div className="header-task-item-info">
+                              <span
+                                className="header-task-item-name"
+                                style={{ color: theme.foreground }}
+                              >
+                                {inst.name}
+                              </span>
+                              {inst.mcVersion && (
+                                <span
+                                  className="header-task-item-ver"
+                                  style={{ color: theme.mutedForeground }}
+                                >
+                                  {inst.mcVersion}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {onKillInstance && (
+                            <button
+                              type="button"
+                              className="header-task-kill-btn"
+                              title="Stop instance"
+                              aria-label={`Stop ${inst.name}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onKillInstance(inst.id);
+                              }}
+                            >
+                              <Icon name="x" size={13} color={theme.mutedForeground} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         <button
           type="button"

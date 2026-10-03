@@ -20,4 +20,17 @@ export type DownloadItem = {
   status: DownloadStatus;
   error?: string | null;
   order?: number;
+  instanceName?: string | null;
+  instanceIcon?: string | null;
+};
+
+export type DownloadHistoryStatus = "completed" | "canceled" | "failed";
+
+export type DownloadHistoryItem = {
+  id: string;
+  instanceName: string;
+  instanceIcon?: string | null;
+  mcVersion?: string;
+  status: DownloadHistoryStatus;
+  timestamp: number; // Unix epoch ms
 };
