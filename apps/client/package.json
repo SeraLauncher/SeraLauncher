@@ -16,7 +16,8 @@
     "@tauri-apps/plugin-opener": "^2",
     "motion": "^13.4.6",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "@sera/player-model": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -3,7 +3,9 @@
   "compilerOptions": {
     "paths": {
       "@sera/ui": ["../../packages/ui/src/index.ts"],
-      "@sera/ui/*": ["../../packages/ui/src/*"]
+      "@sera/ui/*": ["../../packages/ui/src/*"],
+      "@sera/player-model": ["../../packages/player-model/src/index.ts"],
+      "@sera/player-model/*": ["../../packages/player-model/src/*"]
     }
   },
   "include": ["src"]

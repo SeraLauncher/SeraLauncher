@@ -13,6 +13,12 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@sera/player-model": ["./packages/player-model/src/index.ts"],
+      "@sera/player-model/*": ["./packages/player-model/src/*"],
+      "@sera/ui": ["./packages/ui/src/index.ts"],
+      "@sera/ui/*": ["./packages/ui/src/*"]
+    }
   }
 }

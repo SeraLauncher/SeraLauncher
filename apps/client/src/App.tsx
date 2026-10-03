@@ -230,6 +230,8 @@ export default function App() {
                   <HomePage
                     theme={theme}
                     instances={instances.map((i) => i.name)}
+                    skinUrl={activeAccount?.skinUrl ?? undefined}
+                    username={activeAccount?.username}
                     onNavigateToInstances={() => setPage(1)}
                     onLaunch={async (instanceName) => {
                       if (!activeAccount) {

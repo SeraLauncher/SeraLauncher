@@ -3727,3 +3727,26 @@ button {
   font-size: 0.78rem;
   padding: 6px 0;
 }
+
+.home-player-model-wrapper {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: none;
+  user-select: none;
+}
+
+.player-model-viewport canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  outline: none;
+  cursor: default;
+}

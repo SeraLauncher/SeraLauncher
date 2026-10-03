@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Icon } from "./Icon";
+import { PlayerModelView } from "@sera/player-model";
 import type { Theme } from "../theme";
 import { snappy } from "../motion";
 import homeBg from "../assets/images/home-bg.png";
@@ -134,11 +135,15 @@ function areArticlesEqual(a: NewsArticle[], b: NewsArticle[]): boolean {
 export function HomePage({
   theme,
   instances = [],
+  skinUrl,
+  username,
   onNavigateToInstances,
   onLaunch,
 }: {
   theme: Theme;
   instances?: string[];
+  skinUrl?: string;
+  username?: string;
   onNavigateToInstances?: () => void;
   onLaunch?: (instanceName: string) => void;
 }) {
@@ -280,6 +285,17 @@ export function HomePage({
 
         {/* docked play action block overlapping the bottom edge */}
         <div className="home-dock">
+          <div className="home-player-model-wrapper">
+            <PlayerModelView
+              skinUrl={skinUrl}
+              username={username}
+              width={200}
+              height={280}
+              animated={true}
+              interactive={false}
+            />
+          </div>
+
           <motion.button
             type="button"
             className="home-play-btn"

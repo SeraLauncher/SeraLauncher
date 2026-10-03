@@ -272,6 +272,49 @@ async fn login_littleskin(
 }
 
 #[tauri::command]
+async fn fetch_skin_as_data_url(url: String) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.4")
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let res = client.get(&url).send().await.map_err(|e| format!("Failed to fetch skin: {}", e))?;
+    if !res.status().is_success() {
+        return Err(format!("Skin server returned status {}", res.status()));
+    }
+
+    let bytes = res.bytes().await.map_err(|e| format!("Failed to read skin bytes: {}", e))?;
+    
+    // Quick base64 encode using standard alphabet
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut encoded = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0] as usize;
+        let b1 = if chunk.len() > 1 { chunk[1] as usize } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] as usize } else { 0 };
+
+        encoded.push(ALPHABET[(b0 >> 2) & 0x3F] as char);
+        encoded.push(ALPHABET[((b0 << 4) | (b1 >> 4)) & 0x3F] as char);
+
+        if chunk.len() > 1 {
+            encoded.push(ALPHABET[((b1 << 2) | (b2 >> 6)) & 0x3F] as char);
+        } else {
+            encoded.push('=');
+        }
+
+        if chunk.len() > 2 {
+            encoded.push(ALPHABET[b2 & 0x3F] as char);
+        } else {
+            encoded.push('=');
+        }
+    }
+
+    Ok(format!("data:image/png;base64,{}", encoded))
+}
+
+
+#[tauri::command]
 fn get_running_instances() -> Vec<minecraft::RunningInstanceInfo> {
     minecraft::list_running_instances()
 }
@@ -501,6 +544,7 @@ pub fn run() {
             add_offline_account,
             login_elyby,
             login_littleskin,
+            fetch_skin_as_data_url,
             get_active_downloads,
             pause_download,
             resume_download,
