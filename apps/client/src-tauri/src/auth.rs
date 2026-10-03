@@ -523,13 +523,25 @@ async fn authenticate_minecraft_chain(
         .await
         .map_err(|e| format!("Minecraft login request failed: {}", e))?;
 
-    if !mc_login_res.status().is_success() {
-        return Err("Failed to authenticate with Minecraft services.".into());
+    let mc_status = mc_login_res.status();
+    let mc_text = mc_login_res.text().await.map_err(|e| format!("Failed to read Minecraft login response: {}", e))?;
+
+    if !mc_status.is_success() {
+        #[derive(Deserialize)]
+        struct McErrorPayload {
+            #[serde(rename = "errorMessage")]
+            error_message: Option<String>,
+            error: Option<String>,
+        }
+        if let Ok(err_data) = serde_json::from_str::<McErrorPayload>(&mc_text) {
+            if let Some(msg) = err_data.error_message.or(err_data.error) {
+                return Err(format!("Minecraft Services error: {}", msg));
+            }
+        }
+        return Err(format!("Failed to authenticate with Minecraft services (HTTP {}): {}", mc_status, mc_text));
     }
 
-    let mc_login: McLoginResponse = mc_login_res
-        .json()
-        .await
+    let mc_login: McLoginResponse = serde_json::from_str(&mc_text)
         .map_err(|e| format!("Failed to parse Minecraft login response: {}", e))?;
 
     // 4. Fetch Minecraft Profile
