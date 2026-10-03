@@ -1403,24 +1403,18 @@ function InstanceManagementView({
         )}
 
         {activeTab === "settings" && (
-          <form
-            onSubmit={handleSaveSettings}
-            style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}
-          >
-            {/* Instance Settings Group */}
-            <section className="w-full flex flex-col">
-              <h2
-                style={{
-                  color: theme.mutedForeground,
-                  fontSize: "0.92rem",
-                  fontWeight: 600,
-                  margin: "0 0 10px 0",
-                }}
+          <div className="settings w-full min-h-full">
+            <form
+              onSubmit={handleSaveSettings}
+              className="w-full max-w-[620px] mx-auto flex flex-col gap-6"
+            >
+              <h1
+                className="settings-title text-2xl font-bold tracking-tight text-left w-full m-0"
+                style={{ color: theme.foreground, textAlign: "left" }}
               >
                 Instance Settings
-              </h2>
-
-              <div className="box w-full border border-border">
+              </h1>
+              <div className="px-4.5 py-1 bg-card rounded-xl border border-border/50 w-full box">
                 {/* Row 1: Block icon on left with random at bottom, and instance name input with label to its right */}
                 <div className="row" style={{ padding: "12px 0" }}>
                   <div
@@ -1863,7 +1857,7 @@ function InstanceManagementView({
                   </button>
                 </div>
               </div>
-            </section>
+            </form>
 
             <EffectiveJavaArgsModal
               isOpen={showArgsModal}
@@ -1871,7 +1865,7 @@ function InstanceManagementView({
               settings={previewSettings}
               theme={theme}
             />
-          </form>
+          </div>
         )}
       </div>
     </div>
