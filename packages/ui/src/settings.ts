@@ -25,6 +25,14 @@ export const DEFAULT_JAVA_OPTIMIZE = true;
 export const DEFAULT_JVM_ARGS = "";
 
 /** Default memory and runtime flags for Minecraft execution. */
+export const MEMORY_PRESETS = [
+  { label: "2 GB", value: 2048 },
+  { label: "4 GB", value: 4096 },
+  { label: "6 GB", value: 6144 },
+  { label: "8 GB", value: 8192 },
+  { label: "12 GB", value: 12288 },
+];
+
 export const DEFAULT_MIN_MEMORY = 2048;
 export const DEFAULT_MAX_MEMORY = 4096;
 

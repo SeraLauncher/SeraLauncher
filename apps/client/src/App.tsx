@@ -285,6 +285,8 @@ export default function App() {
                     instances={instances}
                     versions={versions}
                     javaRuntimes={javaRuntimes as any}
+                    systemMemoryMb={systemMemoryMb}
+                    onRefreshJava={refreshJavaRuntimes}
                     managingInstanceId={managingInstanceId}
                     onSelectManagingInstanceId={setManagingInstanceId}
                     activeManagementTab={instanceTab}
