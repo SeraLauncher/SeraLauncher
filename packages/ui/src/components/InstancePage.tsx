@@ -1408,7 +1408,7 @@ function InstanceManagementView({
             style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}
           >
             {/* Instance Settings Group */}
-            <section className="group">
+            <section className="w-full flex flex-col">
               <h2
                 style={{
                   color: theme.mutedForeground,
@@ -1420,7 +1420,7 @@ function InstanceManagementView({
                 Instance Settings
               </h2>
 
-              <div className="box">
+              <div className="box w-full border border-border">
                 {/* Row 1: Block icon on left with random at bottom, and instance name input with label to its right */}
                 <div className="row" style={{ padding: "12px 0" }}>
                   <div
