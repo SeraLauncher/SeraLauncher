@@ -20,6 +20,30 @@ interface DiscoveryPageProps {
   versions: MinecraftVersion[];
 }
 
+function capitalizeFirst(str: string): string {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function formatRelativeTime(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  try {
+    const diffSec = Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000));
+    if (diffSec < 60) return "Just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return `${diffHour}h ago`;
+    const diffDay = Math.floor(diffHour / 24);
+    if (diffDay < 30) return `${diffDay}d ago`;
+    const diffMonth = Math.floor(diffDay / 30);
+    if (diffMonth < 12) return `${diffMonth}mo ago`;
+    return `${Math.floor(diffMonth / 12)}y ago`;
+  } catch {
+    return "";
+  }
+}
+
 export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps) {
   const [provider, setProvider] = useState<DiscoveryProvider>("modrinth");
   const [category, setCategory] = useState<DiscoveryCategory>("modpack");
@@ -132,9 +156,18 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
   };
 
   return (
-    <main className="flex-1 flex flex-row h-full overflow-hidden">
-      {/* Left Area: Results List & Top Bar */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden p-6 pr-5 gap-3.5">
+    <main
+      className="relative flex-1 flex flex-row h-full overflow-hidden"
+      style={{ background: theme.sidebar }}
+    >
+      {/* Left Column: Content Area curving inward with borderTopRightRadius: 14 */}
+      <div
+        className="flex-1 flex flex-col h-full overflow-hidden p-6 pr-5 gap-3.5 min-w-0 rounded-tr-[14px]"
+        style={{
+          background: theme.background,
+          borderTopRightRadius: 14,
+        }}
+      >
         {/* Top Bar: Category tabs on left, Provider toggle on right */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           {/* Categories */}
@@ -156,7 +189,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                   key={tab.id}
                   type="button"
                   onClick={() => setCategory(tab.id)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-all"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-all cursor-pointer"
                   style={{
                     background: active ? theme.card : "transparent",
                     color: active ? theme.foreground : theme.mutedForeground,
@@ -184,7 +217,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
             <button
               type="button"
               onClick={() => setProvider("modrinth")}
-              className="px-3 py-1.5 rounded-md transition-colors"
+              className="px-3 py-1.5 rounded-md transition-colors cursor-pointer"
               style={{
                 background: provider === "modrinth" ? theme.primary : "transparent",
                 color: provider === "modrinth" ? theme.primaryForeground : theme.mutedForeground,
@@ -198,7 +231,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
             <button
               type="button"
               onClick={() => setProvider("curseforge")}
-              className="px-3 py-1.5 rounded-md transition-colors"
+              className="px-3 py-1.5 rounded-md transition-colors cursor-pointer"
               style={{
                 background: provider === "curseforge" ? theme.primary : "transparent",
                 color: provider === "curseforge" ? theme.primaryForeground : theme.mutedForeground,
@@ -214,7 +247,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
 
         {/* Search Bar */}
         <div
-          className="w-full h-[34px] flex items-center gap-2 px-3 rounded-lg border border-border"
+          className="w-full h-[36px] flex items-center gap-2 px-3 rounded-lg border border-border"
           style={{ background: theme.secondary }}
         >
           <Icon name="search" size={14} color={theme.mutedForeground} />
@@ -287,7 +320,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-20 rounded-xl border border-border animate-pulse"
+                  className="h-24 rounded-xl border border-border animate-pulse"
                   style={{ background: theme.card }}
                 />
               ))}
@@ -315,10 +348,20 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                       ? `${Math.round(item.downloads / 1_000)}k`
                       : `${item.downloads}`;
 
+                const followCount = item.follows
+                  ? item.follows >= 1_000_000
+                    ? `${(item.follows / 1_000_000).toFixed(1)}M`
+                    : item.follows >= 1_000
+                      ? `${Math.round(item.follows / 1_000)}k`
+                      : `${item.follows}`
+                  : null;
+
+                const timeLabel = formatRelativeTime(item.dateModified);
+
                 return (
                   <div
                     key={`${item.source}-${item.id}`}
-                    className="flex items-center justify-between p-3 rounded-xl border border-border gap-4 transition-all hover:shadow-md"
+                    className="flex items-center justify-between p-3.5 rounded-xl border border-border gap-4 transition-all hover:shadow-md"
                     style={{ background: theme.card }}
                   >
                     {/* Left: Thumbnail & Details */}
@@ -363,40 +406,55 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                           {item.description}
                         </p>
 
-                        {/* Supported categories / loaders badges */}
-                        {item.categories.length > 0 && (
-                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                            {item.categories.slice(0, 4).map((cat) => (
-                              <span
-                                key={cat}
-                                className="text-[10px] px-1.5 py-0.2 rounded font-medium border border-border"
-                                style={{
-                                  background: theme.secondary,
-                                  color: theme.mutedForeground,
-                                }}
-                              >
-                                {cat}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        {/* Badges: Environment badge always first on the left, followed by Capitalized categories */}
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          {item.environment === "both" && (
+                            <span
+                              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium border border-border"
+                              style={{ background: theme.sidebarAccent, color: theme.foreground }}
+                            >
+                              <Icon name="globe" size={10} color={theme.primary} />
+                              Client & Server
+                            </span>
+                          )}
+                          {item.environment === "client" && (
+                            <span
+                              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium border border-border"
+                              style={{ background: theme.sidebarAccent, color: theme.foreground }}
+                            >
+                              <Icon name="computer" size={10} color={theme.primary} />
+                              Client
+                            </span>
+                          )}
+                          {item.environment === "server" && (
+                            <span
+                              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium border border-border"
+                              style={{ background: theme.sidebarAccent, color: theme.foreground }}
+                            >
+                              <Icon name="server" size={10} color={theme.primary} />
+                              Server
+                            </span>
+                          )}
+
+                          {item.categories.slice(0, 4).map((cat) => (
+                            <span
+                              key={cat}
+                              className="text-[10px] px-1.5 py-0.5 rounded font-medium border border-border"
+                              style={{ background: theme.secondary, color: theme.mutedForeground }}
+                            >
+                              {capitalizeFirst(cat)}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Right: Compact Downloads & Install button */}
-                    <div className="flex items-center gap-3 flex-shrink-0 pl-2">
-                      <div
-                        className="flex items-center gap-1 text-[11px] font-medium"
-                        style={{ color: theme.mutedForeground }}
-                      >
-                        <Icon name="download" size={11} color="currentColor" />
-                        <span>{dlCount}</span>
-                      </div>
-
+                    {/* Right: Install button on top, Downloads + Likes below, Updated time on bottom */}
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0 pl-2">
                       <button
                         type="button"
                         onClick={() => setInstallingProject(item)}
-                        className="px-2.5 py-1 text-xs font-semibold rounded-md transition-opacity hover:opacity-90 cursor-pointer"
+                        className="px-3.5 py-1 text-xs font-semibold rounded-md transition-opacity hover:opacity-90 cursor-pointer"
                         style={{
                           background: theme.primary,
                           color: theme.primaryForeground,
@@ -404,6 +462,37 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                       >
                         Install
                       </button>
+
+                      <div
+                        className="flex items-center gap-2 text-[11px]"
+                        style={{ color: theme.mutedForeground }}
+                      >
+                        <div className="flex items-center gap-1 font-medium" title="Downloads">
+                          <Icon name="download" size={11} color="currentColor" />
+                          <span>{dlCount}</span>
+                        </div>
+
+                        {followCount && (
+                          <div
+                            className="flex items-center gap-1 font-medium"
+                            title="Likes / Follows"
+                          >
+                            <Icon name="heart" size={11} color="currentColor" />
+                            <span>{followCount}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {timeLabel && (
+                        <div
+                          className="flex items-center gap-1 text-[12px] font-medium"
+                          title={`Updated: ${item.dateModified}`}
+                          style={{ color: theme.mutedForeground }}
+                        >
+                          <Icon name="clock" size={13} color={theme.primary} />
+                          <span>{timeLabel}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -413,21 +502,28 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
         </div>
       </div>
 
-      {/* Right Sidebar: Filters for Discovery */}
+      {/* Right Sidebar: Static flush sidebar panel with compact width */}
       <aside
-        className="w-56 h-full flex flex-col border-l border-border p-5 gap-4 overflow-y-auto"
+        className="w-56 h-full flex flex-col border-l border-border p-4.5 gap-4.5 overflow-y-auto flex-shrink-0"
         style={{ background: theme.sidebar }}
       >
-        <span
-          className="text-xs font-bold uppercase tracking-wider"
-          style={{ color: theme.foreground }}
-        >
-          Filters
-        </span>
+        <div className="flex items-center gap-2">
+          <Icon name="filter" size={14} color={theme.primary} />
+          <span
+            className="text-xs font-bold uppercase tracking-wider"
+            style={{ color: theme.foreground }}
+          >
+            Filters
+          </span>
+        </div>
 
         {/* Sort Filter */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-[11px] font-semibold" style={{ color: theme.mutedForeground }}>
+          <label
+            className="flex items-center gap-1.5 text-[11px] font-semibold"
+            style={{ color: theme.mutedForeground }}
+          >
+            <Icon name="sortArrows" size={12} color={theme.mutedForeground} />
             Sort By
           </label>
           <div className="w-full">
@@ -448,7 +544,11 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
 
         {/* Minecraft Version Filter */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-[11px] font-semibold" style={{ color: theme.mutedForeground }}>
+          <label
+            className="flex items-center gap-1.5 text-[11px] font-semibold"
+            style={{ color: theme.mutedForeground }}
+          >
+            <Icon name="cubes" size={12} color={theme.mutedForeground} />
             Game Version
           </label>
           <div className="w-full">
@@ -465,7 +565,11 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
         {/* Loader Filter (for mods and modpacks) */}
         {(category === "mods" || category === "modpack") && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-semibold" style={{ color: theme.mutedForeground }}>
+            <label
+              className="flex items-center gap-1.5 text-[11px] font-semibold"
+              style={{ color: theme.mutedForeground }}
+            >
+              <Icon name="puzzle" size={12} color={theme.mutedForeground} />
               Mod Loader
             </label>
             <div className="w-full">
@@ -485,7 +589,11 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
         {/* Environment Filter: Modrinth only */}
         {provider === "modrinth" && (category === "mods" || category === "modpack") && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-semibold" style={{ color: theme.mutedForeground }}>
+            <label
+              className="flex items-center gap-1.5 text-[11px] font-semibold"
+              style={{ color: theme.mutedForeground }}
+            >
+              <Icon name="globe" size={12} color={theme.mutedForeground} />
               Environment
             </label>
             <div className="w-full">

@@ -36,6 +36,7 @@ pub struct DiscoveryProject {
     pub supported_versions: Vec<String>,
     pub date_modified: Option<String>,
     pub download_url: Option<String>,
+    pub environment: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -64,6 +65,8 @@ struct ModrinthSearchHit {
     display_categories: Option<Vec<String>>,
     versions: Option<Vec<String>>,
     date_modified: Option<String>,
+    client_side: Option<String>,
+    server_side: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -253,6 +256,19 @@ async fn search_modrinth(
             supported_versions: h.versions.unwrap_or_default(),
             date_modified: h.date_modified,
             download_url: None,
+            environment: {
+                let client = h.client_side.as_deref().unwrap_or("optional");
+                let server = h.server_side.as_deref().unwrap_or("optional");
+                if client != "unsupported" && server != "unsupported" {
+                    Some("both".to_string())
+                } else if client != "unsupported" {
+                    Some("client".to_string())
+                } else if server != "unsupported" {
+                    Some("server".to_string())
+                } else {
+                    None
+                }
+            },
         }
     }).collect();
 
@@ -355,6 +371,7 @@ async fn search_curseforge(
             supported_versions: Vec::new(),
             date_modified: m.date_modified,
             download_url: None,
+            environment: None,
         }
     }).collect();
 

@@ -39,6 +39,7 @@ export type DiscoveryProject = {
   supportedVersions: string[];
   dateModified?: string | null;
   downloadUrl?: string | null;
+  environment?: "both" | "client" | "server" | string | null;
 };
 
 export type DiscoverySearchResponse = {

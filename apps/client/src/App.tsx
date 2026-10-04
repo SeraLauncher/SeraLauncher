@@ -240,6 +240,8 @@ export default function App() {
                     : NAV[page].label
                 }
                 {...pageFade}
+                animate={{ opacity: 1 }}
+                exit={pageFade.exit}
                 transition={fade}
                 className="page"
               >
