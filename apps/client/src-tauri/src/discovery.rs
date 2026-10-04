@@ -76,6 +76,7 @@ struct ModrinthSearchOutput {
 
 // CurseForge search JSON structures
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CurseForgeSearchOutput {
     data: Vec<CurseForgeMod>,
     pagination: Option<CurseForgePagination>,
@@ -83,6 +84,7 @@ struct CurseForgeSearchOutput {
 
 #[allow(dead_code)]
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CurseForgePagination {
     total_count: Option<u64>,
     index: Option<u32>,
@@ -91,6 +93,7 @@ struct CurseForgePagination {
 
 #[allow(dead_code)]
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CurseForgeMod {
     id: u64,
     slug: String,
@@ -106,23 +109,27 @@ struct CurseForgeMod {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CurseForgeAuthor {
     name: String,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CurseForgeLogo {
     thumbnail_url: Option<String>,
     url: Option<String>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CurseForgeCategory {
     name: String,
 }
 
 #[allow(dead_code)]
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CurseForgeFileIndex {
     game_version: Option<String>,
     mod_loader: Option<u32>,
@@ -136,6 +143,7 @@ pub async fn search_projects(
     query: Option<&str>,
     mc_version: Option<&str>,
     loader: Option<&str>,
+    environment: Option<&str>,
     sort: Option<&str>,
     offset: u32,
     limit: u32,
@@ -150,7 +158,7 @@ pub async fn search_projects(
         return search_curseforge(&client, project_type, query, mc_version, loader, sort, offset, limit).await;
     }
 
-    search_modrinth(&client, project_type, query, mc_version, loader, sort, offset, limit).await
+    search_modrinth(&client, project_type, query, mc_version, loader, environment, sort, offset, limit).await
 }
 
 async fn search_modrinth(
@@ -159,6 +167,7 @@ async fn search_modrinth(
     query: Option<&str>,
     mc_version: Option<&str>,
     loader: Option<&str>,
+    environment: Option<&str>,
     sort: Option<&str>,
     offset: u32,
     limit: u32,
@@ -183,6 +192,14 @@ async fn search_modrinth(
     if let Some(l) = loader {
         if !l.is_empty() && l != "all" && l != "vanilla" {
             facets.push(vec![format!("categories:{}", l.to_lowercase())]);
+        }
+    }
+
+    if let Some(env) = environment {
+        match env.to_lowercase().as_str() {
+            "client" => facets.push(vec!["client_side:required".to_string()]),
+            "server" => facets.push(vec!["server_side:required".to_string()]),
+            _ => {}
         }
     }
 
