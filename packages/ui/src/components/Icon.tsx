@@ -230,7 +230,13 @@ export function SocialIcon({
 }) {
   const Component = socialIcons[name];
   return (
-    <Component size={size} color={color} className={className} title={title} aria-hidden="true" />
+    <Component
+      size={size}
+      color={color}
+      className={`inline-block flex-shrink-0 -translate-y-[1px] ${className ?? ""}`.trim()}
+      title={title}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -268,7 +274,7 @@ export function Icon({
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={className}
+      className={`inline-block flex-shrink-0 -translate-y-[1px] ${className ?? ""}`.trim()}
       aria-hidden="true"
     >
       {pathList.map((d) => (

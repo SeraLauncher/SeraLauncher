@@ -383,44 +383,40 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                       )}
 
                       <div className="flex-1 min-w-0 h-[72px] flex flex-col justify-between">
-                        {/* Top: Title Row aligned on exact horizontal line with icon top */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <h3
-                            className="text-sm font-semibold truncate leading-none"
-                            style={{ color: theme.foreground }}
-                            title={item.title}
-                          >
-                            {item.title}
-                          </h3>
-                          <span
-                            className="text-xs flex-shrink-0 leading-none"
+                        {/* Top Section: Title and Description directly underneath */}
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3
+                              className="text-sm font-semibold truncate leading-none"
+                              style={{ color: theme.foreground }}
+                              title={item.title}
+                            >
+                              {item.title}
+                            </h3>
+                            <span
+                              className="text-xs flex-shrink-0 leading-none"
+                              style={{ color: theme.mutedForeground }}
+                            >
+                              by {item.author}
+                            </span>
+                          </div>
+
+                          <p
+                            className="text-xs line-clamp-2 mt-1 leading-snug overflow-hidden"
                             style={{ color: theme.mutedForeground }}
                           >
-                            by {item.author}
-                          </span>
+                            {item.description}
+                          </p>
                         </div>
 
-                        {/* Middle: Description filling the vertical space */}
-                        <p
-                          className="text-xs line-clamp-2 my-0.5 leading-tight overflow-hidden"
-                          style={{ color: theme.mutedForeground }}
-                        >
-                          {item.description}
-                        </p>
-
-                        {/* Bottom: Badges sitting flush with the bottom of the 72px image */}
+                        {/* Bottom Section: Badges sitting flush with the bottom of the 72px image */}
                         <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
                           {item.environment === "both" && (
                             <span
                               className="inline-flex items-center justify-center gap-1.5 h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
-                              <Icon
-                                name="globe"
-                                size={12}
-                                color={theme.primary}
-                                className="-translate-y-[0.5px]"
-                              />
+                              <Icon name="globe" size={12} color={theme.primary} />
                               <span>Client & Server</span>
                             </span>
                           )}
@@ -429,12 +425,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                               className="inline-flex items-center justify-center gap-1.5 h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
-                              <Icon
-                                name="computer"
-                                size={12}
-                                color={theme.primary}
-                                className="-translate-y-[0.5px]"
-                              />
+                              <Icon name="computer" size={12} color={theme.primary} />
                               <span>Client</span>
                             </span>
                           )}
@@ -443,12 +434,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                               className="inline-flex items-center justify-center gap-1.5 h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
-                              <Icon
-                                name="server"
-                                size={12}
-                                color={theme.primary}
-                                className="-translate-y-[0.5px]"
-                              />
+                              <Icon name="server" size={12} color={theme.primary} />
                               <span>Server</span>
                             </span>
                           )}
@@ -489,12 +475,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                             className="inline-flex items-center gap-1 font-medium leading-none"
                             title="Downloads"
                           >
-                            <Icon
-                              name="download"
-                              size={11}
-                              color="currentColor"
-                              className="-translate-y-[1px]"
-                            />
+                            <Icon name="download" size={11} color="currentColor" />
                             <span>{dlCount}</span>
                           </div>
 
@@ -503,12 +484,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                               className="inline-flex items-center gap-1 font-medium leading-none"
                               title="Likes / Follows"
                             >
-                              <Icon
-                                name="heart"
-                                size={11}
-                                color="currentColor"
-                                className="-translate-y-[1px]"
-                              />
+                              <Icon name="heart" size={11} color="currentColor" />
                               <span>{followCount}</span>
                             </div>
                           )}
@@ -520,12 +496,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                             title={`Updated: ${item.dateModified}`}
                             style={{ color: theme.mutedForeground }}
                           >
-                            <Icon
-                              name="clock"
-                              size={11}
-                              color={theme.primary}
-                              className="-translate-y-[0.5px]"
-                            />
+                            <Icon name="clock" size={11} color={theme.primary} />
                             <span>{timeLabel}</span>
                           </div>
                         )}

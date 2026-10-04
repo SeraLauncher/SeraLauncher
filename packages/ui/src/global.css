@@ -159,6 +159,12 @@
   box-sizing: border-box;
 }
 
+svg {
+  display: inline-block;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
 /* Global scrollbar styling matching application theme without native track outlines */
 ::-webkit-scrollbar,
 *::-webkit-scrollbar {
