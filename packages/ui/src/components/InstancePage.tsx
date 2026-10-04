@@ -203,7 +203,7 @@ export function InstancePage({
           <div className="relative inline-block" ref={sortMenuRef}>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-xs font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground"
               onClick={() => {
                 setSortMenuOpen(!sortMenuOpen);
                 setFilterMenuOpen(false);
@@ -259,7 +259,7 @@ export function InstancePage({
           <div className="relative inline-block" ref={filterMenuRef}>
             <button
               type="button"
-              className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-xs font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground ${versionFilter !== "all" ? "bg-card text-foreground font-semibold border-primary" : ""}`}
+              className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground ${versionFilter !== "all" ? "bg-card text-foreground font-semibold border-primary" : ""}`}
               onClick={() => {
                 setFilterMenuOpen(!filterMenuOpen);
                 setSortMenuOpen(false);

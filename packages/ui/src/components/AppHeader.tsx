@@ -248,7 +248,7 @@ export function AppHeader({
         <div className="relative flex items-center" ref={downloadsRef}>
           <button
             type="button"
-            className={`relative inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full border border-border text-xs font-medium cursor-pointer transition-colors duration-120 overflow-hidden ${!isAnyActive ? "w-6 px-0 justify-center" : ""}`}
+            className={`relative inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-border text-xs font-medium cursor-pointer transition-colors duration-120 overflow-hidden ${!isAnyActive ? "w-6 px-0 justify-center" : ""}`}
             style={{
               background: theme.background,
               color: isDownloading ? theme.foreground : theme.mutedForeground,
@@ -578,7 +578,7 @@ export function AppHeader({
           <div className="relative flex items-center" ref={tasksRef}>
             <button
               type="button"
-              className="inline-flex items-center gap-2 h-6 px-2.5 rounded-full border border-border text-xs font-medium cursor-pointer transition-colors duration-120"
+              className="inline-flex items-center gap-2 h-6 px-2.5 rounded-lg border border-border text-xs font-medium cursor-pointer transition-colors duration-120"
               style={{
                 background: theme.background,
                 color: runningCount > 0 ? theme.foreground : theme.mutedForeground,
