@@ -54,9 +54,11 @@ export function RailIcons({
   );
 
   return (
-    <div className="rail-icons">
-      <div className="rail-icons-main">{at("main").map(button)}</div>
-      <div className="rail-icons-footer">{at("footer").map(button)}</div>
+    <div className="flex flex-1 flex-col items-center gap-2.5 w-full py-1">
+      <div className="flex flex-1 flex-col items-center justify-center gap-2">
+        {at("main").map(button)}
+      </div>
+      <div className="flex flex-col items-center gap-2">{at("footer").map(button)}</div>
     </div>
   );
 }
@@ -79,7 +81,9 @@ function NavButton({
       data-label={item.label}
       aria-label={item.label}
       aria-current={selected ? "page" : undefined}
-      className={`nav-button ${selected ? "active" : ""}`}
+      className={`relative flex items-center justify-center size-11 rounded-[10px] cursor-pointer bg-transparent transition-colors duration-120 hover:bg-sidebar-accent after:content-[attr(data-label)] after:absolute after:left-[calc(100%+8px)] after:top-1/2 after:-translate-y-1/2 after:px-2.5 after:py-1 after:border after:border-border after:rounded-md after:bg-card after:text-foreground after:text-[0.88rem] after:font-medium after:whitespace-nowrap after:opacity-0 after:pointer-events-none after:transition-opacity after:duration-120 after:z-50 after:shadow-[0_4px_12px_rgba(0,0,0,0.25)] hover:after:opacity-100 ${
+        selected ? "bg-sidebar-accent" : ""
+      }`}
       style={{ background: selected ? theme.sidebarAccent : "transparent" }}
       whileTap={{ scale: 0.92 }}
       transition={snappy}

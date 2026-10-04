@@ -6,14 +6,11 @@ import { Icon } from "./Icon";
 import type { SettingsTab } from "./PageHeader";
 import {
   BUNDLED_FAMILY,
-  DEFAULT_FONT_SIZE,
   DEFAULT_GC_PRESET,
   DEFAULT_JAVA_OPTIMIZE,
   DEFAULT_JVM_ARGS,
   DEFAULT_MAX_MEMORY,
   DEFAULT_MIN_MEMORY,
-  MAX_FONT_SIZE,
-  MIN_FONT_SIZE,
   type Appearance,
   type FontChoice,
   type GcPreset,
@@ -21,12 +18,6 @@ import {
   type Settings,
 } from "../settings";
 import type { Theme } from "../theme";
-
-/** Every size the base text setting accepts, newest first. */
-const SIZES = Array.from(
-  { length: MAX_FONT_SIZE - MIN_FONT_SIZE + 1 },
-  (_, i) => MAX_FONT_SIZE - i,
-);
 
 const MEMORY_PRESETS = [
   { label: "2 GB", value: 2048 },
@@ -45,7 +36,6 @@ export function SettingsPage({
   javaRuntimes = [],
   systemMemoryMb = 8192,
   onFont,
-  onFontSize,
   onAppearance,
   onJavaPath,
   onMemory,
@@ -61,7 +51,7 @@ export function SettingsPage({
   javaRuntimes?: readonly JavaRuntime[];
   systemMemoryMb?: number;
   onFont: (font: FontChoice) => void;
-  onFontSize: (size: number) => void;
+  onFontSize?: (size: number) => void;
   onAppearance: (appearance: Appearance) => void;
   onJavaPath?: (javaPath: string | null) => void;
   onMemory?: (minMemory: number, maxMemory: number) => void;
@@ -75,8 +65,6 @@ export function SettingsPage({
   );
   const [showArgsModal, setShowArgsModal] = useState(false);
 
-  const typographyDefault =
-    settings.font === BUNDLED_FAMILY && settings.fontSize === DEFAULT_FONT_SIZE;
   const memoryDefault =
     settings.minMemory === DEFAULT_MIN_MEMORY && settings.maxMemory === DEFAULT_MAX_MEMORY;
   const gcDefault = (settings.gcPreset || DEFAULT_GC_PRESET) === DEFAULT_GC_PRESET;
@@ -123,8 +111,11 @@ export function SettingsPage({
 
   if (activeTab === "java") {
     return (
-      <main className="settings">
-        <h1 className="settings-title" style={{ color: theme.foreground }}>
+      <main className="flex flex-col items-center gap-7 px-6 py-9">
+        <h1
+          className="w-full max-w-[620px] m-0 text-2xl font-bold tracking-[-0.01em] text-left"
+          style={{ color: theme.foreground }}
+        >
           Java &amp; Runtime
         </h1>
 
@@ -154,9 +145,9 @@ export function SettingsPage({
               ) : undefined
             }
             control={
-              <div className="settings-java-control">
+              <div className="flex items-center gap-2 min-w-[200px]">
                 <Dropdown
-                  className="dropdown-wide"
+                  className="min-w-[180px]"
                   value={selectedJavaOption}
                   options={javaOptions}
                   theme={theme}
@@ -194,10 +185,10 @@ export function SettingsPage({
 
           {/* Custom Java Path Input */}
           {customPathMode && (
-            <div className="settings-custom-path-row">
+            <div className="w-full pt-1.5 pb-2.5 border-t border-dashed border-muted-foreground/25">
               <input
                 type="text"
-                className="settings-input"
+                className="w-full px-2.5 py-1.5 rounded-lg border-0 bg-secondary text-foreground text-xs outline-none focus:ring-1 focus:ring-ring"
                 style={{
                   background: theme.secondary,
                   color: theme.foreground,
@@ -228,16 +219,16 @@ export function SettingsPage({
               </button>
             }
             control={
-              <div className="settings-memory-panel">
+              <div className="flex flex-col gap-2.5 py-2 w-full">
                 {/* Preset buttons */}
-                <div className="settings-chips">
+                <div className="flex flex-wrap gap-1.5">
                   {MEMORY_PRESETS.map((p) => {
                     const isActive = settings.maxMemory === p.value;
                     return (
                       <button
                         key={p.value}
                         type="button"
-                        className={`settings-chip ${isActive ? "active" : ""}`}
+                        className="px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer border border-border transition-colors"
                         style={{
                           background: isActive ? theme.primary : theme.secondary,
                           color: isActive ? theme.primaryForeground : theme.foreground,
@@ -255,8 +246,8 @@ export function SettingsPage({
                 </div>
 
                 {/* Max RAM slider */}
-                <div className="settings-slider-wrapper">
-                  <div className="settings-slider-label">
+                <div className="flex flex-col gap-1 w-full">
+                  <div className="flex justify-between text-xs text-muted-foreground font-mono">
                     <span style={{ color: theme.mutedForeground }}>Maximum RAM:</span>
                     <strong style={{ color: theme.foreground }}>
                       {(settings.maxMemory / 1024).toFixed(1)} GB ({settings.maxMemory} MB)
@@ -264,7 +255,7 @@ export function SettingsPage({
                   </div>
                   <input
                     type="range"
-                    className="settings-slider"
+                    className="settings-slider w-full h-1.5 rounded-full bg-secondary outline-none cursor-pointer appearance-none"
                     min={1024}
                     max={maxSliderLimit}
                     step={512}
@@ -281,8 +272,8 @@ export function SettingsPage({
                 </div>
 
                 {/* Min RAM slider */}
-                <div className="settings-slider-wrapper">
-                  <div className="settings-slider-label">
+                <div className="flex flex-col gap-1 w-full">
+                  <div className="flex justify-between text-xs text-muted-foreground font-mono">
                     <span style={{ color: theme.mutedForeground }}>Minimum RAM:</span>
                     <strong style={{ color: theme.foreground }}>
                       {(settings.minMemory / 1024).toFixed(1)} GB ({settings.minMemory} MB)
@@ -290,7 +281,7 @@ export function SettingsPage({
                   </div>
                   <input
                     type="range"
-                    className="settings-slider"
+                    className="settings-slider w-full h-1.5 rounded-full bg-secondary outline-none cursor-pointer appearance-none"
                     min={512}
                     max={settings.maxMemory}
                     step={256}
@@ -326,7 +317,7 @@ export function SettingsPage({
               </button>
             }
             control={
-              <div className="settings-chips">
+              <div className="flex flex-wrap gap-1.5">
                 {[
                   { label: "None", value: "none" as const },
                   { label: "G1GC", value: "g1gc" as const },
@@ -337,7 +328,7 @@ export function SettingsPage({
                     <button
                       key={gc.value}
                       type="button"
-                      className={`settings-chip ${isActive ? "active" : ""}`}
+                      className="px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer border border-border transition-colors"
                       style={{
                         background: isActive ? theme.primary : theme.secondary,
                         color: isActive ? theme.primaryForeground : theme.foreground,
@@ -375,14 +366,14 @@ export function SettingsPage({
                 role="switch"
                 aria-checked={settings.javaOptimize}
                 aria-label="Toggle Mojang optimize defaults"
-                className={`settings-switch ${settings.javaOptimize ? "active" : ""}`}
+                className="relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out outline-none"
                 style={{
                   background: settings.javaOptimize ? theme.primary : theme.secondary,
                 }}
                 onClick={() => onJavaOptimize?.(!settings.javaOptimize)}
               >
                 <span
-                  className="settings-switch-knob"
+                  className="pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform duration-150 ease-in-out"
                   style={{
                     background: settings.javaOptimize ? theme.card : theme.mutedForeground,
                     transform: settings.javaOptimize ? "translateX(22px)" : "translateX(2px)",
@@ -393,12 +384,15 @@ export function SettingsPage({
           />
 
           {/* Custom Java Arguments */}
-          <div className="settings-block-row">
-            <div className="settings-block-header">
-              <div className="row-label">
-                <span className="row-title" style={{ color: theme.foreground }}>
+          <div className="flex flex-col gap-2 py-3 border-t border-muted-foreground/25">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span
+                  className="flex items-center gap-2 text-[0.95rem] font-semibold"
+                  style={{ color: theme.foreground }}
+                >
                   Custom Java Arguments
-                  <span className="row-actions">
+                  <span className="inline-flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => onJvmArgs?.(DEFAULT_JVM_ARGS)}
@@ -420,13 +414,16 @@ export function SettingsPage({
                     </button>
                   </span>
                 </span>
-                <span className="row-hint" style={{ color: theme.mutedForeground }}>
+                <span
+                  className="text-xs text-muted-foreground"
+                  style={{ color: theme.mutedForeground }}
+                >
                   Additional custom arguments appended to the launch command
                 </span>
               </div>
             </div>
             <textarea
-              className="settings-textarea settings-mono"
+              className="w-full p-2.5 rounded-lg border-0 bg-secondary text-foreground text-xs font-mono resize-y min-h-[72px] outline-none focus:ring-1 focus:ring-ring"
               rows={3}
               style={{
                 background: theme.secondary,
@@ -451,13 +448,16 @@ export function SettingsPage({
   }
 
   return (
-    <main className="settings">
-      <h1 className="settings-title" style={{ color: theme.foreground }}>
+    <main className="flex flex-col items-center gap-7 px-6 py-9">
+      <h1
+        className="w-full max-w-[620px] m-0 text-2xl font-bold tracking-[-0.01em] text-left"
+        style={{ color: theme.foreground }}
+      >
         Appearance
       </h1>
 
       {/* Appearance Section */}
-      <section className="group">
+      <section className="w-full max-w-[620px] [&>h2]:m-0 [&>h2]:mb-2 [&>h2]:ml-0.5 [&>h2]:text-[0.8rem] [&>h2]:font-semibold">
         <h2 style={{ color: theme.mutedForeground }}>Color scheme</h2>
         <AppearancePicker value={settings.appearance} onChange={onAppearance} theme={theme} />
       </section>
@@ -469,36 +469,23 @@ export function SettingsPage({
           hint="The face used across the app"
           theme={theme}
           control={
-            <>
-              <Dropdown
-                className="dropdown-wide"
-                value={settings.font}
-                options={fonts}
-                theme={theme}
-                onChange={onFont}
-                render={(font) => font}
-                searchPlaceholder="Search fonts"
-              />
-              <Dropdown
-                className="dropdown-narrow"
-                value={settings.fontSize}
-                options={SIZES}
-                theme={theme}
-                onChange={onFontSize}
-                render={(size) => `${size}px`}
-              />
-            </>
+            <Dropdown
+              className="min-w-[200px]"
+              value={settings.font}
+              options={fonts}
+              theme={theme}
+              onChange={onFont}
+              render={(font) => font}
+              searchPlaceholder="Search fonts"
+            />
           }
           action={
             <button
               type="button"
-              onClick={() => {
-                onFont(BUNDLED_FAMILY);
-                onFontSize(DEFAULT_FONT_SIZE);
-              }}
-              disabled={typographyDefault}
-              title="Reset typography"
-              aria-label="Reset typography"
+              onClick={() => onFont(BUNDLED_FAMILY)}
+              disabled={settings.font === BUNDLED_FAMILY}
+              title="Reset font to default"
+              aria-label="Reset font to default"
               style={{ color: theme.mutedForeground }}
             >
               <Icon name="reset" size={16} color={theme.mutedForeground} />
@@ -526,9 +513,9 @@ function Group({
   children: React.ReactNode;
 }) {
   return (
-    <section className="group">
+    <section className="w-full max-w-[620px] [&>h2]:m-0 [&>h2]:mb-2 [&>h2]:ml-0.5 [&>h2]:text-[0.8rem] [&>h2]:font-semibold">
       <h2 style={{ color: theme.mutedForeground }}>{title}</h2>
-      <div className="box">{children}</div>
+      <div className="px-[18px] py-1 bg-card rounded-xl">{children}</div>
     </section>
   );
 }
@@ -548,17 +535,20 @@ function Row({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="row">
-      <div className="row-label">
-        <span className="row-title" style={{ color: theme.foreground }}>
+    <div className="flex items-center justify-between gap-6 py-[9px] max-[520px]:flex-col max-[520px]:items-start [&+.row]:border-t [&+.row]:border-muted-foreground/25">
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <span
+          className="flex items-center gap-2 text-[0.95rem] font-semibold"
+          style={{ color: theme.foreground }}
+        >
           {label}
           {action}
         </span>
-        <span className="row-hint" style={{ color: theme.mutedForeground }}>
+        <span className="text-xs text-muted-foreground" style={{ color: theme.mutedForeground }}>
           {hint}
         </span>
       </div>
-      <div className="row-control">{control}</div>
+      <div className="shrink-0 flex items-center">{control}</div>
     </div>
   );
 }

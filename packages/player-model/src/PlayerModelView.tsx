@@ -179,7 +179,7 @@ export function PlayerModelView({
   return (
     <div
       ref={containerRef}
-      className={`player-model-viewport ${className}`}
+      className={`relative flex items-center justify-center overflow-hidden [&_canvas]:w-full! [&_canvas]:h-full! [&_canvas]:block [&_canvas]:outline-hidden [&_canvas]:cursor-default ${className}`}
       style={{
         width,
         height,

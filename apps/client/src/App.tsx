@@ -106,7 +106,7 @@ export default function App() {
     // sliding and scaling
     <MotionConfig reducedMotion="user">
       <div
-        className="app"
+        className="relative flex h-full overflow-hidden select-none"
         style={
           {
             // react does not emit css custom properties from a style object, so each
@@ -122,7 +122,6 @@ export default function App() {
               }),
             ),
             fontFamily: fontFamily(settings.font),
-            fontSize: settings.fontSize,
             color: theme.foreground,
             background: theme.background,
           } as React.CSSProperties
@@ -131,29 +130,35 @@ export default function App() {
         {/* the rail is one element for the whole app: going to settings widens it,
             coming back narrows it, and the page beside it never moves */}
         <motion.nav
-          className="rail"
+          className="relative z-30 shrink-0 flex flex-col items-center gap-2 pt-4 px-2.5 pb-3 border-r border-border"
           animate={{ width: isRailOpen ? OPEN_WIDTH : RAIL_WIDTH }}
           transition={rail}
           style={{ background: theme.sidebar }}
         >
           {/* the logo is pinned to the rail and never moves between pages; only the
               wordmark beside it comes and goes */}
-          <div className="rail-brand">
+          <div className="flex items-center gap-3 w-full h-[30px] pl-[9px]">
             <RailLogo appearance={settings.appearance} />
             <AnimatePresence>
               {isRailOpen && (
                 <motion.div
                   key="wordmark"
-                  className="rail-wordmark-wrapper"
+                  className="inline-flex items-baseline gap-[7px] whitespace-nowrap"
                   initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -6 }}
                   transition={railLabel}
                 >
-                  <span className="rail-wordmark" style={{ color: theme.sidebarForeground }}>
+                  <span
+                    className="text-[0.95rem] font-bold whitespace-nowrap"
+                    style={{ color: theme.sidebarForeground }}
+                  >
                     Sera
                   </span>
-                  <span className="rail-version" style={{ color: theme.mutedForeground }}>
+                  <span
+                    className="text-[0.72rem] font-normal tracking-[0.02em] opacity-85 whitespace-nowrap"
+                    style={{ color: theme.mutedForeground }}
+                  >
                     v{APP_VERSION}
                   </span>
                 </motion.div>
@@ -167,7 +172,7 @@ export default function App() {
                 key={page === 1 ? `instance-rail-${managingInstanceId}` : "settings-rail"}
                 {...pageFade}
                 transition={fade}
-                className="rail-inner"
+                className="flex flex-1 flex-col w-full min-h-0"
               >
                 {page === 1 && managingInstanceId ? (
                   <InstanceRailNav
@@ -186,7 +191,12 @@ export default function App() {
                 )}
               </motion.div>
             ) : (
-              <motion.div key="icons" {...pageFade} transition={fade} className="rail-inner">
+              <motion.div
+                key="icons"
+                {...pageFade}
+                transition={fade}
+                className="flex flex-1 flex-col w-full min-h-0"
+              >
                 <RailIcons
                   selected={page}
                   onSelect={(p) => {
@@ -200,7 +210,10 @@ export default function App() {
           </AnimatePresence>
         </motion.nav>
 
-        <div className="content-area" style={{ background: theme.sidebar }}>
+        <div
+          className="flex-1 min-w-0 h-full flex flex-col overflow-hidden bg-sidebar"
+          style={{ background: theme.sidebar }}
+        >
           <AppHeader
             theme={theme}
             appearance={settings.appearance}
@@ -231,7 +244,10 @@ export default function App() {
             onClearAllHistory={clearAllHistory}
           />
 
-          <div className="page-viewport" style={{ background: theme.background }}>
+          <div
+            className="flex-1 min-w-0 min-h-0 h-full relative bg-background rounded-tl-[14px] overflow-hidden"
+            style={{ background: theme.background }}
+          >
             <AnimatePresence mode="wait" initial={false}>
               <motion.main
                 key={
@@ -243,7 +259,7 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 exit={pageFade.exit}
                 transition={fade}
-                className="page"
+                className="flex-1 min-w-0 min-h-0 h-full overflow-y-auto [&>h1]:mt-6 [&>h1]:mx-5 [&>h1]:mb-0"
               >
                 {page === SETTINGS ? (
                   <SettingsPage
@@ -254,7 +270,6 @@ export default function App() {
                     javaRuntimes={javaRuntimes}
                     systemMemoryMb={systemMemoryMb}
                     onFont={(font) => update({ font })}
-                    onFontSize={(fontSize) => update({ fontSize })}
                     onAppearance={(appearance: Appearance) => update({ appearance })}
                     onJavaPath={(javaPath) => update({ javaPath })}
                     onMemory={(minMemory, maxMemory) => update({ minMemory, maxMemory })}
@@ -340,7 +355,7 @@ export default function App() {
                 ) : (
                   <>
                     <h1>{NAV[page].label}</h1>
-                    <p className="page-note">
+                    <p className="mt-2 mx-5 mb-0 text-muted-foreground text-[0.85rem]">
                       {NAV[page].label} is empty for now. The rail and palette are the parts to
                       build on.
                     </p>
@@ -356,7 +371,7 @@ export default function App() {
             transparent. */}
         <motion.div
           aria-hidden="true"
-          className="scheme-wash"
+          className="absolute inset-0 bg-background pointer-events-none z-40"
           key={`wash-${settings.appearance}`}
           initial={{ opacity: 0.5 }}
           animate={{ opacity: 0 }}

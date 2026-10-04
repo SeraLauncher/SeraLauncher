@@ -314,10 +314,10 @@ function AccountModalDialog({
   const modalFooter =
     mode === "login" ? (
       account ? (
-        <div className="account-footer-actions">
+        <div className="flex items-center justify-between w-full">
           <button
             type="button"
-            className="account-secondary-btn"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-secondary hover:bg-card text-xs font-semibold cursor-pointer transition-colors"
             onClick={() => {
               stopPolling();
               setMode("view");
@@ -329,12 +329,12 @@ function AccountModalDialog({
         </div>
       ) : undefined
     ) : (
-      <div className="account-footer-actions">
-        <div className="account-footer-left">
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2">
           {account && onRemoveAccount && (
             <button
               type="button"
-              className="account-logout-btn"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border-0 bg-transparent text-xs font-semibold cursor-pointer hover:bg-destructive/12 transition-colors"
               onClick={() => {
                 onRemoveAccount(account.id);
               }}
@@ -345,10 +345,10 @@ function AccountModalDialog({
             </button>
           )}
         </div>
-        <div className="account-footer-right">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            className="account-secondary-btn"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-secondary hover:bg-card text-xs font-semibold cursor-pointer transition-colors"
             onClick={() => {
               setMode("login");
               setAuthType("microsoft");
@@ -360,7 +360,7 @@ function AccountModalDialog({
           </button>
           <button
             type="button"
-            className="account-primary-btn"
+            className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={onClose}
             style={{ background: theme.primary, color: theme.primaryForeground }}
           >
@@ -380,16 +380,16 @@ function AccountModalDialog({
       footer={modalFooter}
     >
       {loginReason === "launch_required" && mode === "login" && (
-        <div className="account-modal-alert">
+        <div className="flex items-center gap-2 p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500 text-xs">
           <Icon name="alertCircle" size={15} color="#f59e0b" />
           <span>Account required to launch and play Minecraft.</span>
         </div>
       )}
 
       {mode === "login" ? (
-        <div className="account-login-flow">
+        <div className="flex flex-col gap-3 w-full">
           {/* Segmented Auth Type Tabs */}
-          <div className="account-type-tabs">
+          <div className="flex bg-foreground/6 p-[3px] rounded-lg gap-1 w-full">
             <button
               type="button"
               className={`account-type-tab ${authType === "microsoft" ? "active" : ""}`}
@@ -440,8 +440,8 @@ function AccountModalDialog({
           </div>
 
           {authType === "offline" ? (
-            <div className="account-offline-flow">
-              <form onSubmit={handleCreateOfflineAccount} className="account-offline-form">
+            <div className="flex flex-col gap-3 w-full">
+              <form onSubmit={handleCreateOfflineAccount} className="flex flex-col gap-3 w-full">
                 <div
                   style={{
                     display: "flex",
@@ -455,7 +455,7 @@ function AccountModalDialog({
                   </label>
                   <input
                     type="text"
-                    className="modal-text-input"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                     placeholder="e.g. Steve"
                     value={offlineName}
                     onChange={(e) => {
@@ -479,7 +479,7 @@ function AccountModalDialog({
 
                 <button
                   type="submit"
-                  className="account-primary-btn"
+                  className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={offlineBusy || !offlineName.trim()}
                   style={{
                     background: theme.primary,
@@ -492,8 +492,8 @@ function AccountModalDialog({
               </form>
             </div>
           ) : authType === "elyby" ? (
-            <div className="account-offline-flow">
-              <form onSubmit={handleLoginElyBy} className="account-offline-form">
+            <div className="flex flex-col gap-3 w-full">
+              <form onSubmit={handleLoginElyBy} className="flex flex-col gap-3 w-full">
                 <div
                   style={{
                     display: "flex",
@@ -507,7 +507,7 @@ function AccountModalDialog({
                   </label>
                   <input
                     type="text"
-                    className="modal-text-input"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                     placeholder="username or email"
                     value={elyUsername}
                     onChange={(e) => {
@@ -534,10 +534,10 @@ function AccountModalDialog({
                   <label style={{ fontSize: "0.82rem", fontWeight: 500, color: theme.foreground }}>
                     Password
                   </label>
-                  <div className="password-input-wrapper">
+                  <div className="relative flex items-center w-full">
                     <input
                       type={elyShowPassword ? "text" : "password"}
-                      className="modal-text-input"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                       placeholder="password"
                       value={elyPassword}
                       onChange={(e) => {
@@ -553,7 +553,7 @@ function AccountModalDialog({
                     />
                     <button
                       type="button"
-                      className="password-toggle-btn"
+                      className="absolute right-2.5 bg-transparent border-0 cursor-pointer flex items-center justify-center p-1 rounded hover:text-foreground text-muted-foreground"
                       onClick={() => setElyShowPassword(!elyShowPassword)}
                       tabIndex={-1}
                       style={{ color: theme.mutedForeground }}
@@ -574,7 +574,7 @@ function AccountModalDialog({
 
                 <button
                   type="submit"
-                  className="account-primary-btn"
+                  className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={elyBusy || !elyUsername.trim() || !elyPassword.trim()}
                   style={{
                     background: theme.primary,
@@ -585,13 +585,13 @@ function AccountModalDialog({
                   {elyBusy ? "Signing in..." : "Sign in with Ely.by"}
                 </button>
 
-                <div className="account-register-hint">
+                <div className="flex items-center justify-center gap-1.5 text-[0.75rem] mt-1 text-muted-foreground">
                   <span style={{ color: theme.mutedForeground }}>
                     Don't have an Ely.by account?
                   </span>{" "}
                   <button
                     type="button"
-                    className="account-register-link"
+                    className="inline-flex items-center gap-1 bg-transparent border-0 cursor-pointer text-[0.75rem] font-medium underline p-0 hover:text-foreground"
                     onClick={() => {
                       if (onOpenUrl) onOpenUrl("https://ely.by");
                       else window.open("https://ely.by", "_blank");
@@ -605,8 +605,8 @@ function AccountModalDialog({
               </form>
             </div>
           ) : authType === "littleskin" ? (
-            <div className="account-offline-flow">
-              <form onSubmit={handleLoginLittleSkin} className="account-offline-form">
+            <div className="flex flex-col gap-3 w-full">
+              <form onSubmit={handleLoginLittleSkin} className="flex flex-col gap-3 w-full">
                 <div
                   style={{
                     display: "flex",
@@ -620,7 +620,7 @@ function AccountModalDialog({
                   </label>
                   <input
                     type="text"
-                    className="modal-text-input"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                     placeholder="email or character name"
                     value={littleUsername}
                     onChange={(e) => {
@@ -647,10 +647,10 @@ function AccountModalDialog({
                   <label style={{ fontSize: "0.82rem", fontWeight: 500, color: theme.foreground }}>
                     Password
                   </label>
-                  <div className="password-input-wrapper">
+                  <div className="relative flex items-center w-full">
                     <input
                       type={littleShowPassword ? "text" : "password"}
-                      className="modal-text-input"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                       placeholder="password"
                       value={littlePassword}
                       onChange={(e) => {
@@ -666,7 +666,7 @@ function AccountModalDialog({
                     />
                     <button
                       type="button"
-                      className="password-toggle-btn"
+                      className="absolute right-2.5 bg-transparent border-0 cursor-pointer flex items-center justify-center p-1 rounded hover:text-foreground text-muted-foreground"
                       onClick={() => setLittleShowPassword(!littleShowPassword)}
                       tabIndex={-1}
                       style={{ color: theme.mutedForeground }}
@@ -687,7 +687,7 @@ function AccountModalDialog({
 
                 <button
                   type="submit"
-                  className="account-primary-btn"
+                  className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={littleBusy || !littleUsername.trim() || !littlePassword.trim()}
                   style={{
                     background: theme.primary,
@@ -698,13 +698,13 @@ function AccountModalDialog({
                   {littleBusy ? "Signing in..." : "Sign in with LittleSkin"}
                 </button>
 
-                <div className="account-register-hint">
+                <div className="flex items-center justify-center gap-1.5 text-[0.75rem] mt-1 text-muted-foreground">
                   <span style={{ color: theme.mutedForeground }}>
                     Don't have a LittleSkin account?
                   </span>{" "}
                   <button
                     type="button"
-                    className="account-register-link"
+                    className="inline-flex items-center gap-1 bg-transparent border-0 cursor-pointer text-[0.75rem] font-medium underline p-0 hover:text-foreground"
                     onClick={() => {
                       if (onOpenUrl) onOpenUrl("https://littleskin.cn");
                       else window.open("https://littleskin.cn", "_blank");
@@ -718,10 +718,10 @@ function AccountModalDialog({
               </form>
             </div>
           ) : !deviceData ? (
-            <div className="account-ms-start">
+            <div className="flex flex-col gap-3 w-full">
               <button
                 type="button"
-                className="account-primary-btn"
+                className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleStartMicrosoftLogin}
                 disabled={loadingCode}
                 style={{
@@ -750,7 +750,7 @@ function AccountModalDialog({
               </button>
 
               {errorMsg && (
-                <div className="account-error-box">
+                <div className="flex flex-row items-start gap-2.5 p-2.5 rounded-lg border border-destructive/35 bg-destructive/16 text-destructive-foreground text-xs w-full">
                   <Icon name="alertCircle" size={16} color="#ef4444" />
                   <div
                     style={{
@@ -761,11 +761,13 @@ function AccountModalDialog({
                       minWidth: 0,
                     }}
                   >
-                    <span className="account-error-message">{errorMsg}</span>
+                    <span className="flex-1 min-w-0 text-xs leading-relaxed break-words">
+                      {errorMsg}
+                    </span>
                     {errorMsg.includes("xbox.com") && (
                       <button
                         type="button"
-                        className="account-register-link"
+                        className="inline-flex items-center gap-1 bg-transparent border-0 cursor-pointer text-[0.75rem] font-medium underline p-0 hover:text-foreground"
                         onClick={() => {
                           if (onOpenUrl) onOpenUrl("https://www.xbox.com");
                           else window.open("https://www.xbox.com", "_blank");
@@ -785,13 +787,13 @@ function AccountModalDialog({
                 </div>
               )}
 
-              <div className="account-register-hint">
+              <div className="flex items-center justify-center gap-1.5 text-[0.75rem] mt-1 text-muted-foreground">
                 <span style={{ color: theme.mutedForeground }}>
                   Don't have a Minecraft account?
                 </span>{" "}
                 <button
                   type="button"
-                  className="account-register-link"
+                  className="inline-flex items-center gap-1 bg-transparent border-0 cursor-pointer text-[0.75rem] font-medium underline p-0 hover:text-foreground"
                   onClick={() => {
                     const buyUrl =
                       "https://www.minecraft.net/store/minecraft-java-bedrock-edition-pc";
@@ -806,19 +808,24 @@ function AccountModalDialog({
               </div>
             </div>
           ) : (
-            <div className="account-ms-code-flow">
-              <p className="account-desc-text-sm" style={{ color: theme.mutedForeground }}>
+            <div className="flex flex-col gap-3 w-full">
+              <p
+                className="text-[0.78rem] mb-0.5 opacity-85 text-center"
+                style={{ color: theme.mutedForeground }}
+              >
                 Enter this code in your browser to sign in:
               </p>
 
               <div
-                className="account-code-card"
+                className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary"
                 style={{ background: theme.secondary, borderColor: theme.border }}
               >
-                <span className="account-user-code">{deviceData.userCode}</span>
+                <span className="font-mono text-[1.15rem] font-bold tracking-[0.08em]">
+                  {deviceData.userCode}
+                </span>
                 <button
                   type="button"
-                  className="account-copy-btn"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[5px] border-0 text-xs font-semibold cursor-pointer"
                   onClick={handleCopy}
                   style={{
                     background: copied ? theme.success : theme.primary,
@@ -832,7 +839,7 @@ function AccountModalDialog({
 
               <button
                 type="button"
-                className="account-primary-btn account-browser-btn"
+                className="w-full inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all"
                 onClick={handleOpenBrowser}
                 style={{ background: theme.primary, color: theme.primaryForeground }}
               >
@@ -840,7 +847,10 @@ function AccountModalDialog({
                 <span>Open Microsoft Page</span>
               </button>
 
-              <div className="account-poll-status" style={{ color: theme.mutedForeground }}>
+              <div
+                className="flex items-center justify-center gap-2 text-[0.78rem] py-1.5 text-muted-foreground"
+                style={{ color: theme.mutedForeground }}
+              >
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
@@ -852,19 +862,21 @@ function AccountModalDialog({
               </div>
 
               {errorMsg && (
-                <div className="account-error-box">
+                <div className="flex flex-row items-start gap-2.5 p-2.5 rounded-lg border border-destructive/35 bg-destructive/16 text-destructive-foreground text-xs w-full">
                   <Icon name="alertCircle" size={16} color="#ef4444" />
-                  <span className="account-error-message">{errorMsg}</span>
+                  <span className="flex-1 min-w-0 text-xs leading-relaxed break-words">
+                    {errorMsg}
+                  </span>
                 </div>
               )}
             </div>
           )}
         </div>
       ) : (
-        <div className="account-view-flow">
+        <div className="flex flex-col gap-3 w-full">
           {account ? (
             <div
-              className="account-active-card"
+              className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-secondary"
               style={{ background: theme.secondary, borderColor: theme.border }}
             >
               <MinecraftHead
@@ -872,11 +884,11 @@ function AccountModalDialog({
                 skinUrl={account.skinUrl ?? undefined}
                 size={44}
               />
-              <div className="account-details">
-                <div className="account-name-row">
-                  <span className="account-player-name">{account.username}</span>
+              <div className="flex flex-col gap-0.5 min-w-0 flex-1 ml-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold truncate">{account.username}</span>
                   <span
-                    className="account-type-badge"
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded leading-none"
                     style={{
                       background: activeBadge.bg,
                       color: activeBadge.color,
@@ -885,25 +897,32 @@ function AccountModalDialog({
                     {activeBadge.label}
                   </span>
                   <span
-                    className="account-active-badge"
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500"
                     style={{ background: theme.success, color: "#ffffff" }}
                   >
                     Active
                   </span>
                 </div>
-                <span className="account-uuid" style={{ color: theme.mutedForeground }}>
+                <span
+                  className="text-[10px] text-muted-foreground font-mono truncate"
+                  style={{ color: theme.mutedForeground }}
+                >
                   {account.uuid}
                 </span>
               </div>
             </div>
           ) : (
-            <div className="account-empty-state">No account currently logged in.</div>
+            <div className="text-xs text-muted-foreground py-6 text-center">
+              No account currently logged in.
+            </div>
           )}
 
           {/* Multi-account list if more than 1 */}
           {accounts.length > 1 && (
-            <div className="account-other-list">
-              <span className="account-section-title">Other Accounts</span>
+            <div className="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-2">
+                Other Accounts
+              </span>
               {accounts
                 .filter((a) => a.id !== account?.id)
                 .map((other) => {
@@ -911,20 +930,20 @@ function AccountModalDialog({
                   return (
                     <div
                       key={other.id}
-                      className="account-other-item"
+                      className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-secondary/50 hover:bg-secondary transition-colors"
                       style={{ background: theme.secondary, borderColor: theme.border }}
                     >
-                      <div className="account-other-left">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <MinecraftHead
                           username={other.accountType === "offline" ? undefined : other.username}
                           skinUrl={other.skinUrl ?? undefined}
                           size={34}
                         />
-                        <div className="account-other-info">
-                          <div className="account-other-name-row">
-                            <span className="account-other-name">{other.username}</span>
+                        <div className="flex flex-col min-w-0 flex-1 ml-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium truncate">{other.username}</span>
                             <span
-                              className="account-type-badge"
+                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded leading-none"
                               style={{
                                 background: badge.bg,
                                 color: badge.color,
@@ -933,20 +952,22 @@ function AccountModalDialog({
                               {badge.label}
                             </span>
                           </div>
-                          <span className="account-other-uuid">{other.uuid}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono truncate">
+                            {other.uuid}
+                          </span>
                         </div>
                       </div>
-                      <div className="account-other-actions">
+                      <div className="flex items-center gap-1 shrink-0">
                         <button
                           type="button"
-                          className="account-action-sm-btn"
+                          className="px-2.5 py-1 text-[11px] font-medium rounded border border-border bg-card hover:bg-secondary cursor-pointer transition-colors"
                           onClick={() => onSelectAccount?.(other.id)}
                         >
                           Switch
                         </button>
                         <button
                           type="button"
-                          className="account-remove-icon-btn"
+                          className="size-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/15 cursor-pointer transition-colors"
                           onClick={() => onRemoveAccount?.(other.id)}
                           title={`Remove ${other.username}`}
                         >

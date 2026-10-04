@@ -269,23 +269,27 @@ export function HomePage({
     articles.length > 0 ? articles.slice(0, 4) : FALLBACK_ARTICLES.slice(0, 4);
 
   return (
-    <div className="home-container">
+    <div className="flex flex-col gap-4 px-5 pt-5 pb-8 min-h-full">
       {/* hero background banner with overlapping action dock */}
-      <div className="home-hero-container">
+      <div className="relative w-full mb-12 shrink-0">
         <div
-          className="home-hero"
+          className="relative w-full h-[360px] rounded-[14px] overflow-hidden border border-secondary shrink-0"
           style={{
             borderColor: theme.border,
             background: theme.card,
           }}
         >
-          <img src={homeBg} alt="Minecraft Background" className="home-hero-bg" />
-          <div className="home-hero-overlay" />
+          <img
+            src={homeBg}
+            alt="Minecraft Background"
+            className="w-full h-full object-cover object-center block"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/8 to-black/55 pointer-events-none" />
         </div>
 
         {/* docked play action block overlapping the bottom edge */}
-        <div className="home-dock">
-          <div className="home-player-model-wrapper">
+        <div className="absolute top-[calc(100%-24px)] left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
+          <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[200px] h-[280px] flex items-center justify-center z-[3] pointer-events-none select-none">
             <PlayerModelView
               skinUrl={skinUrl}
               username={username}
@@ -298,7 +302,7 @@ export function HomePage({
 
           <motion.button
             type="button"
-            className="home-play-btn"
+            className="relative z-[2] inline-flex items-center justify-center gap-2.5 w-[240px] h-12 px-6 border-0 rounded-xl text-[1.15rem] font-bold tracking-[0.02em] cursor-pointer shadow-none transition-transform duration-120 active:scale-95"
             style={{
               background: theme.success,
               color: "#ffffff",
@@ -309,13 +313,13 @@ export function HomePage({
             onClick={handlePlay}
           >
             <Icon name="play" size={20} color="#ffffff" />
-            <span className="home-play-text">{launching ? "Launching..." : "Play"}</span>
+            <span className="leading-none font-bold">{launching ? "Launching..." : "Play"}</span>
           </motion.button>
 
-          <div className="home-instance-wrapper" ref={wrapperRef}>
+          <div className="relative z-[1] flex justify-center w-full -mt-1.5" ref={wrapperRef}>
             <button
               type="button"
-              className="home-instance-pill"
+              className="inline-flex items-center justify-center gap-1.5 w-[210px] pt-2.5 px-3 pb-1.5 rounded-b-[10px] border-0 bg-secondary text-[0.8rem] font-semibold cursor-pointer shadow-[0_2px_10px_rgba(0,0,0,0.2)] transition-colors hover:border-accent"
               style={{
                 background: theme.secondary,
                 border: 0,
@@ -336,14 +340,14 @@ export function HomePage({
               aria-expanded={showInstanceMenu}
             >
               <Icon name="instance" size={16} color={theme.primary} />
-              <span className="home-instance-label">
+              <span className="whitespace-nowrap overflow-hidden text-ellipsis text-center">
                 {instances.length === 0
                   ? "No instance installed"
                   : selectedInstance || instances[0]}
               </span>
               {instances.length > 0 && (
                 <motion.span
-                  className="home-instance-chevron"
+                  className="inline-flex items-center justify-center shrink-0"
                   animate={{ rotate: showInstanceMenu ? 180 : 0 }}
                   transition={snappy}
                 >
@@ -356,7 +360,7 @@ export function HomePage({
               {showInstanceMenu && (
                 <motion.div
                   key="instance-dropdown"
-                  className="home-instance-dropdown"
+                  className="absolute top-[calc(100%+6px)] left-1/2 min-w-[240px] max-w-[320px] w-max rounded-[10px] border-0 bg-secondary p-1 flex flex-col gap-0.5 z-50 shadow-[0_12px_32px_rgba(0,0,0,0.35)]"
                   initial={{ opacity: 0, scale: 0.96, y: -4, x: "-50%" }}
                   animate={{ opacity: 1, scale: 1, y: 0, x: "-50%" }}
                   exit={{ opacity: 0, scale: 0.96, y: -4, x: "-50%" }}
@@ -370,7 +374,7 @@ export function HomePage({
                 >
                   {hasSearch && (
                     <div
-                      className="home-instance-search-box"
+                      className="flex items-center gap-1.5 px-2 py-1.5 mb-0.5 rounded-md border-0 bg-card focus-within:border-accent"
                       style={{
                         background: theme.card,
                         border: 0,
@@ -380,7 +384,7 @@ export function HomePage({
                       <input
                         ref={searchInputRef}
                         type="text"
-                        className="home-instance-search"
+                        className="flex-1 min-w-0 p-0 border-0 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
                         placeholder="Search version..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -389,7 +393,7 @@ export function HomePage({
                       {query && (
                         <button
                           type="button"
-                          className="home-instance-search-clear"
+                          className="flex items-center justify-center size-4 p-0 border-0 bg-transparent text-muted-foreground hover:text-foreground cursor-pointer"
                           onClick={() => setQuery("")}
                           aria-label="Clear search"
                         >
@@ -399,7 +403,10 @@ export function HomePage({
                     </div>
                   )}
 
-                  <div className="home-instance-list" role="listbox">
+                  <div
+                    className="max-h-[160px] overflow-y-auto flex flex-col gap-0.5 p-0 m-0 list-none"
+                    role="listbox"
+                  >
                     {filteredInstances.map((inst) => {
                       const isSelected = inst === selectedInstance;
                       return (
@@ -408,7 +415,7 @@ export function HomePage({
                           type="button"
                           role="option"
                           aria-selected={isSelected}
-                          className="home-instance-option"
+                          className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-card hover:text-foreground"
                           style={{
                             color: isSelected ? theme.primary : theme.foreground,
                             background: isSelected ? theme.card : "transparent",
@@ -421,7 +428,10 @@ export function HomePage({
                         >
                           <span>{inst}</span>
                           {isSelected && (
-                            <span className="home-instance-check" style={{ color: theme.primary }}>
+                            <span
+                              className="flex items-center justify-center shrink-0 ml-1.5"
+                              style={{ color: theme.primary }}
+                            >
                               •
                             </span>
                           )}
@@ -429,7 +439,10 @@ export function HomePage({
                       );
                     })}
                     {filteredInstances.length === 0 && (
-                      <div className="home-instance-empty" style={{ color: theme.mutedForeground }}>
+                      <div
+                        className="px-3 py-2 text-center text-xs text-muted-foreground"
+                        style={{ color: theme.mutedForeground }}
+                      >
                         No match
                       </div>
                     )}
@@ -442,21 +455,24 @@ export function HomePage({
       </div>
 
       {/* article section divider */}
-      <div className="home-divider-row">
-        <div className="home-divider-line" style={{ background: theme.border }} />
-        <span className="home-divider-title" style={{ color: theme.foreground }}>
+      <div className="flex items-center gap-3 w-full my-2">
+        <div className="flex-1 h-px bg-border/50" style={{ background: theme.border }} />
+        <span
+          className="text-xs font-bold tracking-[0.06em] uppercase text-muted-foreground shrink-0"
+          style={{ color: theme.foreground }}
+        >
           Latest News
         </span>
-        <div className="home-divider-line" style={{ background: theme.border }} />
+        <div className="flex-1 h-px bg-border/50" style={{ background: theme.border }} />
       </div>
 
       {/* article cards row: 3 or 4 cards depending on screen width */}
-      <div className="home-articles-grid">
+      <div className="grid grid-cols-3 min-[1040px]:grid-cols-4 gap-3">
         {loading
           ? [0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="home-article-card home-article-skeleton"
+                className="flex flex-col rounded-[10px] border border-secondary overflow-hidden min-h-[190px] opacity-60 animate-pulse-shimmer [&:nth-child(n+4)]:hidden min-[1040px]:[&:nth-child(n+4)]:flex"
                 style={{
                   background: theme.card,
                   borderColor: theme.border,
@@ -466,7 +482,7 @@ export function HomePage({
           : displayedArticles.map((article) => (
               <motion.article
                 key={article.url + article.title}
-                className="home-article-card"
+                className="flex flex-col rounded-[10px] border border-secondary overflow-hidden cursor-pointer transition-colors duration-150 hover:border-accent [&:nth-child(n+4)]:hidden min-[1040px]:[&:nth-child(n+4)]:flex"
                 style={{
                   background: theme.card,
                   borderColor: theme.border,
@@ -475,16 +491,16 @@ export function HomePage({
                 transition={snappy}
                 onClick={() => openArticle(article.url)}
               >
-                <div className="home-article-thumb-wrapper">
+                <div className="relative w-full aspect-[16/9] overflow-hidden">
                   <img
                     src={article.image}
                     alt={article.imageAltText || article.title}
-                    className="home-article-thumb"
+                    className="w-full h-full object-cover object-center block transition-transform duration-300 hover:scale-105"
                     loading="lazy"
                   />
                   {article.category && (
                     <span
-                      className="home-article-badge"
+                      className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-black/60 text-white backdrop-blur-xs uppercase tracking-wider"
                       style={{
                         background: theme.secondary,
                         color: theme.primary,
@@ -496,14 +512,23 @@ export function HomePage({
                   )}
                 </div>
 
-                <div className="home-article-body">
-                  <span className="home-article-date" style={{ color: theme.mutedForeground }}>
+                <div className="flex-1 flex flex-col p-3 gap-1 bg-card">
+                  <span
+                    className="text-[11px] text-muted-foreground font-mono"
+                    style={{ color: theme.mutedForeground }}
+                  >
                     {formatDate(article.time)}
                   </span>
-                  <h3 className="home-article-title" style={{ color: theme.foreground }}>
+                  <h3
+                    className="text-xs font-semibold line-clamp-1 leading-snug"
+                    style={{ color: theme.foreground }}
+                  >
                     {article.title}
                   </h3>
-                  <p className="home-article-desc" style={{ color: theme.mutedForeground }}>
+                  <p
+                    className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed"
+                    style={{ color: theme.mutedForeground }}
+                  >
                     {article.description}
                   </p>
                 </div>

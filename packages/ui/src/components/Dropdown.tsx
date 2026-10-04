@@ -87,13 +87,13 @@ export function Dropdown<T extends string | number>({
   return (
     <div
       ref={root}
-      className={`dropdown ${className ?? ""}`}
+      className={`relative min-w-[150px] border-0 rounded-lg bg-secondary ${className ?? ""}`}
       onKeyDown={onKeyDown}
       style={{ border: 0, background: theme.secondary }}
     >
       <motion.button
         type="button"
-        className="dropdown-trigger"
+        className="flex items-center justify-between gap-2.5 w-full px-2.5 py-[7px] border-0 text-[0.9rem] text-left cursor-pointer bg-transparent"
         onClick={() => (open ? close() : setOpen(true))}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -132,7 +132,7 @@ export function Dropdown<T extends string | number>({
         {open && (
           <motion.div
             key="list"
-            className="dropdown-list"
+            className="absolute top-[calc(100%+4px)] inset-x-0 z-20 flex flex-col p-1 border-0 rounded-lg bg-secondary shadow-[0_8px_24px_rgba(0,0,0,0.25)] [&>ul]:max-h-[240px] [&>ul]:m-0 [&>ul]:p-0 [&>ul]:overflow-y-auto [&>ul]:list-none"
             style={{ background: theme.secondary, border: 0 }}
             initial={{ opacity: 0, scale: 0.97, y: -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -142,7 +142,7 @@ export function Dropdown<T extends string | number>({
             {searchPlaceholder && (
               <input
                 ref={search}
-                className="dropdown-search"
+                className="w-full shrink-0 mb-1 px-2.5 py-[7px] border-0 rounded-md bg-card text-[0.85rem] outline-none"
                 type="text"
                 value={query}
                 placeholder={searchPlaceholder}
@@ -168,7 +168,7 @@ export function Dropdown<T extends string | number>({
                     aria-selected={option === value}
                     onClick={() => pick(option)}
                     onPointerEnter={() => setCursor(index)}
-                    className="dropdown-option"
+                    className="block w-full px-2.5 py-[7px] border-0 rounded-md text-[0.9rem] text-left whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer transition-colors"
                     style={{
                       color: option === value ? theme.primary : theme.foreground,
                       background: index === cursor ? theme.card : "transparent",
@@ -179,7 +179,10 @@ export function Dropdown<T extends string | number>({
                 </li>
               ))}
               {shown.length === 0 && (
-                <li className="dropdown-empty" style={{ color: theme.mutedForeground }}>
+                <li
+                  className="p-2.5 text-[0.85rem] text-muted-foreground text-center"
+                  style={{ color: theme.mutedForeground }}
+                >
                   No match
                 </li>
               )}

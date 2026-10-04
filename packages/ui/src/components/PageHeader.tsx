@@ -32,15 +32,15 @@ export function SettingsRailNav({
   onBack: () => void;
 }) {
   return (
-    <div className="rail-contents">
-      <div className="rail-nav">
+    <div className="flex flex-1 flex-col min-h-0 w-full">
+      <div className="flex flex-col gap-1 mt-2 w-full">
         {tabs.map((tab) => {
           const active = tab.id === activeTab;
           return (
             <motion.button
               key={tab.id}
               type="button"
-              className={`rail-nav-item ${active ? "active" : ""}`}
+              className="flex items-center gap-2.5 w-full px-2.5 py-2 border-0 rounded-lg text-[0.88rem] font-medium text-left cursor-pointer bg-transparent transition-colors duration-120 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               onClick={() => onSelectTab(tab.id)}
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
@@ -52,7 +52,10 @@ export function SettingsRailNav({
               }}
             >
               <Icon name={tab.icon} size={18} color="currentColor" />
-              <span className="rail-nav-label" style={{ fontWeight: active ? 600 : 500 }}>
+              <span
+                className="whitespace-nowrap overflow-hidden text-ellipsis"
+                style={{ fontWeight: active ? 600 : 500 }}
+              >
                 {tab.label}
               </span>
             </motion.button>
@@ -63,7 +66,7 @@ export function SettingsRailNav({
       <motion.button
         type="button"
         onClick={onBack}
-        className="back"
+        className="flex items-center gap-2 mt-auto px-3 py-2 border-0 rounded-lg text-[0.9rem] font-medium text-left cursor-pointer bg-transparent transition-colors duration-120 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         style={{ color: theme.mutedForeground }}
         initial={{ opacity: 0, x: -6 }}
         animate={{ opacity: 1, x: 0 }}
@@ -90,9 +93,9 @@ export function PageHeader({
   onBack: () => void;
 }) {
   return (
-    <div className="rail-contents">
+    <div className="flex flex-1 flex-col min-h-0 w-full">
       <motion.div
-        className="rail-tab"
+        className="flex items-center gap-2 mt-1.5 px-2.5 py-2 rounded-lg"
         initial={{ opacity: 0, x: -6 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -6 }}
@@ -111,7 +114,7 @@ export function PageHeader({
       <motion.button
         type="button"
         onClick={onBack}
-        className="back"
+        className="flex items-center gap-2 mt-auto px-3 py-2 border-0 rounded-lg text-[0.9rem] font-medium text-left cursor-pointer bg-transparent transition-colors duration-120 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         style={{ color: theme.mutedForeground }}
         initial={{ opacity: 0, x: -6 }}
         animate={{ opacity: 1, x: 0 }}
@@ -164,15 +167,15 @@ export function InstanceRailNav({
   onBack: () => void;
 }) {
   return (
-    <div className="rail-contents">
-      <div className="rail-nav">
+    <div className="flex flex-1 flex-col min-h-0 w-full">
+      <div className="flex flex-col gap-1 mt-2 w-full">
         {tabs.map((tab) => {
           const active = tab.id === activeTab;
           return (
             <motion.button
               key={tab.id}
               type="button"
-              className={`rail-nav-item ${active ? "active" : ""}`}
+              className="flex items-center gap-2.5 w-full px-2.5 py-2 border-0 rounded-lg text-[0.88rem] font-medium text-left cursor-pointer bg-transparent transition-colors duration-120 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               onClick={() => onSelectTab(tab.id)}
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
@@ -184,7 +187,10 @@ export function InstanceRailNav({
               }}
             >
               <Icon name={tab.icon} size={18} color="currentColor" />
-              <span className="rail-nav-label" style={{ fontWeight: active ? 600 : 500 }}>
+              <span
+                className="whitespace-nowrap overflow-hidden text-ellipsis"
+                style={{ fontWeight: active ? 600 : 500 }}
+              >
                 {tab.label}
               </span>
             </motion.button>
@@ -195,7 +201,7 @@ export function InstanceRailNav({
       <motion.button
         type="button"
         onClick={onBack}
-        className="back"
+        className="flex items-center gap-2 mt-auto px-3 py-2 border-0 rounded-lg text-[0.9rem] font-medium text-left cursor-pointer bg-transparent transition-colors duration-120 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         style={{ color: theme.mutedForeground }}
         initial={{ opacity: 0, x: -6 }}
         animate={{ opacity: 1, x: 0 }}

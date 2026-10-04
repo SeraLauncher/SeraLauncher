@@ -23,20 +23,20 @@ export function AppearancePicker({
   theme: Theme;
 }) {
   return (
-    <div className="schemes">
+    <div className="flex gap-4 w-full">
       {OPTIONS.map((option) => (
         <motion.button
           key={option}
           type="button"
           onClick={() => onChange(option)}
           aria-pressed={value === option}
-          className="scheme"
+          className="flex flex-1 flex-col items-center gap-2.5 p-1.5 border-0 rounded-[10px] cursor-pointer bg-transparent"
           whileTap={{ scale: 0.98 }}
           transition={snappy}
         >
           <Swatch appearance={option} />
           <motion.span
-            className="scheme-label"
+            className="flex items-center gap-1.5 text-[0.9rem] font-medium"
             animate={{
               color: value === option ? theme.primary : theme.mutedForeground,
             }}
@@ -64,17 +64,23 @@ function Swatch({ appearance }: { appearance: Appearance }) {
       : { page: "#DFC8B1", rail: "#F1DBC2", line: "#ECD6BD", strong: "#352B2D" };
 
   return (
-    <span className="swatch" style={{ background: swatch.page }}>
-      <span className="swatch-rail" style={{ background: swatch.rail }}>
-        <span className="swatch-bar" style={{ background: swatch.line }} />
-        <span className="swatch-bar" style={{ background: swatch.line }} />
-        <span className="swatch-bar swatch-bar-short" style={{ background: swatch.line }} />
+    <span
+      className="relative flex w-full aspect-[16/10] overflow-hidden border-2 border-transparent rounded-md transition-colors duration-120 group-hover:border-muted-foreground"
+      style={{ background: swatch.page }}
+    >
+      <span
+        className="flex flex-col gap-[9%] w-[30%] px-[5%] py-[12%]"
+        style={{ background: swatch.rail }}
+      >
+        <span className="h-[8%] rounded-[2px]" style={{ background: swatch.line }} />
+        <span className="h-[8%] rounded-[2px]" style={{ background: swatch.line }} />
+        <span className="h-[8%] rounded-[2px] w-[72%]" style={{ background: swatch.line }} />
       </span>
-      <span className="swatch-body">
-        <span className="swatch-bar swatch-bar-strong" style={{ background: swatch.strong }} />
-        <span className="swatch-bar swatch-bar-mid" style={{ background: swatch.line }} />
-        <span className="swatch-bar swatch-bar-mid" style={{ background: swatch.line }} />
-        <span className="swatch-bar swatch-bar-short" style={{ background: swatch.line }} />
+      <span className="flex flex-1 flex-col gap-[9%] px-[10%] py-[14%]">
+        <span className="h-[8%] rounded-[2px] w-[97%]" style={{ background: swatch.strong }} />
+        <span className="h-[8%] rounded-[2px] w-[88%]" style={{ background: swatch.line }} />
+        <span className="h-[8%] rounded-[2px] w-[88%]" style={{ background: swatch.line }} />
+        <span className="h-[8%] rounded-[2px] w-[72%]" style={{ background: swatch.line }} />
       </span>
     </span>
   );

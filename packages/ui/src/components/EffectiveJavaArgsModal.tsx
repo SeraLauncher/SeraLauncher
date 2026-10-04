@@ -43,7 +43,7 @@ export function EffectiveJavaArgsModal({
         <>
           <button
             type="button"
-            className="modal-cancel-btn"
+            className="h-8 px-3.5 rounded-md border-0 bg-transparent text-[0.82rem] font-medium cursor-pointer transition-colors duration-120 hover:bg-foreground/5"
             style={{ color: theme.mutedForeground }}
             onClick={onClose}
           >
@@ -51,7 +51,7 @@ export function EffectiveJavaArgsModal({
           </button>
           <button
             type="button"
-            className="modal-confirm-btn"
+            className="inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-md border-0 text-[0.82rem] font-semibold cursor-pointer transition-[opacity,filter] duration-120 hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               background: theme.primary,
               color: theme.primaryForeground,
@@ -67,14 +67,17 @@ export function EffectiveJavaArgsModal({
         </>
       }
     >
-      <div className="java-args-command-section">
-        <div className="java-args-command-header">
-          <span className="section-title" style={{ color: theme.mutedForeground }}>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span
+            className="text-xs font-semibold text-muted-foreground"
+            style={{ color: theme.mutedForeground }}
+          >
             Combined Runtime Arguments ({allArgs.length} flags)
           </span>
         </div>
         <div
-          className="java-args-command-box"
+          className="p-3.5 rounded-[10px] font-mono text-[0.8rem] leading-relaxed max-h-[300px] overflow-y-auto break-all bg-secondary text-foreground"
           style={{
             background: theme.secondary,
             color: theme.foreground,

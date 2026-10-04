@@ -237,15 +237,18 @@ export function AppHeader({
         : `${runningCount} instances running`;
 
   return (
-    <header className="app-header" style={{ background: theme.sidebar }}>
+    <header
+      className="h-9 flex items-center justify-between px-5 border-0 outline-none shrink-0 z-20 bg-sidebar"
+      style={{ background: theme.sidebar }}
+    >
       {/* left slot for running task indicator and instance dropdown */}
-      <div className="header-left" />
-      <div className="header-right">
+      <div className="flex items-center gap-3" />
+      <div className="flex items-center gap-2">
         {/* Download Manager indicator on the left of instance info */}
-        <div className="header-download-wrapper" ref={downloadsRef}>
+        <div className="relative flex items-center" ref={downloadsRef}>
           <button
             type="button"
-            className={`header-download-btn ${!isAnyActive ? "header-download-btn-icon-only" : ""}`}
+            className={`relative inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full border border-border text-xs font-medium cursor-pointer transition-colors duration-120 overflow-hidden ${!isAnyActive ? "w-6 px-0 justify-center" : ""}`}
             style={{
               background: theme.background,
               color: isDownloading ? theme.foreground : theme.mutedForeground,
@@ -267,13 +270,15 @@ export function AppHeader({
               color={isDownloading ? theme.primary : theme.mutedForeground}
             />
             {isAnyActive && (
-              <span className="header-download-btn-label">{downloadButtonLabel}</span>
+              <span className="truncate max-w-[170px] text-[0.75rem] font-semibold leading-none">
+                {downloadButtonLabel}
+              </span>
             )}
 
             {/* Live progress line along the bottom of the button/icon */}
             {isDownloading && (
               <div
-                className="header-download-pill-progress"
+                className="absolute bottom-0 left-0 h-[2px] rounded-full transition-all duration-200"
                 style={{
                   width: `${Math.max(4, Math.min(100, overallProgress))}%`,
                   background: theme.primary,
@@ -286,7 +291,7 @@ export function AppHeader({
             {showDownloads && (
               <motion.div
                 key="download-popover"
-                className="header-download-popover"
+                className="absolute right-0 top-[calc(100%+8px)] w-[320px] rounded-xl border border-border shadow-[0_16px_36px_rgba(0,0,0,0.35)] z-50 overflow-hidden"
                 initial={{ opacity: 0, scale: 0.96, y: -4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: -4 }}
@@ -297,13 +302,13 @@ export function AppHeader({
                 }}
               >
                 <div
-                  className="header-download-popover-header"
+                  className="flex items-center justify-between px-3.5 py-2.5 border-b border-border text-xs font-semibold"
                   style={{ borderColor: theme.border }}
                 >
-                  <span className="header-download-popover-title">Downloads</span>
+                  <span className="text-xs font-semibold">Downloads</span>
                   {activeDownloads.length > 0 && (
                     <span
-                      className="header-download-badge"
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none"
                       style={{
                         background: "rgba(16, 185, 129, 0.15)",
                         color: theme.success,
@@ -316,8 +321,8 @@ export function AppHeader({
 
                 {/* Active Downloads Section (if any active) */}
                 {activeDownloads.length > 0 && (
-                  <div className="header-download-active-section">
-                    <div className="header-download-list">
+                  <div className="p-2 flex flex-col gap-2 max-h-[220px] overflow-y-auto">
+                    <div className="flex flex-col gap-1.5">
                       {activeDownloads.map((item: DownloadItem) => {
                         const sizeLabel = formatDownloadSize(item.downloadedBytes, item.totalBytes);
                         const etaLabel = formatEta(item);
@@ -325,22 +330,22 @@ export function AppHeader({
                         return (
                           <div
                             key={item.id}
-                            className="header-download-card"
+                            className="flex flex-col gap-1.5 p-2 rounded-lg border border-border/50"
                             style={{
                               background: theme.secondary,
                               borderColor: theme.border,
                             }}
                           >
-                            <div className="header-download-card-header">
-                              <div className="header-download-card-title-group">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex flex-col min-w-0">
                                 <span
-                                  className="header-download-item-title"
+                                  className="text-xs font-medium truncate leading-tight"
                                   style={{ color: theme.foreground }}
                                 >
                                   {item.title}
                                 </span>
                                 <span
-                                  className="header-download-item-subtitle"
+                                  className="text-[11px] truncate leading-tight"
                                   style={{ color: theme.mutedForeground }}
                                 >
                                   {item.phaseLabel}
@@ -348,13 +353,13 @@ export function AppHeader({
                               </div>
 
                               {/* Action buttons (Pause/Resume & Cancel) */}
-                              <div className="header-download-actions">
+                              <div className="flex items-center gap-1 shrink-0">
                                 {(item.status === "downloading" || item.status === "paused") && (
                                   <>
                                     {item.status === "downloading" ? (
                                       <button
                                         type="button"
-                                        className="header-download-action-btn"
+                                        className="size-5 flex items-center justify-center rounded cursor-pointer transition-colors"
                                         onClick={() => onPauseDownload?.(item.id)}
                                         title="Pause download"
                                         style={{
@@ -367,7 +372,7 @@ export function AppHeader({
                                     ) : (
                                       <button
                                         type="button"
-                                        className="header-download-action-btn"
+                                        className="size-5 flex items-center justify-center rounded cursor-pointer transition-colors"
                                         onClick={() => onResumeDownload?.(item.id)}
                                         title="Resume download"
                                         style={{
@@ -380,7 +385,7 @@ export function AppHeader({
                                     )}
                                     <button
                                       type="button"
-                                      className="header-download-action-btn"
+                                      className="size-5 flex items-center justify-center rounded cursor-pointer transition-colors"
                                       onClick={() => onStopDownload?.(item.id)}
                                       title="Cancel download"
                                       style={{
@@ -397,11 +402,11 @@ export function AppHeader({
 
                             {/* Progress bar */}
                             <div
-                              className="header-download-progress-track"
+                              className="h-1.5 w-full rounded-full overflow-hidden"
                               style={{ background: theme.card }}
                             >
                               <div
-                                className="header-download-progress-fill"
+                                className="h-full rounded-full transition-all duration-200"
                                 style={{
                                   width: `${Math.min(100, Math.max(0, item.progress))}%`,
                                   background:
@@ -417,15 +422,15 @@ export function AppHeader({
                             </div>
 
                             {/* Bottom row: Megabyte calculation under progress bar on left, ETA on right */}
-                            <div className="header-download-card-bottom">
+                            <div className="flex items-center justify-between text-[10px] font-mono tabular-nums">
                               <span
-                                className="header-download-meta-size"
+                                className="text-[10px] font-medium font-mono tabular-nums"
                                 style={{ color: theme.mutedForeground }}
                               >
                                 {sizeLabel}
                               </span>
                               <span
-                                className="header-download-meta-eta"
+                                className="text-[10px] font-medium font-mono tabular-nums"
                                 style={{
                                   color:
                                     item.status === "paused"
@@ -448,11 +453,11 @@ export function AppHeader({
                 )}
 
                 {/* Download History Section ("Complete") */}
-                <div className="header-download-history-section">
-                  <div className="header-download-history-header">
+                <div className="border-t border-border">
+                  <div className="flex items-center justify-between px-3.5 py-2 text-[11px]">
                     <button
                       type="button"
-                      className="header-download-history-toggle"
+                      className="flex items-center gap-1 font-medium cursor-pointer transition-colors"
                       onClick={() => setShowComplete((prev) => !prev)}
                       style={{ color: theme.foreground }}
                     >
@@ -469,7 +474,7 @@ export function AppHeader({
                     {downloadHistory.length > 0 && (
                       <button
                         type="button"
-                        className="header-download-history-clear-btn"
+                        className="text-[10px] cursor-pointer transition-colors hover:text-destructive"
                         onClick={onClearAllHistory}
                         style={{ color: theme.mutedForeground }}
                       >
@@ -486,11 +491,11 @@ export function AppHeader({
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={snappy}
-                        className="header-download-history-list"
+                        className="flex flex-col max-h-[160px] overflow-y-auto"
                       >
                         {downloadHistory.length === 0 ? (
                           <div
-                            className="header-download-history-empty"
+                            className="p-4 text-center text-xs"
                             style={{ color: theme.mutedForeground }}
                           >
                             No download history
@@ -514,40 +519,39 @@ export function AppHeader({
                                   : "Failed";
 
                             return (
-                              <div key={item.id} className="header-download-history-item">
+                              <div
+                                key={item.id}
+                                className="group flex items-center justify-between px-3.5 py-1.5 hover:bg-secondary/30 transition-colors text-xs"
+                              >
                                 <div
-                                  className="header-download-history-icon-badge"
+                                  className="size-6 rounded-md flex items-center justify-center shrink-0"
                                   style={{
                                     background: `linear-gradient(135deg, ${gradient.top}, ${gradient.bottom})`,
                                   }}
                                 >
-                                  <img
-                                    src={iconSrc}
-                                    alt=""
-                                    className="header-download-history-icon-img"
-                                  />
+                                  <img src={iconSrc} alt="" className="size-5 object-contain" />
                                 </div>
 
-                                <div className="header-download-history-info">
+                                <div className="flex flex-col min-w-0 flex-1 ml-2">
                                   <span
-                                    className="header-download-history-name"
+                                    className="truncate text-xs font-medium"
                                     style={{ color: theme.foreground }}
                                   >
                                     {item.instanceName}
                                   </span>
                                   <div
-                                    className="header-download-history-sub"
+                                    className="text-[10px] font-mono flex items-center"
                                     style={{ color: theme.mutedForeground }}
                                   >
                                     <span>{formatTimeAgo(item.timestamp)}</span>
-                                    <span className="header-download-history-dot">•</span>
+                                    <span className="mx-1 opacity-60">•</span>
                                     <span>{statusLabel}</span>
                                   </div>
                                 </div>
 
                                 <button
                                   type="button"
-                                  className="header-download-history-trash-btn"
+                                  className="opacity-0 group-hover:opacity-100 hover:text-destructive cursor-pointer transition-opacity p-0.5 rounded"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     onDeleteHistoryItem?.(item.id);
@@ -571,10 +575,10 @@ export function AppHeader({
         </div>
 
         {(!isAnyActive || runningCount > 0) && (
-          <div className="header-task-wrapper" ref={tasksRef}>
+          <div className="relative flex items-center" ref={tasksRef}>
             <button
               type="button"
-              className="header-task-pill"
+              className="inline-flex items-center gap-2 h-6 px-2.5 rounded-full border border-border text-xs font-medium cursor-pointer transition-colors duration-120"
               style={{
                 background: theme.background,
                 color: runningCount > 0 ? theme.foreground : theme.mutedForeground,
@@ -583,21 +587,24 @@ export function AppHeader({
               aria-haspopup="dialog"
               aria-expanded={showTasks}
             >
-              <div className="header-task-dot-wrapper">
+              <div className="relative flex items-center justify-center size-2">
                 {runningCount > 0 && (
-                  <span className="header-task-dot-pulse" style={{ background: theme.success }} />
+                  <span
+                    className="absolute -inset-0.5 rounded-full animate-header-task-pulse"
+                    style={{ background: theme.success }}
+                  />
                 )}
                 <span
-                  className="header-task-dot"
+                  className="size-1.5 rounded-full"
                   style={{
                     background: runningCount > 0 ? theme.success : theme.mutedForeground,
                     opacity: runningCount > 0 ? 1 : 0.45,
                   }}
                 />
               </div>
-              <span className="header-task-label">{runningText}</span>
+              <span className="text-[0.75rem] font-semibold leading-none">{runningText}</span>
               <motion.span
-                className="header-task-chevron"
+                className="inline-flex items-center justify-center shrink-0"
                 animate={{ rotate: showTasks ? 180 : 0 }}
                 transition={snappy}
               >
@@ -609,7 +616,7 @@ export function AppHeader({
               {showTasks && (
                 <motion.div
                   key="task-popover"
-                  className="header-task-popover"
+                  className="absolute right-0 top-[calc(100%+8px)] w-[260px] rounded-xl border border-border shadow-[0_16px_36px_rgba(0,0,0,0.35)] z-50 overflow-hidden"
                   initial={{ opacity: 0, scale: 0.96, y: -4 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96, y: -4 }}
@@ -619,10 +626,13 @@ export function AppHeader({
                     borderColor: theme.border,
                   }}
                 >
-                  <div className="header-task-popover-header" style={{ borderColor: theme.border }}>
-                    <span className="header-task-popover-title">Running Tasks</span>
+                  <div
+                    className="flex items-center justify-between px-3.5 py-2.5 border-b border-border text-xs font-semibold"
+                    style={{ borderColor: theme.border }}
+                  >
+                    <span className="text-xs font-semibold">Running Tasks</span>
                     <span
-                      className="header-task-badge"
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none"
                       style={{
                         background: runningCount > 0 ? theme.success : theme.secondary,
                         color: runningCount > 0 ? "#ffffff" : theme.mutedForeground,
@@ -633,32 +643,35 @@ export function AppHeader({
                   </div>
 
                   {runningCount === 0 ? (
-                    <div className="header-task-empty" style={{ color: theme.mutedForeground }}>
+                    <div
+                      className="flex items-center justify-center p-4 text-xs"
+                      style={{ color: theme.mutedForeground }}
+                    >
                       No instance running
                     </div>
                   ) : (
-                    <div className="header-task-list">
+                    <div className="flex flex-col p-1.5 max-h-[220px] overflow-y-auto gap-1">
                       {runningInstances.map((inst) => (
                         <div
                           key={inst.id}
-                          className="header-task-item"
+                          className="flex items-center justify-between p-2 rounded-lg transition-colors"
                           style={{ background: theme.secondary }}
                         >
-                          <div className="header-task-item-left">
+                          <div className="flex items-center gap-2 min-w-0">
                             <span
-                              className="header-task-status-dot"
+                              className="size-2 rounded-full shrink-0"
                               style={{ background: theme.success }}
                             />
-                            <div className="header-task-item-info">
+                            <div className="flex flex-col min-w-0">
                               <span
-                                className="header-task-item-name"
+                                className="text-xs font-medium truncate leading-tight"
                                 style={{ color: theme.foreground }}
                               >
                                 {inst.name}
                               </span>
                               {inst.mcVersion && (
                                 <span
-                                  className="header-task-item-ver"
+                                  className="text-[10px] leading-tight"
                                   style={{ color: theme.mutedForeground }}
                                 >
                                   {inst.mcVersion}
@@ -669,7 +682,7 @@ export function AppHeader({
                           {onKillInstance && (
                             <button
                               type="button"
-                              className="header-task-kill-btn"
+                              className="size-5 flex items-center justify-center rounded cursor-pointer transition-colors shrink-0"
                               title="Stop instance"
                               aria-label={`Stop ${inst.name}`}
                               onClick={(e) => {
@@ -692,7 +705,7 @@ export function AppHeader({
 
         <button
           type="button"
-          className="account-chip"
+          className="inline-flex items-center gap-2 bg-transparent border-0 p-0 cursor-pointer select-none transition-opacity duration-120 hover:opacity-85"
           onClick={onAccountClick}
           title={hasAccount ? `Logged in as ${account?.username}` : "Sign in with Microsoft"}
           style={{ color: hasAccount ? theme.sidebarForeground : theme.mutedForeground }}
@@ -706,13 +719,13 @@ export function AppHeader({
             facing="right"
             isGray={!hasAccount}
           />
-          <span className="account-name">{displayName}</span>
+          <span className="text-[0.84rem] font-semibold leading-none">{displayName}</span>
         </button>
 
         {/* theme toggle placed directly to the right of the account info */}
         <motion.button
           type="button"
-          className="theme-toggle-btn"
+          className="inline-flex items-center justify-center size-6 p-0 border-0 bg-transparent cursor-pointer transition-colors duration-120 hover:opacity-85"
           style={{ color: theme.mutedForeground }}
           whileTap={{ scale: 0.9 }}
           transition={snappy}

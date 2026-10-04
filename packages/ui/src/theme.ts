@@ -135,6 +135,8 @@ export const logo: Record<Appearance, string> = {
 /** The font family inline styles actually ask for. `default` is not a real family, so
  *  an unset preference resolves to the platform ui font. */
 export function fontFamily(preference: string | undefined): string {
-  if (!preference || preference === "default") return "system-ui";
+  if (!preference || preference === "default" || preference === "Sunghyun Sans") {
+    return '"Sunghyun Sans", system-ui, -apple-system, sans-serif';
+  }
   return `"${preference}", "Sunghyun Sans", system-ui, sans-serif`;
 }
