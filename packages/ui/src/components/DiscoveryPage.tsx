@@ -370,12 +370,12 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                         <img
                           src={item.iconUrl}
                           alt=""
-                          className="w-[70px] h-[70px] rounded-xl object-cover flex-shrink-0"
+                          className="w-[72px] h-[72px] rounded-xl object-cover flex-shrink-0"
                           loading="lazy"
                         />
                       ) : (
                         <div
-                          className="w-[70px] h-[70px] rounded-xl flex items-center justify-center flex-shrink-0 border border-border"
+                          className="w-[72px] h-[72px] rounded-xl flex items-center justify-center flex-shrink-0 border border-border"
                           style={{ background: theme.secondary }}
                         >
                           <Icon name="cubes" size={26} color={theme.mutedForeground} />
@@ -411,29 +411,44 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                           {item.environment === "both" && (
                             <span
-                              className="flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border"
+                              className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
-                              <Icon name="globe" size={12} color={theme.primary} />
-                              Client & Server
+                              <Icon
+                                name="globe"
+                                size={12}
+                                color={theme.primary}
+                                className="-translate-y-[0.5px]"
+                              />
+                              <span>Client & Server</span>
                             </span>
                           )}
                           {item.environment === "client" && (
                             <span
-                              className="flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border"
+                              className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
-                              <Icon name="computer" size={12} color={theme.primary} />
-                              Client
+                              <Icon
+                                name="computer"
+                                size={12}
+                                color={theme.primary}
+                                className="-translate-y-[0.5px]"
+                              />
+                              <span>Client</span>
                             </span>
                           )}
                           {item.environment === "server" && (
                             <span
-                              className="flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border"
+                              className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
-                              <Icon name="server" size={12} color={theme.primary} />
-                              Server
+                              <Icon
+                                name="server"
+                                size={12}
+                                color={theme.primary}
+                                className="-translate-y-[0.5px]"
+                              />
+                              <span>Server</span>
                             </span>
                           )}
 
@@ -468,17 +483,30 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                         className="flex items-center gap-2.5 text-[11px]"
                         style={{ color: theme.mutedForeground }}
                       >
-                        <div className="flex items-center gap-1 font-medium" title="Downloads">
-                          <Icon name="download" size={11} color="currentColor" />
+                        <div
+                          className="inline-flex items-center gap-1 font-medium leading-none"
+                          title="Downloads"
+                        >
+                          <Icon
+                            name="download"
+                            size={11}
+                            color="currentColor"
+                            className="-translate-y-[1px]"
+                          />
                           <span>{dlCount}</span>
                         </div>
 
                         {followCount && (
                           <div
-                            className="flex items-center gap-1 font-medium"
+                            className="inline-flex items-center gap-1 font-medium leading-none"
                             title="Likes / Follows"
                           >
-                            <Icon name="heart" size={11} color="currentColor" />
+                            <Icon
+                              name="heart"
+                              size={11}
+                              color="currentColor"
+                              className="-translate-y-[1px]"
+                            />
                             <span>{followCount}</span>
                           </div>
                         )}
@@ -486,11 +514,16 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
 
                       {timeLabel && (
                         <div
-                          className="flex items-center gap-1 text-[12px] font-medium"
+                          className="inline-flex items-center gap-1 text-[12px] font-medium leading-none"
                           title={`Updated: ${item.dateModified}`}
                           style={{ color: theme.mutedForeground }}
                         >
-                          <Icon name="clock" size={13} color={theme.primary} />
+                          <Icon
+                            name="clock"
+                            size={12}
+                            color={theme.primary}
+                            className="-translate-y-[0.5px]"
+                          />
                           <span>{timeLabel}</span>
                         </div>
                       )}
