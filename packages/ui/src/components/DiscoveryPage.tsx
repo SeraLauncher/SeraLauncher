@@ -382,9 +382,9 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                         </div>
                       )}
 
-                      <div className="flex-1 min-w-0">
-                        {/* Title Row aligned on exact horizontal line with icon top & install button */}
-                        <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0 h-[72px] flex flex-col justify-between">
+                        {/* Top: Title Row aligned on exact horizontal line with icon top */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <h3
                             className="text-sm font-semibold truncate leading-none"
                             style={{ color: theme.foreground }}
@@ -400,18 +400,19 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                           </span>
                         </div>
 
+                        {/* Middle: Description filling the vertical space */}
                         <p
-                          className="text-xs line-clamp-1 mt-0.5 leading-snug"
+                          className="text-xs line-clamp-2 my-0.5 leading-tight overflow-hidden"
                           style={{ color: theme.mutedForeground }}
                         >
                           {item.description}
                         </p>
 
-                        {/* Badges: Environment badge always first, followed by Capitalized categories */}
-                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {/* Bottom: Badges sitting flush with the bottom of the 72px image */}
+                        <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
                           {item.environment === "both" && (
                             <span
-                              className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border leading-none"
+                              className="inline-flex items-center justify-center gap-1.5 h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
                               <Icon
@@ -425,7 +426,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                           )}
                           {item.environment === "client" && (
                             <span
-                              className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border leading-none"
+                              className="inline-flex items-center justify-center gap-1.5 h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
                               <Icon
@@ -439,7 +440,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                           )}
                           {item.environment === "server" && (
                             <span
-                              className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border leading-none"
+                              className="inline-flex items-center justify-center gap-1.5 h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
                               <Icon
@@ -455,18 +456,18 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                           {item.categories.slice(0, 4).map((cat) => (
                             <span
                               key={cat}
-                              className="text-[11px] px-2 py-0.5 rounded-md font-medium border border-border"
+                              className="inline-flex items-center justify-center h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
                               style={{ background: theme.secondary, color: theme.mutedForeground }}
                             >
-                              {capitalizeFirst(cat)}
+                              <span>{capitalizeFirst(cat)}</span>
                             </span>
                           ))}
                         </div>
                       </div>
                     </div>
 
-                    {/* Right Group: Install Button on exact horizontal line with title row, metrics below */}
-                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0 pl-2">
+                    {/* Right Group: Install Button on top, metrics flush at bottom */}
+                    <div className="h-[72px] flex flex-col justify-between items-end flex-shrink-0 pl-2">
                       <button
                         type="button"
                         onClick={() => setInstallingProject(item)}
@@ -479,54 +480,56 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                         Install
                       </button>
 
-                      <div
-                        className="flex items-center gap-2.5 text-[11px]"
-                        style={{ color: theme.mutedForeground }}
-                      >
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
                         <div
-                          className="inline-flex items-center gap-1 font-medium leading-none"
-                          title="Downloads"
+                          className="flex items-center gap-2 text-[11px]"
+                          style={{ color: theme.mutedForeground }}
                         >
-                          <Icon
-                            name="download"
-                            size={11}
-                            color="currentColor"
-                            className="-translate-y-[1px]"
-                          />
-                          <span>{dlCount}</span>
-                        </div>
-
-                        {followCount && (
                           <div
                             className="inline-flex items-center gap-1 font-medium leading-none"
-                            title="Likes / Follows"
+                            title="Downloads"
                           >
                             <Icon
-                              name="heart"
+                              name="download"
                               size={11}
                               color="currentColor"
                               className="-translate-y-[1px]"
                             />
-                            <span>{followCount}</span>
+                            <span>{dlCount}</span>
+                          </div>
+
+                          {followCount && (
+                            <div
+                              className="inline-flex items-center gap-1 font-medium leading-none"
+                              title="Likes / Follows"
+                            >
+                              <Icon
+                                name="heart"
+                                size={11}
+                                color="currentColor"
+                                className="-translate-y-[1px]"
+                              />
+                              <span>{followCount}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {timeLabel && (
+                          <div
+                            className="inline-flex items-center gap-1 text-[11px] font-medium leading-none"
+                            title={`Updated: ${item.dateModified}`}
+                            style={{ color: theme.mutedForeground }}
+                          >
+                            <Icon
+                              name="clock"
+                              size={11}
+                              color={theme.primary}
+                              className="-translate-y-[0.5px]"
+                            />
+                            <span>{timeLabel}</span>
                           </div>
                         )}
                       </div>
-
-                      {timeLabel && (
-                        <div
-                          className="inline-flex items-center gap-1 text-[12px] font-medium leading-none"
-                          title={`Updated: ${item.dateModified}`}
-                          style={{ color: theme.mutedForeground }}
-                        >
-                          <Icon
-                            name="clock"
-                            size={12}
-                            color={theme.primary}
-                            className="-translate-y-[0.5px]"
-                          />
-                          <span>{timeLabel}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
