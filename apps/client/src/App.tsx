@@ -6,6 +6,7 @@ import {
   APP_VERSION,
   HomePage,
   InstancePage,
+  DiscoveryPage,
   NAV,
   RAIL_WIDTH,
   RailIcons,
@@ -332,6 +333,8 @@ export default function App() {
                       await launchInstance(inst.id);
                     }}
                   />
+                ) : page === 2 ? (
+                  <DiscoveryPage theme={theme} instances={instances} versions={versions} />
                 ) : (
                   <>
                     <h1>{NAV[page].label}</h1>

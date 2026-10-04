@@ -52,7 +52,7 @@ export function InstancePage({
   theme: Theme;
   instances: Instance[];
   versions: MinecraftVersion[];
-  javaRuntimes: JavaRuntime[];
+  javaRuntimes?: JavaRuntime[];
   managingInstanceId?: string | null;
   onSelectManagingInstanceId?: (id: string | null) => void;
   activeManagementTab?: InstanceManagementTab;
@@ -438,7 +438,6 @@ export function InstancePage({
           <CreateInstanceModal
             theme={theme}
             versions={versions}
-            javaRuntimes={javaRuntimes}
             onClose={() => setCreateModalOpen(false)}
             onCreate={async (name, mcVersion, versionType, icon) => {
               await onCreateInstance(name, mcVersion, versionType, icon);
@@ -471,26 +470,53 @@ export function InstancePage({
 }
 
 /** Modal to create a new vanilla Minecraft instance */
+function formatReleaseDate(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
+function getPrefix(l: string): string {
+  if (l === "fabric") return "Fabric";
+  if (l === "forge") return "Forge";
+  if (l === "neoforge") return "NeoForge";
+  if (l === "quilt") return "Quilt";
+  return "Vanilla";
+}
+
 function CreateInstanceModal({
   theme,
   versions,
-  javaRuntimes,
   onClose,
   onCreate,
 }: {
   theme: Theme;
   versions: MinecraftVersion[];
-  javaRuntimes: JavaRuntime[];
   onClose: () => void;
-  onCreate: (name: string, mcVersion: string, versionType: string, icon: string) => Promise<void>;
+  onCreate: (
+    name: string,
+    mcVersion: string,
+    versionType: string,
+    icon: string,
+    loader?: string,
+    loaderVersion?: string,
+  ) => Promise<void>;
 }) {
   const [tab, setTab] = useState<"release" | "snapshot">("release");
+  const [loader, setLoader] = useState<"vanilla" | "fabric" | "forge" | "neoforge" | "quilt">(
+    "vanilla",
+  );
   const [search, setSearch] = useState("");
   const [selectedVersion, setSelectedVersion] = useState<MinecraftVersion | null>(() => {
     return versions.find((v) => v.type === "release") ?? versions[0] ?? null;
   });
+
   const [name, setName] = useState(
-    selectedVersion ? `Vanilla ${selectedVersion.id}` : "Vanilla Minecraft",
+    selectedVersion ? `${getPrefix("vanilla")} ${selectedVersion.id}` : "Vanilla Minecraft",
   );
   const [nameManuallyEdited, setNameManuallyEdited] = useState(false);
 
@@ -512,21 +538,17 @@ function CreateInstanceModal({
     });
   }, [versions, tab, search]);
 
-  const reqJava = selectedVersion?.requiredJavaVersion ?? 21;
-
-  // Check if compatible Java is installed
-  const hasMatchingJava = useMemo(() => {
-    return javaRuntimes.some((r) => {
-      if (reqJava === 8) return r.majorVersion === 8;
-      if (reqJava === 16 || reqJava === 17) return r.majorVersion === 16 || r.majorVersion === 17;
-      return r.majorVersion >= 21;
-    });
-  }, [javaRuntimes, reqJava]);
-
   const handleSelectVersion = (v: MinecraftVersion) => {
     setSelectedVersion(v);
     if (!nameManuallyEdited) {
-      setName(`Vanilla ${v.id}`);
+      setName(`${getPrefix(loader)} ${v.id}`);
+    }
+  };
+
+  const handleSelectLoader = (newLoader: "vanilla" | "fabric" | "forge" | "neoforge" | "quilt") => {
+    setLoader(newLoader);
+    if (!nameManuallyEdited && selectedVersion) {
+      setName(`${getPrefix(newLoader)} ${selectedVersion.id}`);
     }
   };
 
@@ -553,7 +575,7 @@ function CreateInstanceModal({
       isOpen={true}
       onClose={onClose}
       theme={theme}
-      title="Create Vanilla Instance"
+      title="Create Instance"
       maxWidth={540}
       footer={
         <>
@@ -715,6 +737,44 @@ function CreateInstanceModal({
         </div>
       )}
 
+      {/* Mod Loader Selector */}
+      <div className="modal-field">
+        <label className="modal-label" style={{ color: theme.foreground }}>
+          Mod Loader
+        </label>
+        <div
+          className="flex items-center gap-1 p-1 rounded-lg border border-border"
+          style={{ background: theme.sidebarAccent }}
+        >
+          {(
+            [
+              { id: "vanilla", label: "None (Vanilla)" },
+              { id: "fabric", label: "Fabric" },
+              { id: "forge", label: "Forge" },
+              { id: "neoforge", label: "NeoForge" },
+              { id: "quilt", label: "Quilt" },
+            ] as const
+          ).map((item) => {
+            const isSelected = loader === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelectLoader(item.id)}
+                className="flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-all text-center"
+                style={{
+                  background: isSelected ? theme.primary : "transparent",
+                  color: isSelected ? theme.primaryForeground : theme.mutedForeground,
+                  fontWeight: isSelected ? 600 : 500,
+                }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Version Selector */}
       <div className="modal-field">
         <div className="version-tabs-row">
@@ -782,15 +842,27 @@ function CreateInstanceModal({
                 }}
                 onClick={() => handleSelectVersion(v)}
               >
-                <span className="version-item-id">{v.id}</span>
-                <span
-                  className="version-item-java"
-                  style={{
-                    color: isSelected ? theme.primaryForeground : theme.mutedForeground,
-                  }}
-                >
-                  Java {v.requiredJavaVersion}
-                </span>
+                <span className="version-item-id font-medium">{v.id}</span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[11px]"
+                    style={{
+                      color: isSelected ? theme.primaryForeground : theme.mutedForeground,
+                      opacity: 0.85,
+                    }}
+                  >
+                    {formatReleaseDate(v.releaseTime)}
+                  </span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border border-border"
+                    style={{
+                      background: isSelected ? "rgba(255, 255, 255, 0.2)" : theme.card,
+                      color: isSelected ? theme.primaryForeground : theme.mutedForeground,
+                    }}
+                  >
+                    {v.type}
+                  </span>
+                </div>
               </button>
             );
           })}
@@ -799,36 +871,6 @@ function CreateInstanceModal({
               No versions match "{search}"
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Java Requirement Status Card */}
-      <div
-        className="java-status-card"
-        style={{
-          background: theme.sidebarAccent,
-          borderColor: theme.border,
-        }}
-      >
-        <div className="java-status-icon">
-          <Icon name="coffee" size={20} color={theme.primary} />
-        </div>
-        <div className="java-status-content">
-          <div className="java-status-title" style={{ color: theme.foreground }}>
-            Target Runtime: Java {reqJava}
-          </div>
-          <div className="java-status-desc" style={{ color: theme.mutedForeground }}>
-            {hasMatchingJava ? (
-              <span className="java-status-detected" style={{ color: theme.primary }}>
-                ✓ Compatible Java {reqJava} detected on your system.
-              </span>
-            ) : (
-              <span className="java-status-autodownload">
-                Java {reqJava} is not installed. SeraLauncher will automatically download and set up
-                Eclipse Temurin Java {reqJava} for this instance.
-              </span>
-            )}
-          </div>
         </div>
       </div>
     </Modal>

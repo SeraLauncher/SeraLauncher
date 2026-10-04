@@ -9,6 +9,8 @@ mod downloader;
 mod downloads;
 mod fonts;
 mod instances;
+mod loaders;
+mod discovery;
 mod java;
 mod minecraft;
 mod paths;
@@ -197,8 +199,50 @@ async fn create_instance(
     mc_version: String,
     version_type: Option<String>,
     icon: Option<String>,
+    loader: Option<String>,
+    loader_version: Option<String>,
 ) -> Result<instances::Instance, String> {
-    instances::create_instance(&app, name, mc_version, version_type, icon).await
+    instances::create_instance(&app, name, mc_version, version_type, icon, loader, loader_version).await
+}
+
+#[tauri::command]
+async fn get_mod_loader_versions(mc_version: String, loader: String) -> Result<Vec<loaders::LoaderVersionInfo>, String> {
+    loaders::fetch_loader_versions(&mc_version, &loader).await
+}
+
+#[tauri::command]
+async fn search_discovery(
+    provider: String,
+    project_type: String,
+    query: Option<String>,
+    mc_version: Option<String>,
+    loader: Option<String>,
+    sort: Option<String>,
+    offset: Option<u32>,
+    limit: Option<u32>,
+) -> Result<discovery::DiscoverySearchResponse, String> {
+    discovery::search_projects(
+        &provider,
+        &project_type,
+        query.as_deref(),
+        mc_version.as_deref(),
+        loader.as_deref(),
+        sort.as_deref(),
+        offset.unwrap_or(0),
+        limit.unwrap_or(20),
+    ).await
+}
+
+#[tauri::command]
+async fn install_discovery_project(
+    app: tauri::AppHandle,
+    instance_id: String,
+    project_type: String,
+    download_url: String,
+    file_name: String,
+) -> Result<String, String> {
+    let path = discovery::install_file_to_instance(&app, &instance_id, &project_type, &download_url, &file_name).await?;
+    Ok(path.to_string_lossy().to_string())
 }
 
 #[tauri::command]
@@ -556,6 +600,9 @@ pub fn run() {
             get_minecraft_versions,
             list_instances,
             create_instance,
+            get_mod_loader_versions,
+            search_discovery,
+            install_discovery_project,
             delete_instance,
             update_instance,
             get_instance_logs,

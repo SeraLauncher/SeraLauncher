@@ -25,3 +25,5 @@ export * from "./components/ui/modal";
 export * from "./downloads";
 
 export * from "@sera/player-model";
+
+export * from "./components/DiscoveryPage";

@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "./**/*.{ts,tsx}";
+@source "../../packages/ui/src/**/*.{ts,tsx}";
 
 @theme {
   --color-background: var(--background);
@@ -155,6 +157,55 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Global scrollbar styling matching application theme without native track outlines */
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+  background-color: transparent !important;
+}
+
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background-color: var(--border) !important;
+  border-radius: 9999px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: background-color 0.15s ease;
+}
+
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--primary) !important;
+  /* visually insets the thumb on hover to appear slimmer */
+  border: 1px solid transparent !important;
+  background-clip: content-box !important;
+}
+
+::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--primary) !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
 }
 
 html,
@@ -1015,8 +1066,6 @@ button {
   gap: 2px;
   overflow-y: auto;
   max-height: calc(4 * 2.15rem + 6px);
-  scrollbar-width: thin;
-  scrollbar-color: var(--secondary) transparent;
 }
 
 .home-instance-list::-webkit-scrollbar {

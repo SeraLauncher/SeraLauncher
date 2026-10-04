@@ -20,6 +20,10 @@ pub struct Instance {
     pub created_at: String,
     pub last_played: Option<String>,
     pub play_time_seconds: u64,
+    #[serde(default)]
+    pub loader: Option<String>,
+    #[serde(default)]
+    pub loader_version: Option<String>,
 }
 
 fn instance_file(instance_dir: &Path) -> PathBuf {
@@ -74,6 +78,8 @@ pub async fn create_instance(
     mc_version: String,
     version_type: Option<String>,
     icon: Option<String>,
+    loader: Option<String>,
+    loader_version: Option<String>,
 ) -> Result<Instance, String> {
     use tauri::Emitter;
     let base = instances_dir(app)?;
@@ -115,6 +121,8 @@ pub async fn create_instance(
         created_at: now,
         last_played: None,
         play_time_seconds: 0,
+        loader: loader.clone(),
+        loader_version: loader_version.clone(),
     };
 
     let json = serde_json::to_string_pretty(&instance)
@@ -244,6 +252,8 @@ mod tests {
             created_at: "1727850000".to_string(),
             last_played: None,
             play_time_seconds: 0,
+            loader: None,
+            loader_version: None,
         };
 
         let json = serde_json::to_string(&inst).unwrap();

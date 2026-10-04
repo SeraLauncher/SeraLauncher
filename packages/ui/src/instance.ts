@@ -12,6 +12,41 @@ export type Instance = {
   createdAt: string;
   lastPlayed?: string | null;
   playTimeSeconds: number;
+  loader?: "vanilla" | "fabric" | "forge" | "neoforge" | "quilt" | string | null;
+  loaderVersion?: string | null;
+};
+
+export type ModLoaderType = "vanilla" | "fabric" | "forge" | "neoforge" | "quilt";
+
+export type LoaderVersionInfo = {
+  version: string;
+  stable: boolean;
+};
+
+export type DiscoveryProject = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  author: string;
+  iconUrl?: string | null;
+  downloads: number;
+  follows?: number | null;
+  source: "modrinth" | "curseforge" | string;
+  projectType: "modpack" | "mod" | "resourcepack" | "shader" | string;
+  categories: string[];
+  supportedLoaders: string[];
+  supportedVersions: string[];
+  dateModified?: string | null;
+  downloadUrl?: string | null;
+};
+
+export type DiscoverySearchResponse = {
+  source: string;
+  projects: DiscoveryProject[];
+  totalHits: number;
+  offset: number;
+  limit: number;
 };
 
 export type MinecraftVersion = {
