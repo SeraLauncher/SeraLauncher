@@ -316,10 +316,10 @@ export function HomePage({
             <span className="leading-none font-bold">{launching ? "Launching..." : "Play"}</span>
           </motion.button>
 
-          <div className="relative z-[1] flex justify-center w-full -mt-2.5" ref={wrapperRef}>
+          <div className="relative z-[1] flex justify-center w-full -mt-1" ref={wrapperRef}>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1.5 w-[210px] pt-2 px-3 pb-1 rounded-b-[10px] border-0 bg-secondary text-[0.8rem] font-semibold cursor-pointer shadow-[0_2px_10px_rgba(0,0,0,0.2)] transition-colors hover:border-accent"
+              className="inline-flex items-center justify-center gap-1.5 w-[210px] pt-2.5 px-3.5 pb-1.5 rounded-b-[10px] border-0 bg-secondary text-[0.82rem] font-semibold cursor-pointer shadow-[0_2px_10px_rgba(0,0,0,0.2)] transition-colors hover:border-accent"
               style={{
                 background: theme.secondary,
                 border: 0,
@@ -427,14 +427,6 @@ export function HomePage({
                           }}
                         >
                           <span>{inst}</span>
-                          {isSelected && (
-                            <span
-                              className="flex items-center justify-center shrink-0 ml-1.5"
-                              style={{ color: theme.primary }}
-                            >
-                              •
-                            </span>
-                          )}
                         </button>
                       );
                     })}

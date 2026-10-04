@@ -217,47 +217,37 @@ export function InstancePage({
             <AnimatePresence>
               {sortMenuOpen && (
                 <motion.div
-                  className="absolute left-0 top-[calc(100%+4px)] min-w-[150px] p-1 rounded-lg border border-border bg-card shadow-xl z-30 flex flex-col gap-0.5"
+                  className="absolute left-0 top-[calc(100%+4px)] min-w-[150px] p-1 rounded-lg border border-border bg-secondary shadow-xl z-30 flex flex-col gap-0.5"
+                  style={{ background: theme.secondary, borderColor: theme.border }}
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.1 }}
                 >
-                  <button
-                    type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${sortBy === "lastPlayed" ? "font-semibold text-primary" : "text-foreground"}`}
-                    onClick={() => {
-                      setSortBy("lastPlayed");
-                      setSortMenuOpen(false);
-                    }}
-                  >
-                    <span>Last played</span>
-                    {sortBy === "lastPlayed" && (
-                      <Icon name="check" size={14} color={theme.primary} />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${sortBy === "name" ? "font-semibold text-primary" : "text-foreground"}`}
-                    onClick={() => {
-                      setSortBy("name");
-                      setSortMenuOpen(false);
-                    }}
-                  >
-                    <span>Name</span>
-                    {sortBy === "name" && <Icon name="check" size={14} color={theme.primary} />}
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${sortBy === "version" ? "font-semibold text-primary" : "text-foreground"}`}
-                    onClick={() => {
-                      setSortBy("version");
-                      setSortMenuOpen(false);
-                    }}
-                  >
-                    <span>Minecraft version</span>
-                    {sortBy === "version" && <Icon name="check" size={14} color={theme.primary} />}
-                  </button>
+                  {[
+                    { id: "lastPlayed", label: "Last played" },
+                    { id: "name", label: "Name" },
+                    { id: "version", label: "Minecraft version" },
+                  ].map((item) => {
+                    const isSelected = sortBy === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="w-full px-3 py-2 rounded-md border-0 text-sm font-medium text-left cursor-pointer transition-colors hover:bg-card/70"
+                        style={{
+                          background: isSelected ? theme.card : "transparent",
+                          color: theme.foreground,
+                        }}
+                        onClick={() => {
+                          setSortBy(item.id as any);
+                          setSortMenuOpen(false);
+                        }}
+                      >
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -293,51 +283,37 @@ export function InstancePage({
             <AnimatePresence>
               {filterMenuOpen && (
                 <motion.div
-                  className="absolute left-0 top-[calc(100%+4px)] min-w-[150px] p-1 rounded-lg border border-border bg-card shadow-xl z-30 flex flex-col gap-0.5"
+                  className="absolute right-0 top-[calc(100%+4px)] min-w-[160px] p-1 rounded-lg border border-border bg-secondary shadow-xl z-30 flex flex-col gap-0.5"
+                  style={{ background: theme.secondary, borderColor: theme.border }}
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.1 }}
                 >
-                  <button
-                    type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${versionFilter === "all" ? "font-semibold text-primary" : "text-foreground"}`}
-                    onClick={() => {
-                      setVersionFilter("all");
-                      setFilterMenuOpen(false);
-                    }}
-                  >
-                    <span>All versions</span>
-                    {versionFilter === "all" && (
-                      <Icon name="check" size={14} color={theme.primary} />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${versionFilter === "release" ? "font-semibold text-primary" : "text-foreground"}`}
-                    onClick={() => {
-                      setVersionFilter("release");
-                      setFilterMenuOpen(false);
-                    }}
-                  >
-                    <span>Releases only</span>
-                    {versionFilter === "release" && (
-                      <Icon name="check" size={14} color={theme.primary} />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${versionFilter === "snapshot" ? "font-semibold text-primary" : "text-foreground"}`}
-                    onClick={() => {
-                      setVersionFilter("snapshot");
-                      setFilterMenuOpen(false);
-                    }}
-                  >
-                    <span>Snapshots only</span>
-                    {versionFilter === "snapshot" && (
-                      <Icon name="check" size={14} color={theme.primary} />
-                    )}
-                  </button>
+                  {[
+                    { id: "all", label: "All versions" },
+                    { id: "release", label: "Releases only" },
+                    { id: "snapshot", label: "Snapshots only" },
+                  ].map((item) => {
+                    const isSelected = versionFilter === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="w-full px-3 py-2 rounded-md border-0 text-sm font-medium text-left cursor-pointer transition-colors hover:bg-card/70"
+                        style={{
+                          background: isSelected ? theme.card : "transparent",
+                          color: theme.foreground,
+                        }}
+                        onClick={() => {
+                          setVersionFilter(item.id as any);
+                          setFilterMenuOpen(false);
+                        }}
+                      >
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
                 </motion.div>
               )}
             </AnimatePresence>
