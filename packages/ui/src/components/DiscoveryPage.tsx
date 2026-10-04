@@ -361,38 +361,39 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                 return (
                   <div
                     key={`${item.source}-${item.id}`}
-                    className="flex items-center justify-between p-3.5 rounded-xl border border-border gap-4 transition-all hover:shadow-md"
+                    className="flex items-start justify-between p-3 rounded-xl border border-border gap-3.5 transition-all hover:shadow-md"
                     style={{ background: theme.card }}
                   >
-                    {/* Left: Thumbnail & Details */}
-                    <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                    {/* Left Group: Icon + Details */}
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       {item.iconUrl ? (
                         <img
                           src={item.iconUrl}
                           alt=""
-                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                          className="w-[70px] h-[70px] rounded-xl object-cover flex-shrink-0"
                           loading="lazy"
                         />
                       ) : (
                         <div
-                          className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 border border-border"
+                          className="w-[70px] h-[70px] rounded-xl flex items-center justify-center flex-shrink-0 border border-border"
                           style={{ background: theme.secondary }}
                         >
-                          <Icon name="cubes" size={20} color={theme.mutedForeground} />
+                          <Icon name="cubes" size={26} color={theme.mutedForeground} />
                         </div>
                       )}
 
                       <div className="flex-1 min-w-0">
+                        {/* Title Row aligned on exact horizontal line with icon top & install button */}
                         <div className="flex items-center gap-2">
                           <h3
-                            className="text-sm font-semibold truncate"
+                            className="text-sm font-semibold truncate leading-none"
                             style={{ color: theme.foreground }}
                             title={item.title}
                           >
                             {item.title}
                           </h3>
                           <span
-                            className="text-[11px] flex-shrink-0"
+                            className="text-xs flex-shrink-0 leading-none"
                             style={{ color: theme.mutedForeground }}
                           >
                             by {item.author}
@@ -400,38 +401,38 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                         </div>
 
                         <p
-                          className="text-xs line-clamp-1 mt-0.5"
+                          className="text-xs line-clamp-1 mt-0.5 leading-snug"
                           style={{ color: theme.mutedForeground }}
                         >
                           {item.description}
                         </p>
 
-                        {/* Badges: Environment badge always first on the left, followed by Capitalized categories */}
+                        {/* Badges: Environment badge always first, followed by Capitalized categories */}
                         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                           {item.environment === "both" && (
                             <span
-                              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium border border-border"
+                              className="flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
-                              <Icon name="globe" size={10} color={theme.primary} />
+                              <Icon name="globe" size={12} color={theme.primary} />
                               Client & Server
                             </span>
                           )}
                           {item.environment === "client" && (
                             <span
-                              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium border border-border"
+                              className="flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
-                              <Icon name="computer" size={10} color={theme.primary} />
+                              <Icon name="computer" size={12} color={theme.primary} />
                               Client
                             </span>
                           )}
                           {item.environment === "server" && (
                             <span
-                              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium border border-border"
+                              className="flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md font-medium border border-border"
                               style={{ background: theme.sidebarAccent, color: theme.foreground }}
                             >
-                              <Icon name="server" size={10} color={theme.primary} />
+                              <Icon name="server" size={12} color={theme.primary} />
                               Server
                             </span>
                           )}
@@ -439,7 +440,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                           {item.categories.slice(0, 4).map((cat) => (
                             <span
                               key={cat}
-                              className="text-[10px] px-1.5 py-0.5 rounded font-medium border border-border"
+                              className="text-[11px] px-2 py-0.5 rounded-md font-medium border border-border"
                               style={{ background: theme.secondary, color: theme.mutedForeground }}
                             >
                               {capitalizeFirst(cat)}
@@ -449,12 +450,12 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                       </div>
                     </div>
 
-                    {/* Right: Install button on top, Downloads + Likes below, Updated time on bottom */}
+                    {/* Right Group: Install Button on exact horizontal line with title row, metrics below */}
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0 pl-2">
                       <button
                         type="button"
                         onClick={() => setInstallingProject(item)}
-                        className="px-3.5 py-1 text-xs font-semibold rounded-md transition-opacity hover:opacity-90 cursor-pointer"
+                        className="h-[26px] px-3 text-xs font-semibold rounded-md transition-opacity hover:opacity-90 cursor-pointer flex items-center justify-center leading-none"
                         style={{
                           background: theme.primary,
                           color: theme.primaryForeground,
@@ -464,7 +465,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                       </button>
 
                       <div
-                        className="flex items-center gap-2 text-[11px]"
+                        className="flex items-center gap-2.5 text-[11px]"
                         style={{ color: theme.mutedForeground }}
                       >
                         <div className="flex items-center gap-1 font-medium" title="Downloads">
