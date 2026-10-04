@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Icon } from "./Icon";
-import { MinecraftHead } from "./AppHeader";
+import { MinecraftHead } from "@sera/player-model";
 import { Modal } from "./ui/modal";
 import type { Theme } from "../theme";
 import type { AccountType, DeviceCodeResponse, PublicAccount } from "../account";

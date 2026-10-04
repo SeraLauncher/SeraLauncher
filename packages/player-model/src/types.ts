@@ -1,3 +1,5 @@
+import type React from "react";
+
 export interface PlayerModelViewProps {
   skinUrl?: string | null;
   username?: string;
@@ -8,6 +10,18 @@ export interface PlayerModelViewProps {
   animated?: boolean;
   interactive?: boolean;
   className?: string;
+}
+
+export interface PlayerHeadViewProps {
+  username?: string;
+  skinUrl?: string | null;
+  avatarUrl?: string | null;
+  size?: number;
+  viewMode?: "2d" | "3d";
+  facing?: "left" | "right";
+  isGray?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export interface BoxFaceUv {

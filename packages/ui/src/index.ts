@@ -23,3 +23,5 @@ export * from "./account";
 export * from "./components/AccountModal";
 export * from "./components/ui/modal";
 export * from "./downloads";
+
+export * from "@sera/player-model";

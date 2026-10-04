@@ -70,3 +70,12 @@ pub fn settings_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 pub fn accounts_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_root(app)?.join("accounts.json"))
 }
+
+/// Directory for cached player skins: `<app_data_root>/skins`.
+pub fn skins_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app_data_root(app)?.join("skins");
+    if !dir.exists() {
+        let _ = std::fs::create_dir_all(&dir);
+    }
+    Ok(dir)
+}

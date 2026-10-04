@@ -1,10 +1,10 @@
+import { PlayerHeadView } from "@sera/player-model";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "./Icon";
 import type { Appearance } from "../settings";
 import type { Theme } from "../theme";
 import { snappy } from "../motion";
-import steveGraySkin from "../assets/images/steve-gray-skin.png";
 import type { DownloadHistoryItem, DownloadItem } from "../downloads";
 import { getBlockIconSrc, getPastelGradientForInstance, parseInstanceIcon } from "../blocks";
 
@@ -81,121 +81,7 @@ export type RunningTaskInstance = {
   startedAt?: number;
 };
 
-/** Official Mojang grayscale Steve texture URL */
-export const DEFAULT_STEVE_TEXTURE =
-  "http://textures.minecraft.net/texture/adb0e5c6f99e66b74fa84277894b7e4b8f09b2452fb7e486d6ee42b045c26137";
-
-/** renders real minecraft player heads from skin textures or head apis */
-export function MinecraftHead({
-  username,
-  skinUrl,
-  avatarUrl,
-  size = 20,
-  isGray = false,
-}: {
-  username?: string;
-  skinUrl?: string;
-  avatarUrl?: string;
-  size?: number;
-  isGray?: boolean;
-}) {
-  const currentSource = `${username ?? ""}-${skinUrl ?? ""}-${avatarUrl ?? ""}`;
-  const [prevSource, setPrevSource] = useState(currentSource);
-  const [loadFailed, setLoadFailed] = useState(false);
-
-  if (prevSource !== currentSource) {
-    setPrevSource(currentSource);
-    setLoadFailed(false);
-  }
-
-  // check if url is a 2d pre-rendered head rather than a 64x64 skin texture sheet
-  const isDirectAvatar = Boolean(
-    avatarUrl || (skinUrl && (skinUrl.includes("/avatar") || skinUrl.includes("avatarUrl"))),
-  );
-
-  const effectiveAvatar = avatarUrl ?? (isDirectAvatar ? skinUrl : undefined);
-  const headSrc =
-    effectiveAvatar ?? `https://mc-heads.net/avatar/${encodeURIComponent(username ?? "Steve")}/32`;
-
-  if (isDirectAvatar || loadFailed) {
-    return (
-      <img
-        src={headSrc}
-        alt={username ?? "Steve"}
-        width={size}
-        height={size}
-        loading="lazy"
-        onError={() => setLoadFailed(true)}
-        style={{
-          width: size,
-          height: size,
-          flexShrink: 0,
-          imageRendering: "pixelated",
-          filter: isGray ? "grayscale(100%)" : "none",
-          display: "block",
-        }}
-      />
-    );
-  }
-
-  // default to the official grayscale steve texture when no specific skin/user is given
-  const isDefaultTexture = !username && !avatarUrl && !skinUrl;
-  const activeSkin = skinUrl ?? (isDefaultTexture ? steveGraySkin : undefined);
-
-  if (activeSkin && !loadFailed) {
-    // 64x64 skin texture: front face is (8,8) to (16,16), helm layer is (40,8) to (48,16)
-    const faceOffset = -size;
-    const helmOffset = -size * 5;
-    const bgSize = size * 8;
-
-    return (
-      <div
-        role="img"
-        aria-label={username ?? "Minecraft Player Head"}
-        style={{
-          width: size,
-          height: size,
-          flexShrink: 0,
-          backgroundImage: `url("${activeSkin}"), url("${activeSkin}")`,
-          backgroundPosition: `${helmOffset}px ${faceOffset}px, ${faceOffset}px ${faceOffset}px`,
-          backgroundSize: `${bgSize}px ${bgSize}px, ${bgSize}px ${bgSize}px`,
-          backgroundRepeat: "no-repeat, no-repeat",
-          imageRendering: "pixelated",
-          filter: isGray ? "grayscale(100%)" : "none",
-          display: "inline-block",
-        }}
-      >
-        {/* hidden preloader to catch 404s on background-image and fall back to rendered avatar */}
-        <img
-          src={activeSkin}
-          alt=""
-          aria-hidden="true"
-          style={{ display: "none" }}
-          onError={() => setLoadFailed(true)}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <img
-      src={headSrc}
-      alt={username ?? "Steve"}
-      width={size}
-      height={size}
-      loading="lazy"
-      onError={() => setLoadFailed(true)}
-      style={{
-        width: size,
-        height: size,
-        flexShrink: 0,
-        imageRendering: "pixelated",
-        filter: isGray ? "grayscale(100%)" : "none",
-        display: "block",
-      }}
-    />
-  );
-}
+export { PlayerHeadView, MinecraftHead } from "@sera/player-model";
 
 export function AppHeader({
   theme,
@@ -811,11 +697,13 @@ export function AppHeader({
           title={hasAccount ? `Logged in as ${account?.username}` : "Sign in with Microsoft"}
           style={{ color: hasAccount ? theme.sidebarForeground : theme.mutedForeground }}
         >
-          <MinecraftHead
+          <PlayerHeadView
             username={account?.username}
             skinUrl={account?.skinUrl}
             avatarUrl={account?.avatarUrl}
-            size={20}
+            size={22}
+            viewMode="3d"
+            facing="right"
             isGray={!hasAccount}
           />
           <span className="account-name">{displayName}</span>

@@ -4,3 +4,4 @@ export * from "./steveFallback";
 export * from "./skinTexture";
 export * from "./skinModel";
 export * from "./PlayerModelView";
+export * from "./PlayerHeadView";
