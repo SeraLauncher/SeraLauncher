@@ -316,10 +316,10 @@ export function HomePage({
             <span className="leading-none font-bold">{launching ? "Launching..." : "Play"}</span>
           </motion.button>
 
-          <div className="relative z-[1] flex justify-center w-full -mt-1.5" ref={wrapperRef}>
+          <div className="relative z-[1] flex justify-center w-full -mt-2.5" ref={wrapperRef}>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1.5 w-[210px] pt-2.5 px-3 pb-1.5 rounded-b-[10px] border-0 bg-secondary text-[0.8rem] font-semibold cursor-pointer shadow-[0_2px_10px_rgba(0,0,0,0.2)] transition-colors hover:border-accent"
+              className="inline-flex items-center justify-center gap-1.5 w-[210px] pt-2 px-3 pb-1 rounded-b-[10px] border-0 bg-secondary text-[0.8rem] font-semibold cursor-pointer shadow-[0_2px_10px_rgba(0,0,0,0.2)] transition-colors hover:border-accent"
               style={{
                 background: theme.secondary,
                 border: 0,
@@ -384,7 +384,7 @@ export function HomePage({
                       <input
                         ref={searchInputRef}
                         type="text"
-                        className="flex-1 min-w-0 p-0 border-0 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
+                        className="flex-1 min-w-0 p-0 border-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
                         placeholder="Search version..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -415,7 +415,7 @@ export function HomePage({
                           type="button"
                           role="option"
                           aria-selected={isSelected}
-                          className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-card hover:text-foreground"
+                          className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-sm font-medium text-left cursor-pointer transition-colors hover:bg-card hover:text-foreground"
                           style={{
                             color: isSelected ? theme.primary : theme.foreground,
                             background: isSelected ? theme.card : "transparent",

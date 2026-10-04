@@ -237,8 +237,10 @@ body {
   color: var(--foreground, #f1dbc2);
 }
 
-button {
-  font: inherit;
+@layer base {
+  button {
+    font-family: inherit;
+  }
 }
 
 /* Animation Keyframes */

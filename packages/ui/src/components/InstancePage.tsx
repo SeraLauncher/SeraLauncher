@@ -190,7 +190,7 @@ export function InstancePage({
 
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg border-0 bg-primary text-primary-foreground text-xs font-semibold cursor-pointer transition-all hover:brightness-108 active:scale-95 shrink-0"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg border-0 bg-primary text-primary-foreground text-sm font-semibold cursor-pointer transition-all hover:brightness-108 active:scale-95 shrink-0"
             onClick={() => setCreateModalOpen(true)}
           >
             <Icon name="plus" size={17} color={theme.primaryForeground} />
@@ -203,7 +203,7 @@ export function InstancePage({
           <div className="relative inline-block" ref={sortMenuRef}>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-[11px] font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-xs font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground"
               onClick={() => {
                 setSortMenuOpen(!sortMenuOpen);
                 setFilterMenuOpen(false);
@@ -225,7 +225,7 @@ export function InstancePage({
                 >
                   <button
                     type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs text-left cursor-pointer transition-colors hover:bg-secondary ${sortBy === "lastPlayed" ? "font-semibold text-primary" : "text-foreground"}`}
+                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${sortBy === "lastPlayed" ? "font-semibold text-primary" : "text-foreground"}`}
                     onClick={() => {
                       setSortBy("lastPlayed");
                       setSortMenuOpen(false);
@@ -238,7 +238,7 @@ export function InstancePage({
                   </button>
                   <button
                     type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs text-left cursor-pointer transition-colors hover:bg-secondary ${sortBy === "name" ? "font-semibold text-primary" : "text-foreground"}`}
+                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${sortBy === "name" ? "font-semibold text-primary" : "text-foreground"}`}
                     onClick={() => {
                       setSortBy("name");
                       setSortMenuOpen(false);
@@ -249,7 +249,7 @@ export function InstancePage({
                   </button>
                   <button
                     type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs text-left cursor-pointer transition-colors hover:bg-secondary ${sortBy === "version" ? "font-semibold text-primary" : "text-foreground"}`}
+                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${sortBy === "version" ? "font-semibold text-primary" : "text-foreground"}`}
                     onClick={() => {
                       setSortBy("version");
                       setSortMenuOpen(false);
@@ -269,7 +269,7 @@ export function InstancePage({
           <div className="relative inline-block" ref={filterMenuRef}>
             <button
               type="button"
-              className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-[11px] font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground ${versionFilter !== "all" ? "bg-card text-foreground font-semibold border-primary" : ""}`}
+              className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-border bg-secondary text-xs font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground ${versionFilter !== "all" ? "bg-card text-foreground font-semibold border-primary" : ""}`}
               onClick={() => {
                 setFilterMenuOpen(!filterMenuOpen);
                 setSortMenuOpen(false);
@@ -301,7 +301,7 @@ export function InstancePage({
                 >
                   <button
                     type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs text-left cursor-pointer transition-colors hover:bg-secondary ${versionFilter === "all" ? "font-semibold text-primary" : "text-foreground"}`}
+                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${versionFilter === "all" ? "font-semibold text-primary" : "text-foreground"}`}
                     onClick={() => {
                       setVersionFilter("all");
                       setFilterMenuOpen(false);
@@ -314,7 +314,7 @@ export function InstancePage({
                   </button>
                   <button
                     type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs text-left cursor-pointer transition-colors hover:bg-secondary ${versionFilter === "release" ? "font-semibold text-primary" : "text-foreground"}`}
+                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${versionFilter === "release" ? "font-semibold text-primary" : "text-foreground"}`}
                     onClick={() => {
                       setVersionFilter("release");
                       setFilterMenuOpen(false);
@@ -327,7 +327,7 @@ export function InstancePage({
                   </button>
                   <button
                     type="button"
-                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs text-left cursor-pointer transition-colors hover:bg-secondary ${versionFilter === "snapshot" ? "font-semibold text-primary" : "text-foreground"}`}
+                    className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary py-1.5 px-2.5 ${versionFilter === "snapshot" ? "font-semibold text-primary" : "text-foreground"}`}
                     onClick={() => {
                       setVersionFilter("snapshot");
                       setFilterMenuOpen(false);
@@ -365,7 +365,7 @@ export function InstancePage({
           </p>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg border-0 bg-primary text-primary-foreground text-xs font-semibold cursor-pointer transition-all hover:brightness-108 active:scale-95 shrink-0"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg border-0 bg-primary text-primary-foreground text-sm font-semibold cursor-pointer transition-all hover:brightness-108 active:scale-95 shrink-0"
             onClick={() => setCreateModalOpen(true)}
           >
             <Icon name="plus" size={18} color={theme.primaryForeground} />
@@ -380,7 +380,7 @@ export function InstancePage({
           No instances matching "{search}"
         </div>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 w-full">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,195px))] gap-3.5 w-full">
           {processedInstances.map((inst) => {
             const gradient = getPastelGradientForInstance(inst.id || inst.name, inst.icon);
             const iconSrc = getBlockIconSrc(inst.icon);
@@ -636,13 +636,13 @@ function CreateInstanceModal({
         </div>
 
         {/* Name input */}
-        <div className="modal-field" style={{ flex: 1 }}>
-          <label className="modal-label" style={{ color: theme.foreground }}>
+        <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+          <label className="text-xs font-semibold leading-none" style={{ color: theme.foreground }}>
             Instance Name
           </label>
           <input
             type="text"
-            className="modal-text-input"
+            className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
             style={{
               background: theme.sidebarAccent,
               borderColor: theme.border,
@@ -1135,16 +1135,19 @@ function InstanceManagementView({
 
   if (activeTab === "settings") {
     return (
-      <main className="settings">
-        <h1 className="settings-title" style={{ color: theme.foreground }}>
+      <main className="flex flex-col items-center gap-7 px-6 py-9 w-full overflow-y-auto">
+        <h1
+          className="w-full max-w-[620px] m-0 text-2xl font-bold tracking-[-0.01em] text-left"
+          style={{ color: theme.foreground }}
+        >
           Instance Settings
         </h1>
 
-        <section className="group">
+        <section className="w-full max-w-[620px] [&>h2]:m-0 [&>h2]:mb-2 [&>h2]:ml-0.5 [&>h2]:text-[0.8rem] [&>h2]:font-semibold">
           <form onSubmit={handleSaveSettings}>
-            <div className="box">
+            <div className="px-[18px] py-1 bg-card rounded-xl border border-border">
               {/* Row 1: Block icon on left with random at bottom, and instance name input with label to its right */}
-              <div className="row" style={{ padding: "12px 0" }}>
+              <div className="flex items-center justify-between gap-6 py-3 max-[520px]:flex-col max-[520px]:items-start">
                 <div
                   style={{
                     display: "flex",
@@ -1316,9 +1319,12 @@ function InstanceManagementView({
               )}
 
               {/* Row 2: Java Executable */}
-              <div className="row">
-                <div className="row-label">
-                  <span className="row-title" style={{ color: theme.foreground }}>
+              <div className="flex items-center justify-between gap-6 py-[9px] max-[520px]:flex-col max-[520px]:items-start border-t border-muted-foreground/25">
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span
+                    className="flex items-center gap-2 text-[0.95rem] font-semibold"
+                    style={{ color: theme.foreground }}
+                  >
                     Java Executable
                     {onRefreshJava && (
                       <button
@@ -1326,13 +1332,17 @@ function InstanceManagementView({
                         onClick={onRefreshJava}
                         title="Rescan system for installed Java runtimes"
                         aria-label="Rescan system for installed Java runtimes"
+                        className="cursor-pointer transition-colors hover:text-primary"
                         style={{ color: theme.mutedForeground }}
                       >
-                        <Icon name="refresh" size={16} color={theme.mutedForeground} />
+                        <Icon name="refresh" size={16} color="currentColor" />
                       </button>
                     )}
                   </span>
-                  <span className="row-hint" style={{ color: theme.mutedForeground }}>
+                  <span
+                    className="text-xs text-muted-foreground"
+                    style={{ color: theme.mutedForeground }}
+                  >
                     {customJava
                       ? `Custom: ${customJava}`
                       : javaRuntimes.length > 0
@@ -1341,8 +1351,8 @@ function InstanceManagementView({
                   </span>
                 </div>
 
-                <div className="row-control">
-                  <div className="settings-java-control">
+                <div className="shrink-0 flex items-center">
+                  <div className="flex items-center gap-2 min-w-[200px]">
                     <Dropdown
                       className="dropdown-wide"
                       value={selectedJavaOption}
@@ -1382,7 +1392,7 @@ function InstanceManagementView({
 
               {/* Custom Java Path Row if in custom path mode */}
               {customPathMode && (
-                <div className="settings-custom-path-row">
+                <div className="w-full pt-1.5 pb-2.5 border-t border-dashed border-muted-foreground/25">
                   <input
                     type="text"
                     className="settings-input"
@@ -1399,44 +1409,59 @@ function InstanceManagementView({
               )}
 
               {/* Row 3: Memory Allocation */}
-              <div className="row">
-                <div className="row-label">
-                  <span className="row-title" style={{ color: theme.foreground }}>
+              <div className="flex items-center justify-between gap-6 py-[9px] max-[520px]:flex-col max-[520px]:items-start border-t border-muted-foreground/25">
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span
+                    className="flex items-center gap-2 text-[0.95rem] font-semibold"
+                    style={{ color: theme.foreground }}
+                  >
                     Memory Allocation
                     <button
                       type="button"
+                      disabled={
+                        minMemory === DEFAULT_MIN_MEMORY && maxMemory === DEFAULT_MAX_MEMORY
+                      }
                       onClick={() => {
                         setMinMemory(DEFAULT_MIN_MEMORY);
                         setMaxMemory(DEFAULT_MAX_MEMORY);
                       }}
                       title="Reset memory allocation"
                       aria-label="Reset memory allocation"
-                      style={{ color: theme.mutedForeground }}
+                      className="transition-colors disabled:opacity-30 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:opacity-80"
+                      style={{
+                        color:
+                          minMemory === DEFAULT_MIN_MEMORY && maxMemory === DEFAULT_MAX_MEMORY
+                            ? theme.mutedForeground
+                            : theme.primary,
+                      }}
                     >
-                      <Icon name="reset" size={16} color={theme.mutedForeground} />
+                      <Icon name="reset" size={16} color="currentColor" />
                     </button>
                   </span>
-                  <span className="row-hint" style={{ color: theme.mutedForeground }}>
+                  <span
+                    className="text-xs text-muted-foreground"
+                    style={{ color: theme.mutedForeground }}
+                  >
                     Minimum (-Xms) and Maximum (-Xmx) heap size. Host: ~
                     {(systemMemoryMb / 1024).toFixed(1)} GB RAM
                   </span>
                 </div>
 
-                <div className="row-control">
-                  <div className="settings-memory-panel">
+                <div className="shrink-0 flex items-center">
+                  <div className="flex flex-col gap-2.5 py-2 w-full">
                     {/* Preset buttons */}
-                    <div className="settings-chips">
+                    <div className="flex flex-wrap gap-1.5">
                       {MEMORY_PRESETS.map((p) => {
                         const isActive = maxMemory === p.value;
                         return (
                           <button
                             key={p.value}
                             type="button"
-                            className={`settings-chip ${isActive ? "active" : ""}`}
-                            style={{
-                              background: isActive ? theme.primary : theme.secondary,
-                              color: isActive ? theme.primaryForeground : theme.foreground,
-                            }}
+                            className={`px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer border border-border transition-colors ${
+                              isActive
+                                ? "bg-primary text-primary-foreground font-semibold"
+                                : "bg-secondary text-foreground hover:bg-card"
+                            }`}
                             onClick={() => {
                               const newMax = p.value;
                               const newMin = Math.min(minMemory, newMax);
@@ -1451,8 +1476,8 @@ function InstanceManagementView({
                     </div>
 
                     {/* Max RAM slider */}
-                    <div className="settings-slider-wrapper">
-                      <div className="settings-slider-label">
+                    <div className="flex flex-col gap-1 w-full">
+                      <div className="flex justify-between text-xs text-muted-foreground font-mono">
                         <span style={{ color: theme.mutedForeground }}>Maximum RAM:</span>
                         <strong style={{ color: theme.foreground }}>
                           {(maxMemory / 1024).toFixed(1)} GB ({maxMemory} MB)
@@ -1478,8 +1503,8 @@ function InstanceManagementView({
                     </div>
 
                     {/* Min RAM slider */}
-                    <div className="settings-slider-wrapper">
-                      <div className="settings-slider-label">
+                    <div className="flex flex-col gap-1 w-full">
+                      <div className="flex justify-between text-xs text-muted-foreground font-mono">
                         <span style={{ color: theme.mutedForeground }}>Minimum RAM:</span>
                         <strong style={{ color: theme.foreground }}>
                           {(minMemory / 1024).toFixed(1)} GB ({minMemory} MB)
@@ -1506,20 +1531,27 @@ function InstanceManagementView({
               </div>
 
               {/* Row 4: Custom Java Arguments */}
-              <div className="settings-block-row">
-                <div className="settings-block-header">
-                  <div className="row-label">
-                    <span className="row-title" style={{ color: theme.foreground }}>
+              <div className="flex flex-col gap-2 py-3 border-t border-muted-foreground/25">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span
+                      className="flex items-center gap-2 text-[0.95rem] font-semibold"
+                      style={{ color: theme.foreground }}
+                    >
                       Custom Java Arguments
-                      <span className="row-actions">
+                      <span className="inline-flex items-center gap-1.5">
                         <button
                           type="button"
+                          disabled={!jvmArgs.trim()}
                           onClick={() => setJvmArgs("")}
                           title="Clear custom Java arguments"
                           aria-label="Clear custom Java arguments"
-                          style={{ color: theme.mutedForeground }}
+                          className="transition-colors disabled:opacity-30 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:opacity-80"
+                          style={{
+                            color: !jvmArgs.trim() ? theme.mutedForeground : theme.primary,
+                          }}
                         >
-                          <Icon name="reset" size={16} color={theme.mutedForeground} />
+                          <Icon name="reset" size={16} color="currentColor" />
                         </button>
                         <button
                           type="button"
@@ -1532,14 +1564,17 @@ function InstanceManagementView({
                         </button>
                       </span>
                     </span>
-                    <span className="row-hint" style={{ color: theme.mutedForeground }}>
+                    <span
+                      className="text-xs text-muted-foreground"
+                      style={{ color: theme.mutedForeground }}
+                    >
                       Additional custom arguments appended to the launch command
                     </span>
                   </div>
                 </div>
 
                 <textarea
-                  className="settings-textarea settings-mono"
+                  className="w-full p-2.5 rounded-lg border-0 bg-secondary text-foreground text-xs font-mono resize-y min-h-[72px] outline-none focus:ring-1 focus:ring-ring"
                   rows={3}
                   style={{
                     background: theme.secondary,

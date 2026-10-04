@@ -138,9 +138,10 @@ export function SettingsPage({
                   onClick={onRefreshJava}
                   title="Rescan system for installed Java runtimes"
                   aria-label="Rescan system for installed Java runtimes"
+                  className="cursor-pointer transition-colors hover:text-primary"
                   style={{ color: theme.mutedForeground }}
                 >
-                  <Icon name="refresh" size={16} color={theme.mutedForeground} />
+                  <Icon name="refresh" size={16} color="currentColor" />
                 </button>
               ) : undefined
             }
@@ -213,9 +214,10 @@ export function SettingsPage({
                 disabled={memoryDefault}
                 title="Reset memory allocation"
                 aria-label="Reset memory allocation"
-                style={{ color: theme.mutedForeground }}
+                className="transition-colors disabled:opacity-30 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:opacity-80"
+                style={{ color: memoryDefault ? theme.mutedForeground : theme.primary }}
               >
-                <Icon name="reset" size={16} color={theme.mutedForeground} />
+                <Icon name="reset" size={16} color="currentColor" />
               </button>
             }
             control={
@@ -311,9 +313,10 @@ export function SettingsPage({
                 disabled={gcDefault}
                 title="Reset garbage collector to G1GC"
                 aria-label="Reset garbage collector to G1GC"
-                style={{ color: theme.mutedForeground }}
+                className="transition-colors disabled:opacity-30 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:opacity-80"
+                style={{ color: gcDefault ? theme.mutedForeground : theme.primary }}
               >
-                <Icon name="reset" size={16} color={theme.mutedForeground} />
+                <Icon name="reset" size={16} color="currentColor" />
               </button>
             }
             control={
@@ -355,9 +358,10 @@ export function SettingsPage({
                 disabled={optimizeDefault}
                 title="Reset Mojang optimize defaults"
                 aria-label="Reset Mojang optimize defaults"
-                style={{ color: theme.mutedForeground }}
+                className="transition-colors disabled:opacity-30 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:opacity-80"
+                style={{ color: optimizeDefault ? theme.mutedForeground : theme.primary }}
               >
-                <Icon name="reset" size={16} color={theme.mutedForeground} />
+                <Icon name="reset" size={16} color="currentColor" />
               </button>
             }
             control={
@@ -399,9 +403,10 @@ export function SettingsPage({
                       disabled={jvmDefault}
                       title="Clear custom Java arguments"
                       aria-label="Clear custom Java arguments"
-                      style={{ color: theme.mutedForeground }}
+                      className="transition-colors disabled:opacity-30 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:opacity-80"
+                      style={{ color: jvmDefault ? theme.mutedForeground : theme.primary }}
                     >
-                      <Icon name="reset" size={16} color={theme.mutedForeground} />
+                      <Icon name="reset" size={16} color="currentColor" />
                     </button>
                     <button
                       type="button"
@@ -486,9 +491,12 @@ export function SettingsPage({
               disabled={settings.font === BUNDLED_FAMILY}
               title="Reset font to default"
               aria-label="Reset font to default"
-              style={{ color: theme.mutedForeground }}
+              className="transition-colors disabled:opacity-30 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:opacity-80"
+              style={{
+                color: settings.font === BUNDLED_FAMILY ? theme.mutedForeground : theme.primary,
+              }}
             >
-              <Icon name="reset" size={16} color={theme.mutedForeground} />
+              <Icon name="reset" size={16} color="currentColor" />
             </button>
           }
         />
