@@ -313,31 +313,28 @@ async fn fetch_skin_as_data_url(app: tauri::AppHandle, url: String) -> Result<St
     let hash: String = hasher.finalize().into_iter().map(|b| format!("{:02x}", b)).collect();
     let cached_path = skins_dir.join(format!("{}.png", hash));
 
-    // Try fetching from remote first to keep skin fresh
-    let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.4")
-        .timeout(std::time::Duration::from_secs(8))
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    match client.get(&url).send().await {
-        Ok(res) if res.status().is_success() => {
-            if let Ok(bytes) = res.bytes().await {
-                let _ = std::fs::write(&cached_path, &bytes);
-                return Ok(encode_base64_data_url(&bytes));
-            }
-        }
-        _ => {}
-    }
-
-    // Fall back to cached skin file on disk for offline use
+    // Fast-path: return cached skin file immediately without network latency
     if cached_path.exists() {
         if let Ok(cached_bytes) = std::fs::read(&cached_path) {
             return Ok(encode_base64_data_url(&cached_bytes));
         }
     }
 
-    Err(format!("Could not fetch skin from URL and no cached version exists for {}", url))
+    // Fetch from remote if not yet cached
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.6")
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let res = client.get(&url).send().await.map_err(|e| format!("Failed to fetch skin: {}", e))?;
+    if res.status().is_success() {
+        let bytes = res.bytes().await.map_err(|e| format!("Failed to read skin bytes: {}", e))?;
+        let _ = std::fs::write(&cached_path, &bytes);
+        return Ok(encode_base64_data_url(&bytes));
+    }
+
+    Err(format!("Could not fetch skin from URL {}", url))
 }
 
 #[tauri::command]

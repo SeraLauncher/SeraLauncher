@@ -160,7 +160,7 @@ pub async fn fetch_minecraft_versions() -> Result<MinecraftVersionsResponse, Str
 
     let url = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.4")
+        .user_agent("SeraLauncher/0.1.6")
         .build()
         .map_err(|err| format!("HTTP client error: {}", err))?;
 
@@ -478,7 +478,7 @@ pub async fn install_minecraft_version_with_instance(
     instance_icon: Option<&str>,
 ) -> Result<VersionPackage, String> {
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.4")
+        .user_agent("SeraLauncher/0.1.6")
         .build()
         .map_err(|err| format!("HTTP client error: {}", err))?;
 

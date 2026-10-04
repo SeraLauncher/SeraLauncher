@@ -1,5 +1,5 @@
 /** Current Sera application version. */
-export const APP_VERSION = "0.1.4";
+export const APP_VERSION = "0.1.6";
 
 /** Which palette the app is painted with. Owned here rather than in `theme.ts` so the
  *  settings store can import it without pulling the palettes in. */

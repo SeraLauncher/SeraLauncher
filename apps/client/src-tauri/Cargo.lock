@@ -3671,7 +3671,7 @@ dependencies = [
 
 [[package]]
 name = "sera-launcher"
-version = "0.1.4"
+version = "0.1.6"
 dependencies = [
  "flate2",
  "font-kit",

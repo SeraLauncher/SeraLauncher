@@ -173,9 +173,25 @@ export function PlayerHeadView({
     };
   }, [cacheKey, cachedUrl, viewMode, facing, size, skinUrl]);
 
+  if (!renderedSrc) {
+    return (
+      <div
+        className={className}
+        style={{
+          width: size,
+          height: size,
+          display: "inline-block",
+          flexShrink: 0,
+          backgroundColor: "transparent",
+          ...customStyle,
+        }}
+      />
+    );
+  }
+
   return (
     <img
-      src={renderedSrc || undefined}
+      src={renderedSrc}
       alt={username ?? "Steve"}
       width={size}
       height={size}
@@ -188,6 +204,8 @@ export function PlayerHeadView({
         display: "inline-block",
         flexShrink: 0,
         backgroundColor: "transparent",
+        border: "none",
+        outline: "none",
         ...customStyle,
       }}
     />
