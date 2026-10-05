@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Icon } from "./Icon";
+import { Icon, SiCurseforge, SiModrinth } from "./Icon";
 import { Dropdown } from "./Dropdown";
 import type { Theme } from "../theme";
 import type {
@@ -217,7 +217,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
             <button
               type="button"
               onClick={() => setProvider("modrinth")}
-              className="px-3 py-1.5 rounded-md transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer"
               style={{
                 background: provider === "modrinth" ? theme.primary : "transparent",
                 color: provider === "modrinth" ? theme.primaryForeground : theme.mutedForeground,
@@ -226,12 +226,13 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                 lineHeight: 1.2,
               }}
             >
-              Modrinth
+              <SiModrinth size={14} color="currentColor" />
+              <span>Modrinth</span>
             </button>
             <button
               type="button"
               onClick={() => setProvider("curseforge")}
-              className="px-3 py-1.5 rounded-md transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer"
               style={{
                 background: provider === "curseforge" ? theme.primary : "transparent",
                 color: provider === "curseforge" ? theme.primaryForeground : theme.mutedForeground,
@@ -240,7 +241,8 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                 lineHeight: 1.2,
               }}
             >
-              CurseForge
+              <SiCurseforge size={14} color="currentColor" />
+              <span>CurseForge</span>
             </button>
           </div>
         </div>

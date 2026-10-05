@@ -1,3 +1,5 @@
+import { SiCurseforge, SiModrinth } from "react-icons/si";
+export * from "react-icons/si";
 import {
   FaDiscord,
   FaGithub,
@@ -197,6 +199,8 @@ const paths = {
 } as const;
 
 export const socialIcons = {
+  modrinth: SiModrinth,
+  curseforge: SiCurseforge,
   discord: FaDiscord,
   github: FaGithub,
   instagram: FaInstagram,
