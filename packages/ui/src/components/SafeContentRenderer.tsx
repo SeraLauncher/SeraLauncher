@@ -36,7 +36,7 @@ export function SafeContentRenderer({
     let htmlString = content;
     if (type === "markdown") {
       try {
-        const parsed = marked.parse(content, { gfm: true, breaks: true });
+        const parsed = marked.parse(content, { gfm: true, breaks: false });
         htmlString = typeof parsed === "string" ? parsed : content;
       } catch {
         htmlString = content;
@@ -73,12 +73,18 @@ export function SafeContentRenderer({
         // Safe anchor links opening externally
         if (tagName === "a") {
           const href = el.getAttribute("href") || "#";
+          const hasOnlyImg =
+            el.childNodes.length === 1 && el.childNodes[0].nodeName.toLowerCase() === "img";
           return (
             <a
               key={currentKey}
               href={href}
               onClick={(e) => handleLinkClick(e, href)}
-              className="text-primary underline hover:opacity-85 font-medium inline-flex items-center gap-0.5 cursor-pointer"
+              className={
+                hasOnlyImg
+                  ? "inline-block align-middle my-1 mr-1.5 hover:opacity-90 transition-opacity cursor-pointer leading-none"
+                  : "text-primary underline hover:opacity-85 font-medium inline-flex items-center gap-0.5 cursor-pointer"
+              }
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -104,7 +110,7 @@ export function SafeContentRenderer({
               src={src}
               alt={alt}
               loading="lazy"
-              className="max-w-full h-auto rounded-xl my-3 border border-border inline-block object-contain"
+              className="max-w-full h-auto rounded-lg my-1 mr-1.5 inline-block align-middle object-contain"
             />
           );
         }

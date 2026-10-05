@@ -410,14 +410,15 @@ export function DiscoveryDetailsPage({
           <button
             type="button"
             onClick={() => setActiveTab("description")}
-            className="px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer"
             style={{
               background: activeTab === "description" ? theme.card : "transparent",
               color: activeTab === "description" ? theme.foreground : theme.mutedForeground,
               boxShadow: activeTab === "description" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
             }}
           >
-            Description
+            <Icon name="book" size={13} color="currentColor" />
+            <span>Description</span>
           </button>
 
           <button
@@ -430,6 +431,7 @@ export function DiscoveryDetailsPage({
               boxShadow: activeTab === "versions" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
             }}
           >
+            <Icon name="cubes" size={13} color="currentColor" />
             <span>Versions</span>
             {versionsList.length > 0 && (
               <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-sidebarAccent opacity-80">
@@ -449,6 +451,7 @@ export function DiscoveryDetailsPage({
                 boxShadow: activeTab === "gallery" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
               }}
             >
+              <Icon name="photo" size={13} color="currentColor" />
               <span>Gallery</span>
               <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-sidebarAccent opacity-80">
                 {details.gallery.length}
