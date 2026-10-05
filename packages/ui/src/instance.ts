@@ -100,3 +100,74 @@ export type RunningInstanceInfo = {
   mcVersion: string;
   startedAt: number;
 };
+
+export interface DiscoveryLicense {
+  name: string;
+  url?: string | null;
+}
+
+export interface DiscoveryLinks {
+  website?: string | null;
+  source?: string | null;
+  issues?: string | null;
+  wiki?: string | null;
+  discord?: string | null;
+  donate?: string | null;
+}
+
+export interface DiscoveryAuthor {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+  role?: string | null;
+  url?: string | null;
+}
+
+export interface DiscoveryGalleryItem {
+  title?: string | null;
+  description?: string | null;
+  url: string;
+  thumbnailUrl?: string | null;
+  featured?: boolean;
+}
+
+export interface DiscoveryVersion {
+  id: string;
+  name: string;
+  versionNumber: string;
+  gameVersions: string[];
+  loaders: string[];
+  datePublished: string;
+  fileSize: number;
+  downloadUrl: string;
+  fileName: string;
+  versionType: "release" | "beta" | "alpha" | string;
+  downloads?: number;
+}
+
+export interface DiscoveryProjectDetails {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  description: string;
+  descriptionType: "markdown" | "html";
+  author: string;
+  iconUrl?: string | null;
+  downloads: number;
+  follows?: number | null;
+  source: "modrinth" | "curseforge";
+  projectType: "modpack" | "mod" | "resourcepack" | "shader" | string;
+  categories: string[];
+  supportedLoaders: string[];
+  supportedVersions: string[];
+  environment?: "both" | "client" | "server" | null;
+  links: DiscoveryLinks;
+  creators: DiscoveryAuthor[];
+  license?: DiscoveryLicense | null;
+  publishedDate?: string | null;
+  updatedDate?: string | null;
+  gallery: DiscoveryGalleryItem[];
+  webUrl: string;
+  reportUrl: string;
+}

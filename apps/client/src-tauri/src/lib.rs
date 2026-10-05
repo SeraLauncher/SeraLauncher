@@ -236,6 +236,24 @@ async fn search_discovery(
 }
 
 #[tauri::command]
+async fn get_discovery_project_details(
+    provider: String,
+    project_id: String,
+) -> Result<discovery::DiscoveryProjectDetails, String> {
+    discovery::get_project_details(&provider, &project_id).await
+}
+
+#[tauri::command]
+async fn get_discovery_project_versions(
+    provider: String,
+    project_id: String,
+    mc_version: Option<String>,
+    loader: Option<String>,
+) -> Result<Vec<discovery::DiscoveryVersion>, String> {
+    discovery::get_project_versions(&provider, &project_id, mc_version.as_deref(), loader.as_deref()).await
+}
+
+#[tauri::command]
 async fn install_discovery_project(
     app: tauri::AppHandle,
     instance_id: String,
@@ -605,6 +623,8 @@ pub fn run() {
             get_mod_loader_versions,
             search_discovery,
             install_discovery_project,
+            get_discovery_project_details,
+            get_discovery_project_versions,
             delete_instance,
             update_instance,
             get_instance_logs,

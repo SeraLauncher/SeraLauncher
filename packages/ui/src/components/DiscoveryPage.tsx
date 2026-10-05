@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon, SiCurseforge, SiModrinth } from "./Icon";
 import { Dropdown } from "./Dropdown";
+import { Badge } from "./ui/badge";
+import { DiscoveryDetailsPage } from "./DiscoveryDetailsPage";
 import type { Theme } from "../theme";
 import type {
   DiscoveryProject,
@@ -97,6 +99,24 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>(instances[0]?.id || "");
   const [isInstalling, setIsInstalling] = useState(false);
   const [installSuccess, setInstallSuccess] = useState<string | null>(null);
+
+  // Active project drilldown detail state & preserved scroll offset
+  const [selectedProject, setSelectedProject] = useState<DiscoveryProject | null>(null);
+  const savedScrollTopRef = useRef<number>(0);
+
+  const handleOpenProjectDetails = (item: DiscoveryProject) => {
+    savedScrollTopRef.current = scrollContainerRef.current?.scrollTop || 0;
+    setSelectedProject(item);
+  };
+
+  const handleBackFromDetails = () => {
+    setSelectedProject(null);
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = savedScrollTopRef.current;
+      }
+    }, 0);
+  };
 
   // Previous search ref to only debounce text typing, not tab/provider/filter switches
   const prevSearchRef = useRef(search);
@@ -206,6 +226,18 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
       setIsInstalling(false);
     }
   };
+
+  if (selectedProject) {
+    return (
+      <DiscoveryDetailsPage
+        theme={theme}
+        project={selectedProject}
+        instances={instances}
+        versions={versions}
+        onBack={handleBackFromDetails}
+      />
+    );
+  }
 
   return (
     <main
@@ -487,7 +519,8 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                 return (
                   <div
                     key={`${item.source}-${item.id}`}
-                    className="flex items-start justify-between p-3 rounded-xl border border-border gap-3.5 transition-all hover:shadow-md"
+                    onClick={() => handleOpenProjectDetails(item)}
+                    className="flex items-start justify-between p-3 rounded-xl border border-border gap-3.5 transition-all hover:shadow-md cursor-pointer select-none"
                     style={{ background: theme.card }}
                   >
                     {/* Left Group: Icon + Details */}
@@ -538,41 +571,34 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                         {/* Bottom Section: Badges sitting flush with the bottom of the 72px image */}
                         <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
                           {item.environment === "both" && (
-                            <span
-                              className="inline-flex items-center justify-center gap-1.5 h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
-                              style={{ background: theme.sidebarAccent, color: theme.foreground }}
+                            <Badge
+                              variant="environment"
+                              icon={<Icon name="globe" size={12} color={theme.primary} />}
                             >
-                              <Icon name="globe" size={12} color={theme.primary} />
-                              <span>Client & Server</span>
-                            </span>
+                              Client & Server
+                            </Badge>
                           )}
                           {item.environment === "client" && (
-                            <span
-                              className="inline-flex items-center justify-center gap-1.5 h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
-                              style={{ background: theme.sidebarAccent, color: theme.foreground }}
+                            <Badge
+                              variant="environment"
+                              icon={<Icon name="computer" size={12} color={theme.primary} />}
                             >
-                              <Icon name="computer" size={12} color={theme.primary} />
-                              <span>Client</span>
-                            </span>
+                              Client
+                            </Badge>
                           )}
                           {item.environment === "server" && (
-                            <span
-                              className="inline-flex items-center justify-center gap-1.5 h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
-                              style={{ background: theme.sidebarAccent, color: theme.foreground }}
+                            <Badge
+                              variant="environment"
+                              icon={<Icon name="server" size={12} color={theme.primary} />}
                             >
-                              <Icon name="server" size={12} color={theme.primary} />
-                              <span>Server</span>
-                            </span>
+                              Server
+                            </Badge>
                           )}
 
                           {item.categories.slice(0, 4).map((cat) => (
-                            <span
-                              key={cat}
-                              className="inline-flex items-center justify-center h-[20px] text-[11px] px-2 rounded-md font-medium border border-border leading-none"
-                              style={{ background: theme.secondary, color: theme.mutedForeground }}
-                            >
-                              <span>{capitalizeFirst(cat)}</span>
-                            </span>
+                            <Badge key={cat} variant="environment">
+                              {capitalizeFirst(cat)}
+                            </Badge>
                           ))}
                         </div>
                       </div>

@@ -27,3 +27,5 @@ export * from "./downloads";
 export * from "@sera/player-model";
 
 export * from "./components/DiscoveryPage";
+export * from "./components/DiscoveryDetailsPage";
+export * from "./components/SafeContentRenderer";
