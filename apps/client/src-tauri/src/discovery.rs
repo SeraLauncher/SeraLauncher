@@ -16,7 +16,10 @@ mod urlencoding {
 }
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -138,6 +141,9 @@ struct CurseForgeFileIndex {
     mod_loader: Option<u32>,
 }
 
+static SEARCH_CACHE: Mutex<Option<HashMap<String, (Instant, DiscoverySearchResponse)>>> = Mutex::new(None);
+const CACHE_TTL_SECS: u64 = 300; // 5 minutes cache
+
 const DEFAULT_CURSEFORGE_KEY: &str = "$2a$10$bL4bIL5pUWqfcO7KQtnMReakwtfHbNKh6v1uTpKlzhwoueEJQnPnm";
 
 pub async fn search_projects(
@@ -151,17 +157,53 @@ pub async fn search_projects(
     offset: u32,
     limit: u32,
 ) -> Result<DiscoverySearchResponse, String> {
+    let cache_key = format!(
+        "{}:{}:{}:{}:{}:{}:{}:{}:{}",
+        provider.to_lowercase(),
+        project_type.to_lowercase(),
+        query.unwrap_or("").trim().to_lowercase(),
+        mc_version.unwrap_or(""),
+        loader.unwrap_or(""),
+        environment.unwrap_or(""),
+        sort.unwrap_or(""),
+        offset,
+        limit
+    );
+
+    // Check in-memory cache first for instant response
+    if let Ok(guard) = SEARCH_CACHE.lock() {
+        if let Some(cache) = guard.as_ref() {
+            if let Some((inserted_at, cached_res)) = cache.get(&cache_key) {
+                if inserted_at.elapsed() < Duration::from_secs(CACHE_TTL_SECS) {
+                    return Ok(cached_res.clone());
+                }
+            }
+        }
+    }
+
     let client = reqwest::Client::builder()
         .user_agent("SeraLauncher/0.1.6")
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;
 
-    if provider.eq_ignore_ascii_case("curseforge") {
-        return search_curseforge(&client, project_type, query, mc_version, loader, sort, offset, limit).await;
+    let res = if provider.eq_ignore_ascii_case("curseforge") {
+        search_curseforge(&client, project_type, query, mc_version, loader, sort, offset, limit).await?
+    } else {
+        search_modrinth(&client, project_type, query, mc_version, loader, environment, sort, offset, limit).await?
+    };
+
+    // Store in cache
+    if let Ok(mut guard) = SEARCH_CACHE.lock() {
+        let cache = guard.get_or_insert_with(HashMap::new);
+        // Prune expired entries if cache is growing
+        if cache.len() > 120 {
+            cache.retain(|_, (t, _)| t.elapsed() < Duration::from_secs(CACHE_TTL_SECS));
+        }
+        cache.insert(cache_key, (Instant::now(), res.clone()));
     }
 
-    search_modrinth(&client, project_type, query, mc_version, loader, environment, sort, offset, limit).await
+    Ok(res)
 }
 
 async fn search_modrinth(

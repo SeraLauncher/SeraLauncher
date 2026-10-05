@@ -44,6 +44,13 @@ function formatRelativeTime(dateStr?: string | null): string {
   }
 }
 
+// In-memory cache to make provider and filter switches instantaneous
+const discoveryClientCache = new Map<
+  string,
+  { projects: DiscoveryProject[]; totalHits: number; timestamp: number }
+>();
+const CLIENT_CACHE_TTL_MS = 180000; // 3 minutes
+
 export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps) {
   const [provider, setProvider] = useState<DiscoveryProvider>("modrinth");
   const [category, setCategory] = useState<DiscoveryCategory>("modpack");
@@ -75,11 +82,31 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
   const [isInstalling, setIsInstalling] = useState(false);
   const [installSuccess, setInstallSuccess] = useState<string | null>(null);
 
+  // Previous search ref to only debounce text typing, not tab/provider/filter switches
+  const prevSearchRef = useRef(search);
+
   useEffect(() => {
     let active = true;
+    const cacheKey = `${provider}:${category}:${search.trim().toLowerCase()}:${selectedVersion}:${selectedLoader}:${environment}:${sort}:${page}`;
+    const cached = discoveryClientCache.get(cacheKey);
+
+    const searchChanged = prevSearchRef.current !== search;
+    prevSearchRef.current = search;
+    const debounceMs = searchChanged ? 280 : 0;
 
     const timer = setTimeout(() => {
-      setLoading(true);
+      // If cached in memory, restore immediately without spinner
+      if (cached) {
+        setProjects(cached.projects);
+        setTotalHits(cached.totalHits);
+        setLoading(false);
+        if (Date.now() - cached.timestamp < CLIENT_CACHE_TTL_MS) {
+          return;
+        }
+      } else {
+        setLoading(true);
+      }
+
       invoke<DiscoverySearchResponse>("search_discovery", {
         provider,
         projectType: category,
@@ -93,17 +120,26 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
       })
         .then((res) => {
           if (!active) return;
-          setProjects(res.projects || []);
-          setTotalHits(res.totalHits || 0);
+          const projs = res.projects || [];
+          const hits = res.totalHits || 0;
+          discoveryClientCache.set(cacheKey, {
+            projects: projs,
+            totalHits: hits,
+            timestamp: Date.now(),
+          });
+          setProjects(projs);
+          setTotalHits(hits);
           setLoading(false);
         })
         .catch(() => {
           if (!active) return;
-          setProjects([]);
-          setTotalHits(0);
+          if (!cached) {
+            setProjects([]);
+            setTotalHits(0);
+          }
           setLoading(false);
         });
-    }, 250);
+    }, debounceMs);
 
     return () => {
       active = false;
