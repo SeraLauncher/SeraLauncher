@@ -75,6 +75,51 @@ function formatDate(dateStr?: string | null): string {
   }
 }
 
+// Module-level in-memory cache for instant 0ms project details and versions loading
+const projectDetailsClientCache = new Map<
+  string,
+  { details: DiscoveryProjectDetails; timestamp: number }
+>();
+const projectVersionsClientCache = new Map<
+  string,
+  { versions: DiscoveryVersion[]; timestamp: number }
+>();
+const PROJECT_CACHE_TTL_MS = 300000; // 5 minutes
+
+function getCachedDetails(key: string): DiscoveryProjectDetails | null {
+  const cached = projectDetailsClientCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.timestamp > PROJECT_CACHE_TTL_MS) {
+    projectDetailsClientCache.delete(key);
+    return null;
+  }
+  return cached.details;
+}
+
+function setCachedDetails(key: string, details: DiscoveryProjectDetails) {
+  projectDetailsClientCache.set(key, { details, timestamp: Date.now() });
+}
+
+function getCachedVersions(key: string): DiscoveryVersion[] | null {
+  const cached = projectVersionsClientCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.timestamp > PROJECT_CACHE_TTL_MS) {
+    projectVersionsClientCache.delete(key);
+    return null;
+  }
+  return cached.versions;
+}
+
+function setCachedVersions(key: string, versions: DiscoveryVersion[]) {
+  projectVersionsClientCache.set(key, { versions, timestamp: Date.now() });
+}
+
+function preloadImage(url?: string | null) {
+  if (!url) return;
+  const img = new Image();
+  img.src = url;
+}
+
 function handleOpenExternal(url?: string | null) {
   if (!url) return;
   openUrl(url).catch(() => {
@@ -89,11 +134,17 @@ export function DiscoveryDetailsPage({
   onBack,
 }: DiscoveryDetailsPageProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>("description");
-  const [details, setDetails] = useState<DiscoveryProjectDetails | null>(null);
-  const [loadingDetails, setLoadingDetails] = useState(true);
+  const cacheKey = `${project.source}:${project.id}`;
 
-  const [versionsList, setVersionsList] = useState<DiscoveryVersion[]>([]);
-  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [details, setDetails] = useState<DiscoveryProjectDetails | null>(() =>
+    getCachedDetails(cacheKey),
+  );
+  const [loadingDetails, setLoadingDetails] = useState(() => !getCachedDetails(cacheKey));
+
+  const [versionsList, setVersionsList] = useState<DiscoveryVersion[]>(
+    () => getCachedVersions(cacheKey) || [],
+  );
+  const [loadingVersions, setLoadingVersions] = useState(() => !getCachedVersions(cacheKey));
   const [versionFilterType, setVersionFilterType] = useState<"all" | "release" | "beta" | "alpha">(
     "all",
   );
@@ -116,40 +167,61 @@ export function DiscoveryDetailsPage({
     null,
   );
 
-  // Fetch full details
+  // Smart details prefetcher & background image preloader
   useEffect(() => {
-    let active = true;
-
-    const timer = setTimeout(() => {
-      setLoadingDetails(true);
-      invoke<DiscoveryProjectDetails>("get_discovery_project_details", {
-        provider: project.source,
-        projectId: project.id,
-      })
-        .then((res) => {
-          if (!active) return;
-          setDetails(res);
-          setLoadingDetails(false);
-        })
-        .catch(() => {
-          if (!active) return;
-          setLoadingDetails(false);
+    const cached = getCachedDetails(cacheKey);
+    if (cached) {
+      // Preload gallery thumbnails in background with staggered timing so UI never stutters
+      if (cached.gallery && cached.gallery.length > 0) {
+        cached.gallery.slice(0, 15).forEach((g, idx) => {
+          const url = g.thumbnailUrl || g.url;
+          if (url) {
+            setTimeout(() => preloadImage(url), idx * 40);
+          }
         });
-    }, 0);
+      }
+      return;
+    }
+
+    let active = true;
+    invoke<DiscoveryProjectDetails>("get_discovery_project_details", {
+      provider: project.source,
+      projectId: project.id,
+    })
+      .then((res) => {
+        if (!active) return;
+        setCachedDetails(cacheKey, res);
+        setDetails(res);
+        setLoadingDetails(false);
+
+        // Preload gallery screenshots into browser image cache
+        if (res.gallery && res.gallery.length > 0) {
+          res.gallery.slice(0, 15).forEach((g, idx) => {
+            const url = g.thumbnailUrl || g.url;
+            if (url) {
+              setTimeout(() => preloadImage(url), idx * 40);
+            }
+          });
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoadingDetails(false);
+      });
 
     return () => {
       active = false;
-      clearTimeout(timer);
     };
-  }, [project.source, project.id]);
+  }, [cacheKey, project.source, project.id]);
 
-  // Fetch versions on demand or on tab switch
+  // Smart background versions prefetcher (fetches in background on mount)
   useEffect(() => {
-    if (activeTab !== "versions") return;
-    let active = true;
+    const cached = getCachedVersions(cacheKey);
+    if (cached) return;
 
+    let active = true;
+    // Low priority background fetch after layout settles
     const timer = setTimeout(() => {
-      setLoadingVersions(true);
       invoke<DiscoveryVersion[]>("get_discovery_project_versions", {
         provider: project.source,
         projectId: project.id,
@@ -158,21 +230,22 @@ export function DiscoveryDetailsPage({
       })
         .then((res) => {
           if (!active) return;
-          setVersionsList(res || []);
+          const versions = res || [];
+          setCachedVersions(cacheKey, versions);
+          setVersionsList(versions);
           setLoadingVersions(false);
         })
         .catch(() => {
           if (!active) return;
-          setVersionsList([]);
           setLoadingVersions(false);
         });
-    }, 0);
+    }, 50);
 
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [activeTab, project.source, project.id]);
+  }, [cacheKey, project.source, project.id]);
 
   const filteredVersions = useMemo(() => {
     if (versionFilterType === "all") return versionsList;

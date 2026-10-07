@@ -16,6 +16,7 @@ import type { JavaRuntime, Settings } from "../settings";
 import { DEFAULT_MIN_MEMORY, DEFAULT_MAX_MEMORY, MEMORY_PRESETS } from "../settings";
 import { Dropdown } from "./Dropdown";
 import { EffectiveJavaArgsModal } from "./EffectiveJavaArgsModal";
+import { InstanceModsTab } from "./InstanceModsTab";
 import {
   BLOCK_ICON_KEYS,
   PASTEL_GRADIENTS,
@@ -157,6 +158,8 @@ export function InstancePage({
         onRefreshJava={onRefreshJava}
         runningInstances={runningInstances}
         onKillInstance={onKillInstance}
+        instances={instances}
+        versions={versions}
         onSelectTab={setEffectiveTab}
         onBack={() => setEffectiveManagingId(null)}
         onLaunch={() => onLaunch(managingInstance)}
@@ -856,6 +859,8 @@ function CreateInstanceModal({
 function InstanceManagementView({
   theme,
   instance,
+  instances = [],
+  versions = [],
   activeTab,
   javaRuntimes = [],
   systemMemoryMb = 8192,
@@ -871,6 +876,8 @@ function InstanceManagementView({
 }: {
   theme: Theme;
   instance: Instance;
+  instances?: Instance[];
+  versions?: MinecraftVersion[];
   activeTab: InstanceManagementTab;
   javaRuntimes?: JavaRuntime[];
   systemMemoryMb?: number;
@@ -1142,14 +1149,9 @@ function InstanceManagementView({
                     }}
                   >
                     <div
-                      className="relative w-full aspect-[16/10] flex items-center justify-center overflow-hidden"
+                      className="relative size-14 rounded-xl flex items-center justify-center overflow-hidden shadow-[inset_0_2px_5px_rgba(255,255,255,0.28),inset_0_-2px_6px_rgba(0,0,0,0.35)] cursor-pointer shrink-0 transition-transform hover:scale-105"
                       style={{
-                        width: "54px",
-                        height: "54px",
-                        borderRadius: "10px",
-                        cursor: "pointer",
                         background: `linear-gradient(180deg, ${currentGradient.top} 0%, ${currentGradient.bottom} 100%)`,
-                        flexShrink: 0,
                       }}
                       onClick={() => setShowIconPicker(!showIconPicker)}
                       title="Change block or background color"
@@ -1157,8 +1159,7 @@ function InstanceManagementView({
                       <img
                         src={getBlockIconSrc(selectedBlock)}
                         alt="Instance icon"
-                        className="size-16 object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.35)] transition-transform duration-200 group-hover:scale-110"
-                        style={{ width: "72%", height: "72%" }}
+                        className="w-[72%] h-[72%] object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,0.45)]"
                       />
                     </div>
                     <button
@@ -1201,16 +1202,7 @@ function InstanceManagementView({
                     </span>
                     <input
                       type="text"
-                      className="settings-input"
-                      style={{
-                        background: theme.secondary,
-                        color: theme.foreground,
-                        border: 0,
-                        width: "100%",
-                        height: "38px",
-                        fontSize: "0.92rem",
-                        fontWeight: 600,
-                      }}
+                      className="w-full h-10 px-3.5 rounded-xl border border-border bg-secondary text-foreground text-sm font-semibold outline-none focus:border-primary transition-colors"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Instance name"
@@ -1371,12 +1363,7 @@ function InstanceManagementView({
                 <div className="w-full pt-1.5 pb-2.5 border-t border-dashed border-muted-foreground/25">
                   <input
                     type="text"
-                    className="settings-input"
-                    style={{
-                      background: theme.secondary,
-                      color: theme.foreground,
-                      border: 0,
-                    }}
+                    className="w-full h-10 px-3.5 rounded-xl border border-border bg-secondary text-foreground text-xs font-mono outline-none focus:border-primary transition-colors"
                     value={customJava}
                     placeholder="e.g. /usr/lib/jvm/java-21-openjdk/bin/java or C:\Program Files\Java\...\javaw.exe"
                     onChange={(e) => setCustomJava(e.target.value)}
@@ -1609,6 +1596,20 @@ function InstanceManagementView({
     );
   }
 
+  if (activeTab === "mods") {
+    return (
+      <div className="relative flex-1 flex flex-col h-full min-h-full overflow-hidden">
+        <InstanceModsTab
+          theme={theme}
+          instance={instance}
+          instances={instances}
+          versions={versions}
+          onOpenFolder={onOpenFolder}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4 p-5 min-h-full">
       <div className="flex flex-col gap-5 w-full">
@@ -1618,7 +1619,7 @@ function InstanceManagementView({
             <div className="flex items-center justify-between p-5 rounded-2xl border border-border bg-card shadow-sm">
               <div className="flex items-center gap-4 min-w-0">
                 <div
-                  className="instance-overview-art"
+                  className="relative size-16 shrink-0 rounded-xl flex items-center justify-center overflow-hidden shadow-[inset_0_2px_5px_rgba(255,255,255,0.28),inset_0_-2px_6px_rgba(0,0,0,0.35)]"
                   style={{
                     background: `linear-gradient(180deg, ${gradient.top} 0%, ${gradient.bottom} 100%)`,
                   }}
@@ -1626,21 +1627,21 @@ function InstanceManagementView({
                   <img
                     src={iconSrc}
                     alt={instance.name}
-                    className="size-16 object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.35)] transition-transform duration-200 group-hover:scale-110"
+                    className="w-[72%] h-[72%] object-contain drop-shadow-[0_6px_12px_rgba(0,0,0,0.45)]"
                     draggable={false}
                   />
                 </div>
 
-                <div className="flex flex-col gap-1 min-w-0">
-                  <h2 className="text-xl font-bold truncate">{instance.name}</h2>
+                <div className="flex flex-col justify-center gap-1.5 min-w-0">
+                  <h2 className="text-xl font-bold truncate leading-tight">{instance.name}</h2>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="font-medium">
-                      <Icon name="cubes" size={14} color="currentColor" />
+                    <span className="inline-flex items-center gap-1.5 font-medium">
+                      <Icon name="cubes" size={13} color="currentColor" />
                       <span>{loaderLabel}</span>
                     </span>
-                    <span className="opacity-50">•</span>
-                    <span className="font-medium">
-                      <Icon name="clock" size={14} color="currentColor" />
+                    <span className="opacity-40">•</span>
+                    <span className="inline-flex items-center gap-1.5 font-medium">
+                      <Icon name="clock" size={13} color="currentColor" />
                       <span>{formatPlayTime(instance.playTimeSeconds)}</span>
                     </span>
                   </div>
@@ -1652,8 +1653,8 @@ function InstanceManagementView({
                 {isRunning ? (
                   <button
                     type="button"
-                    className="instance-banner-play-btn running"
-                    style={{ background: theme.destructive, color: "#ffffff" }}
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl font-semibold text-sm text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
+                    style={{ background: theme.destructive }}
                     onClick={() => onKillInstance?.(instance.id)}
                     title="Stop instance"
                   >
@@ -1663,8 +1664,8 @@ function InstanceManagementView({
                 ) : (
                   <button
                     type="button"
-                    className="instance-banner-play-btn"
-                    style={{ background: theme.success, color: "#ffffff" }}
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl font-semibold text-sm text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
+                    style={{ background: theme.success }}
                     onClick={() => {
                       setLogs("");
                       onLaunch();
@@ -1679,7 +1680,7 @@ function InstanceManagementView({
                 <div className="relative inline-block" ref={bannerMenuRef}>
                   <button
                     type="button"
-                    className="size-10 rounded-xl border border-border bg-card flex items-center justify-center cursor-pointer hover:bg-secondary transition-colors"
+                    className="size-10 rounded-xl bg-secondary/80 text-foreground flex items-center justify-center cursor-pointer hover:bg-secondary transition-colors"
                     onClick={() => setBannerMenuOpen(!bannerMenuOpen)}
                     title="More actions"
                   >
@@ -1823,7 +1824,7 @@ function InstanceManagementView({
               {/* Row 3: Terminal screen */}
               <div
                 ref={terminalScreenRef}
-                className="w-full flex-1 min-h-[300px] max-h-[480px] rounded-xl border border-border bg-black/90 p-3 overflow-y-auto font-mono text-xs select-text"
+                className="w-full flex-1 min-h-[300px] max-h-[480px] rounded-xl border border-border bg-[#18181b] p-3 overflow-y-auto font-mono text-xs select-text"
               >
                 <pre
                   ref={logPreRef}
@@ -1858,26 +1859,6 @@ function InstanceManagementView({
               </div>
             </div>
           </>
-        )}
-
-        {activeTab === "mods" && (
-          <div className="flex flex-col gap-4 p-5 rounded-xl border border-border bg-card">
-            <div className="flex items-center justify-between w-full">
-              <h3 className="text-base font-semibold m-0">Mods</h3>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors"
-                onClick={onOpenFolder}
-              >
-                <Icon name="folder" size={14} color="currentColor" />
-                <span>Open Mods Folder</span>
-              </button>
-            </div>
-            <div className="flex flex-col items-center justify-center text-center py-12 px-4 gap-3 text-muted-foreground text-sm [&>p]:m-0 [&>p]:max-w-[400px] [&>p]:leading-relaxed">
-              <Icon name="puzzle" size={32} color={theme.mutedForeground} />
-              <p>Install mod files (.jar) by placing them into the instance's mods folder.</p>
-            </div>
-          </div>
         )}
 
         {activeTab === "resourcepacks" && (

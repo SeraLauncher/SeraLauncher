@@ -230,6 +230,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
   if (selectedProject) {
     return (
       <DiscoveryDetailsPage
+        key={`${selectedProject.source}:${selectedProject.id}`}
         theme={theme}
         project={selectedProject}
         instances={instances}
@@ -520,6 +521,13 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                   <div
                     key={`${item.source}-${item.id}`}
                     onClick={() => handleOpenProjectDetails(item)}
+                    onMouseEnter={() => {
+                      // Low-priority background prefetch on hover intent
+                      invoke("get_discovery_project_details", {
+                        provider: item.source,
+                        projectId: item.id,
+                      }).catch(() => {});
+                    }}
                     className="flex items-start justify-between p-3 rounded-xl border border-border gap-3.5 transition-all hover:shadow-md cursor-pointer select-none"
                     style={{ background: theme.card }}
                   >
@@ -673,7 +681,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
             className="text-xs font-bold uppercase tracking-wider"
             style={{ color: theme.foreground }}
           >
-            Filters
+            SEARCH SETTINGS
           </span>
         </div>
 
