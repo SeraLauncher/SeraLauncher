@@ -132,7 +132,7 @@ export function Dropdown<T extends string | number>({
         {open && (
           <motion.div
             key="list"
-            className="absolute top-[calc(100%+4px)] inset-x-0 z-20 flex flex-col p-1 border-0 rounded-lg bg-secondary shadow-[0_8px_24px_rgba(0,0,0,0.25)] [&>ul]:max-h-[240px] [&>ul]:m-0 [&>ul]:p-0 [&>ul]:overflow-y-auto [&>ul]:list-none"
+            className="absolute top-[calc(100%+4px)] inset-x-0 z-50 flex flex-col p-1 border-0 rounded-lg bg-secondary shadow-[0_8px_24px_rgba(0,0,0,0.25)] [&>ul]:max-h-[240px] [&>ul]:m-0 [&>ul]:p-0 [&>ul]:overflow-y-auto [&>ul]:list-none"
             style={{ background: theme.secondary, border: 0 }}
             initial={{ opacity: 0, scale: 0.97, y: -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

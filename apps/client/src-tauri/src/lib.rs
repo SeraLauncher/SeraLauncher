@@ -206,6 +206,16 @@ async fn create_instance(
 }
 
 #[tauri::command]
+async fn install_mod_loader(
+    app: tauri::AppHandle,
+    instance_id: String,
+    loader: String,
+    loader_version: String,
+) -> Result<(), String> {
+    loaders::install_mod_loader(&app, &instance_id, &loader, &loader_version).await
+}
+
+#[tauri::command]
 async fn get_mod_loader_versions(mc_version: String, loader: String) -> Result<Vec<loaders::LoaderVersionInfo>, String> {
     loaders::fetch_loader_versions(&mc_version, &loader).await
 }
@@ -427,6 +437,8 @@ fn get_instance_logs(app: tauri::AppHandle, id: String) -> Result<String, String
 #[tauri::command]
 fn open_instance_folder(app: tauri::AppHandle, id: String) -> Result<(), String> {
     let dir = instances::get_instance_dir(&app, &id)?;
+    let _ = std::fs::create_dir_all(dir.join("mods"));
+    let _ = std::fs::create_dir_all(dir.join(".minecraft").join("mods"));
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
@@ -621,6 +633,7 @@ pub fn run() {
             list_instances,
             create_instance,
             get_mod_loader_versions,
+            install_mod_loader,
             search_discovery,
             install_discovery_project,
             get_discovery_project_details,

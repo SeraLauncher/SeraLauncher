@@ -13,6 +13,7 @@ export interface ModalProps {
   footer?: ReactNode;
   maxWidth?: number | string;
   className?: string;
+  contentClassName?: string;
   showCloseButton?: boolean;
 }
 
@@ -25,6 +26,7 @@ export function Modal({
   footer,
   maxWidth = 480,
   className = "",
+  contentClassName,
   showCloseButton = true,
 }: ModalProps) {
   // Close on Escape key
@@ -87,12 +89,17 @@ export function Modal({
               </div>
             )}
 
-            <div className="p-4.5 flex flex-col gap-3.5 max-h-[70vh] overflow-y-auto overflow-x-hidden">
+            <div
+              className={
+                contentClassName ??
+                "relative z-10 p-4.5 flex flex-col gap-3.5 max-h-[70vh] overflow-y-auto"
+              }
+            >
               {children}
             </div>
 
             {footer && (
-              <div className="flex items-center justify-end gap-2 px-4.5 py-3 border-t border-border/60">
+              <div className="relative z-0 flex items-center justify-end gap-2 px-4.5 py-3 border-t border-border/60">
                 {footer}
               </div>
             )}

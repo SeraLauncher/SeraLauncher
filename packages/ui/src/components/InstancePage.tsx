@@ -1612,6 +1612,7 @@ function InstanceManagementView({
                 : "shader"
           }
           onOpenFolder={onOpenFolder}
+          onUpdate={onUpdate}
         />
       </div>
     );

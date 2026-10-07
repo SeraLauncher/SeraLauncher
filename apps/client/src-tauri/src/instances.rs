@@ -217,6 +217,17 @@ pub fn update_instance(app: &tauri::AppHandle, instance: &Instance) -> Result<()
     std::fs::write(instance_file(&target), json)
         .map_err(|err| format!("Failed to write instance.json: {}", err))?;
 
+    // Automatically create mods directory when a mod loader is configured
+    if let Some(loader) = &instance.loader {
+        let l = loader.to_lowercase();
+        if l != "vanilla" && l != "none" {
+            let mods_dir = target.join(".minecraft").join("mods");
+            if !mods_dir.exists() {
+                let _ = std::fs::create_dir_all(&mods_dir);
+            }
+        }
+    }
+
     let _ = app.emit("instances_changed", ());
     Ok(())
 }

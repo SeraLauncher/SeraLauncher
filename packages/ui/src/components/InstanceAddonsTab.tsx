@@ -1,3 +1,213 @@
+interface InstallLoaderModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  instance: Instance;
+  theme: Theme;
+  onInstalled: (loader: string, loaderVersion: string) => Promise<void>;
+}
+
+const SUPPORTED_LOADERS = [
+  { id: "fabric", name: "Fabric", desc: "Lightweight, highly modular, and fast loader" },
+  { id: "neoforge", name: "NeoForge", desc: "Modern community-driven fork of Minecraft Forge" },
+  { id: "forge", name: "Forge", desc: "Traditional loader with a massive mod ecosystem" },
+  { id: "quilt", name: "Quilt", desc: "Caring, modular loader compatible with most Fabric mods" },
+] as const;
+
+function InstallLoaderModal({
+  isOpen,
+  onClose,
+  instance,
+  theme,
+  onInstalled,
+}: InstallLoaderModalProps) {
+  const [selectedLoader, setSelectedLoader] = useState<"fabric" | "neoforge" | "forge" | "quilt">(
+    "fabric",
+  );
+  const [versions, setVersions] = useState<LoaderVersionInfo[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<string>("");
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [installing, setInstalling] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+
+    const timer = setTimeout(() => {
+      setLoadingVersions(true);
+      invoke<LoaderVersionInfo[]>("get_mod_loader_versions", {
+        mcVersion: instance.mcVersion,
+        loader: selectedLoader,
+      })
+        .then((res) => {
+          if (!active) return;
+          const list = res || [];
+          setVersions(list);
+          if (list.length > 0) {
+            setSelectedVersion(list[0].version);
+          } else {
+            setSelectedVersion("latest");
+          }
+          setLoadingVersions(false);
+        })
+        .catch(() => {
+          if (!active) return;
+          setVersions([{ version: "latest", stable: true }]);
+          setSelectedVersion("latest");
+          setLoadingVersions(false);
+        });
+    }, 0);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [isOpen, selectedLoader, instance.mcVersion]);
+
+  const [installProgress, setInstallProgress] = useState(0);
+
+  const handleInstall = async () => {
+    if (!selectedVersion) return;
+    setInstalling(true);
+    setInstallProgress(25);
+    try {
+      const timer = setInterval(() => {
+        setInstallProgress((p) => (p < 85 ? p + 15 : p));
+      }, 350);
+
+      await invoke("install_mod_loader", {
+        instanceId: instance.id,
+        loader: selectedLoader,
+        loaderVersion: selectedVersion,
+      });
+
+      clearInterval(timer);
+      setInstallProgress(100);
+
+      await onInstalled(selectedLoader, selectedVersion);
+      onClose();
+    } finally {
+      setInstalling(false);
+      setInstallProgress(0);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      theme={theme}
+      title="Install Mod Loader"
+      maxWidth={500}
+      contentClassName="relative z-10 p-4.5 flex flex-col gap-3.5 overflow-visible"
+      footer={
+        <>
+          <button
+            type="button"
+            className="h-8 px-3.5 rounded-md border-0 bg-transparent text-[0.82rem] font-medium cursor-pointer transition-colors hover:bg-foreground/5 select-none"
+            style={{ color: theme.mutedForeground }}
+            onClick={onClose}
+            disabled={installing}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-md border-0 text-[0.82rem] font-semibold cursor-pointer transition-[opacity,filter] hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
+            style={{ background: theme.primary, color: theme.primaryForeground }}
+            onClick={handleInstall}
+            disabled={installing || loadingVersions}
+          >
+            {installing
+              ? "Installing..."
+              : `Install ${selectedLoader.charAt(0).toUpperCase() + selectedLoader.slice(1)}`}
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4 py-1">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold" style={{ color: theme.foreground }}>
+            Select Mod Loader for {instance.name} (Minecraft {instance.mcVersion})
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            Installing a mod loader enables compatibility with mods and automatically initializes
+            the mods folder.
+          </span>
+        </div>
+
+        {/* Loader Cards Grid */}
+        <div className="grid grid-cols-2 gap-2">
+          {SUPPORTED_LOADERS.map((ldr) => {
+            const isSelected = selectedLoader === ldr.id;
+            return (
+              <button
+                key={ldr.id}
+                type="button"
+                onClick={() => setSelectedLoader(ldr.id)}
+                className={`flex flex-col text-left p-3 rounded-xl border transition-all cursor-pointer select-none ${isSelected ? "border-primary bg-card shadow-xs" : "border-border bg-secondary hover:border-border/80"}`}
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  <span
+                    className="text-xs font-bold"
+                    style={{ color: isSelected ? theme.primary : theme.foreground }}
+                  >
+                    {ldr.name}
+                  </span>
+                  {isSelected && <div className="size-2 rounded-full bg-primary" />}
+                </div>
+                <span className="text-[10px] text-muted-foreground leading-tight line-clamp-2">
+                  {ldr.desc}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Loader Version Selector */}
+        <div className="flex flex-col gap-1.5 pt-1 relative z-20">
+          <label className="text-xs font-semibold" style={{ color: theme.foreground }}>
+            Loader Version
+          </label>
+          {loadingVersions ? (
+            <div className="h-9 px-3 flex items-center rounded-lg border border-border bg-secondary text-xs text-muted-foreground">
+              Fetching available versions for {instance.mcVersion}...
+            </div>
+          ) : (
+            <Dropdown
+              value={selectedVersion}
+              options={versions.map((v) => v.version)}
+              render={(ver) => {
+                const info = versions.find((v) => v.version === ver);
+                if (info?.stable) {
+                  return `${ver} (Stable)`;
+                }
+                return ver;
+              }}
+              onChange={(v) => setSelectedVersion(v)}
+              theme={theme}
+            />
+          )}
+        </div>
+
+        {installing && (
+          <div className="flex flex-col gap-1.5 pt-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Installing {selectedLoader} loader...</span>
+              <span>{installProgress}%</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${installProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { AnimatePresence, motion } from "motion/react";
@@ -7,12 +217,14 @@ import { DiscoveryDetailsPage } from "./DiscoveryDetailsPage";
 import { DiscoveryProviderToggle, type DiscoveryProvider } from "./DiscoveryProviderToggle";
 import { DiscoveryPagination } from "./DiscoveryPagination";
 import { DiscoveryProjectCard } from "./DiscoveryProjectCard";
+import { Modal } from "./ui/modal";
 import { fade, pageFade } from "../motion";
 import type { Theme } from "../theme";
 import type {
   DiscoveryProject,
   DiscoverySearchResponse,
   Instance,
+  LoaderVersionInfo,
   MinecraftVersion,
 } from "../instance";
 
@@ -25,6 +237,7 @@ interface InstanceAddonsTabProps {
   versions: MinecraftVersion[];
   category: "mods" | "resourcepack" | "shader";
   onOpenFolder: () => Promise<void>;
+  onUpdate?: (updated: Instance) => Promise<void>;
 }
 
 function capitalizeFirst(str: string): string {
@@ -46,7 +259,9 @@ export function InstanceAddonsTab({
   versions,
   category,
   onOpenFolder,
+  onUpdate,
 }: InstanceAddonsTabProps) {
+  const [showInstallLoaderModal, setShowInstallLoaderModal] = useState(false);
   const [provider, setProvider] = useState<DiscoveryProvider>("modrinth");
   const [search, setSearch] = useState("");
 
@@ -84,6 +299,28 @@ export function InstanceAddonsTab({
   const [selectedProject, setSelectedProject] = useState<DiscoveryProject | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const savedScrollTopRef = useRef<number>(0);
+
+  const isVanilla =
+    category === "mods" &&
+    (!instance.loader ||
+      instance.loader.toLowerCase() === "vanilla" ||
+      instance.loader.toLowerCase() === "none");
+
+  const handleLoaderInstalled = async (loader: string, loaderVersion: string) => {
+    setSelectedLoader(loader);
+    const updated = {
+      ...instance,
+      loader,
+      loaderVersion,
+    };
+    if (onUpdate) {
+      await onUpdate(updated);
+    }
+    setInstallSuccessMessage(
+      `${loader.charAt(0).toUpperCase() + loader.slice(1)} Loader installed successfully! Mods directory created.`,
+    );
+    setTimeout(() => setInstallSuccessMessage(null), 3000);
+  };
 
   const prevSearchRef = useRef(search);
 
@@ -244,277 +481,325 @@ export function InstanceAddonsTab({
           transition={fade}
           className="relative flex-1 flex flex-col gap-3.5 w-full h-full min-h-full overflow-hidden p-6 pr-5"
         >
-          {/* Top Header Row above Search: Provider switcher on the LEFT, Action & Settings trigger on the RIGHT */}
-          <div className="flex items-center justify-between w-full flex-wrap gap-2.5">
-            <DiscoveryProviderToggle
-              provider={provider}
-              onChange={(p) => {
-                setProvider(p);
-                setPage(1);
-              }}
-              theme={theme}
-            />
-
-            <div className="flex items-center gap-2">
-              {installSuccessMessage && (
-                <span className="text-xs font-medium text-emerald-500 animate-in fade-in">
-                  {installSuccessMessage}
-                </span>
-              )}
-
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
-                onClick={onOpenFolder}
-                title={`Open instance ${categoryLabel} directory`}
-              >
-                <Icon name="folder" size={14} color="currentColor" />
-                <span>{folderButtonLabel}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSearchSettingsOpen((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-semibold cursor-pointer transition-colors select-none"
-                style={{
-                  background: searchSettingsOpen ? theme.primary : theme.secondary,
-                  color: searchSettingsOpen ? theme.primaryForeground : theme.foreground,
-                }}
-                title="Toggle search filters"
-              >
-                <Icon name="filter" size={13} color="currentColor" />
-                <span>Search Settings</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Search Input Bar */}
-          <div
-            className="w-full h-[38px] flex items-center gap-2 px-3 rounded-lg border border-border"
-            style={{ background: theme.secondary }}
-          >
-            <Icon name="search" size={14} color={theme.mutedForeground} />
-            <input
-              type="text"
-              placeholder={`Search ${categoryLabel}...`}
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="w-full text-xs bg-transparent outline-none border-none h-full placeholder:text-muted-foreground"
-              style={{ color: theme.foreground }}
-            />
-          </div>
-
-          {/* Results Count & Pagination Controls */}
-          <DiscoveryPagination
-            page={page}
-            totalHits={totalHits}
-            limit={limit}
-            loading={loading}
-            itemLabel={categoryLabel}
-            theme={theme}
-            onPageChange={setPage}
-            onScrollToTop={() =>
-              scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
-            }
-          />
-
-          {/* Results List: 1 Card per line */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pr-1">
-            {loading ? (
-              <div className="flex flex-col gap-2.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-24 rounded-xl border border-border animate-pulse"
-                    style={{ background: theme.card }}
-                  />
-                ))}
-              </div>
-            ) : projects.length === 0 ? (
+          {isVanilla ? (
+            <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 select-none">
               <div
-                className="flex flex-col items-center justify-center h-64 rounded-xl border border-border text-center p-4"
+                className="flex flex-col items-center justify-center text-center p-7 gap-4 border border-border rounded-2xl shadow-sm max-w-[420px] w-full"
                 style={{ background: theme.card }}
               >
-                <Icon name="search" size={28} color={theme.mutedForeground} />
-                <span className="text-sm font-medium mt-3" style={{ color: theme.foreground }}>
-                  No {categoryLabel} found
-                </span>
-                <span className="text-xs mt-1" style={{ color: theme.mutedForeground }}>
-                  Try adjusting your search query or filters in Search Settings
-                </span>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2.5 pb-2">
-                {projects.map((item) => (
-                  <DiscoveryProjectCard
-                    key={`${item.source}-${item.id}`}
-                    item={item}
-                    theme={theme}
-                    onClick={() => handleOpenProjectDetails(item)}
-                    onInstall={(e) => handleInstallAddon(item, e)}
-                    isInstalling={installingId === item.id}
-                    isInstalled={installedIds.has(item.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+                <div
+                  className="size-14 rounded-2xl flex items-center justify-center border border-border"
+                  style={{ background: theme.secondary }}
+                >
+                  <Icon name="puzzle" size={28} color={theme.primary} />
+                </div>
 
-          {/* Floating SEARCH SETTINGS Drawer (Scoped below header, inside tab only) */}
-          <AnimatePresence>
-            {searchSettingsOpen && (
-              <>
-                {/* Backdrop contained within tab content below header */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute inset-0 bg-black/45 z-20 backdrop-blur-2xs"
-                  onClick={() => setSearchSettingsOpen(false)}
+                <div className="flex flex-col gap-1.5">
+                  <h2 className="text-base font-bold m-0" style={{ color: theme.foreground }}>
+                    No Mod Loader Installed
+                  </h2>
+                  <p className="text-xs text-muted-foreground leading-relaxed max-w-xs m-0">
+                    This instance is running Vanilla Minecraft {instance.mcVersion}. To install and
+                    run mods, install a mod loader like Fabric, Forge, NeoForge, or Quilt.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowInstallLoaderModal(true)}
+                  className="inline-flex items-center gap-2 h-9 px-4 rounded-xl text-xs font-semibold cursor-pointer shadow-sm transition-all hover:brightness-110 active:scale-95"
+                  style={{ background: theme.primary, color: theme.primaryForeground }}
+                >
+                  <Icon name="download" size={14} color="currentColor" />
+                  <span>Install Mod Loader</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Top Header Row above Search: Provider switcher on the LEFT, Action & Settings trigger on the RIGHT */}
+              <div className="flex items-center justify-between w-full flex-wrap gap-2.5">
+                <DiscoveryProviderToggle
+                  provider={provider}
+                  onChange={(p) => {
+                    setProvider(p);
+                    setPage(1);
+                  }}
+                  theme={theme}
                 />
 
-                {/* Sliding Drawer Panel contained below header */}
-                <motion.aside
-                  initial={{ x: "100%", opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: "100%", opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 350, damping: 32 }}
-                  className="absolute top-0 bottom-0 right-0 w-64 z-30 shadow-2xl border-l border-border p-4.5 flex flex-col gap-4.5 overflow-y-auto"
-                  style={{ background: theme.sidebar }}
-                >
-                  <div className="flex items-center justify-between border-b border-border pb-3">
-                    <div className="flex items-center gap-2">
-                      <Icon name="filter" size={14} color={theme.primary} />
-                      <span
-                        className="text-xs font-bold uppercase tracking-wider"
-                        style={{ color: theme.foreground }}
-                      >
-                        SEARCH SETTINGS
-                      </span>
-                    </div>
-                    <button
-                      type="button"
+                <div className="flex items-center gap-2">
+                  {installSuccessMessage && (
+                    <span className="text-xs font-medium text-emerald-500 animate-in fade-in">
+                      {installSuccessMessage}
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+                    onClick={onOpenFolder}
+                    title={`Open instance ${categoryLabel} directory`}
+                  >
+                    <Icon name="folder" size={14} color="currentColor" />
+                    <span>{folderButtonLabel}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSearchSettingsOpen((prev) => !prev)}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-semibold cursor-pointer transition-colors select-none"
+                    style={{
+                      background: searchSettingsOpen ? theme.primary : theme.secondary,
+                      color: searchSettingsOpen ? theme.primaryForeground : theme.foreground,
+                    }}
+                    title="Toggle search filters"
+                  >
+                    <Icon name="filter" size={13} color="currentColor" />
+                    <span>Search Settings</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Input Bar */}
+              <div
+                className="w-full h-[38px] flex items-center gap-2 px-3 rounded-lg border border-border"
+                style={{ background: theme.secondary }}
+              >
+                <Icon name="search" size={14} color={theme.mutedForeground} />
+                <input
+                  type="text"
+                  placeholder={`Search ${categoryLabel}...`}
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full text-xs bg-transparent outline-none border-none h-full placeholder:text-muted-foreground"
+                  style={{ color: theme.foreground }}
+                />
+              </div>
+
+              {/* Results Count & Pagination Controls */}
+              <DiscoveryPagination
+                page={page}
+                totalHits={totalHits}
+                limit={limit}
+                loading={loading}
+                itemLabel={categoryLabel}
+                theme={theme}
+                onPageChange={setPage}
+                onScrollToTop={() =>
+                  scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+                }
+              />
+
+              {/* Results List: 1 Card per line */}
+              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pr-1">
+                {loading ? (
+                  <div className="flex flex-col gap-2.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-24 rounded-xl border border-border animate-pulse"
+                        style={{ background: theme.card }}
+                      />
+                    ))}
+                  </div>
+                ) : projects.length === 0 ? (
+                  <div
+                    className="flex flex-col items-center justify-center h-64 rounded-xl border border-border text-center p-4"
+                    style={{ background: theme.card }}
+                  >
+                    <Icon name="search" size={28} color={theme.mutedForeground} />
+                    <span className="text-sm font-medium mt-3" style={{ color: theme.foreground }}>
+                      No {categoryLabel} found
+                    </span>
+                    <span className="text-xs mt-1" style={{ color: theme.mutedForeground }}>
+                      Try adjusting your search query or filters in Search Settings
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2.5 pb-2">
+                    {projects.map((item) => (
+                      <DiscoveryProjectCard
+                        key={`${item.source}-${item.id}`}
+                        item={item}
+                        theme={theme}
+                        onClick={() => handleOpenProjectDetails(item)}
+                        onInstall={(e) => handleInstallAddon(item, e)}
+                        isInstalling={installingId === item.id}
+                        isInstalled={installedIds.has(item.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Floating SEARCH SETTINGS Drawer (Scoped below header, inside tab only) */}
+              <AnimatePresence>
+                {searchSettingsOpen && (
+                  <>
+                    {/* Backdrop contained within tab content below header */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute inset-0 bg-black/45 z-20 backdrop-blur-2xs"
                       onClick={() => setSearchSettingsOpen(false)}
-                      className="size-7 rounded-md flex items-center justify-center cursor-pointer hover:bg-card transition-colors"
-                      style={{ color: theme.mutedForeground }}
-                      title="Close search settings"
-                    >
-                      <Icon name="x" size={14} color="currentColor" />
-                    </button>
-                  </div>
+                    />
 
-                  {/* Sort Filter */}
-                  <div className="flex flex-col gap-1.5">
-                    <label
-                      className="flex items-center gap-1.5 text-[11px] font-semibold"
-                      style={{ color: theme.mutedForeground }}
+                    {/* Sliding Drawer Panel contained below header */}
+                    <motion.aside
+                      initial={{ x: "100%", opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      exit={{ x: "100%", opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 350, damping: 32 }}
+                      className="absolute top-0 bottom-0 right-0 w-64 z-30 shadow-2xl border-l border-border p-4.5 flex flex-col gap-4.5 overflow-y-auto"
+                      style={{ background: theme.sidebar }}
                     >
-                      <Icon name="sortArrows" size={12} color={theme.mutedForeground} />
-                      Sort By
-                    </label>
-                    <div className="w-full">
-                      <Dropdown
-                        value={sort}
-                        options={sortOptions}
-                        render={(opt) => {
-                          if (opt === "relevance") return "Relevance";
-                          if (opt === "downloads") return "Most Downloads";
-                          if (opt === "updated") return "Recently Updated";
-                          return "Newest";
-                        }}
-                        onChange={(opt) => {
-                          setSort(opt);
-                          setPage(1);
-                        }}
-                        theme={theme}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Minecraft Version Filter */}
-                  <div className="flex flex-col gap-1.5">
-                    <label
-                      className="flex items-center gap-1.5 text-[11px] font-semibold"
-                      style={{ color: theme.mutedForeground }}
-                    >
-                      <Icon name="cubes" size={12} color={theme.mutedForeground} />
-                      Game Version
-                    </label>
-                    <div className="w-full">
-                      <Dropdown
-                        value={selectedVersion}
-                        options={versionOptions}
-                        render={(opt) => (opt === "all" ? "All Versions" : opt)}
-                        onChange={(opt) => {
-                          setSelectedVersion(opt);
-                          setPage(1);
-                        }}
-                        theme={theme}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Mod Loader Filter (Only applicable for Mods) */}
-                  {category === "mods" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label
-                        className="flex items-center gap-1.5 text-[11px] font-semibold"
-                        style={{ color: theme.mutedForeground }}
-                      >
-                        <Icon name="settings" size={12} color={theme.mutedForeground} />
-                        Mod Loader
-                      </label>
-                      <div className="w-full">
-                        <Dropdown
-                          value={selectedLoader}
-                          options={loaderOptions}
-                          render={(opt) => (opt === "all" ? "All Loaders" : capitalizeFirst(opt))}
-                          onChange={(opt) => {
-                            setSelectedLoader(opt);
-                            setPage(1);
-                          }}
-                          theme={theme}
-                        />
+                      <div className="flex items-center justify-between border-b border-border pb-3">
+                        <div className="flex items-center gap-2">
+                          <Icon name="filter" size={14} color={theme.primary} />
+                          <span
+                            className="text-xs font-bold uppercase tracking-wider"
+                            style={{ color: theme.foreground }}
+                          >
+                            SEARCH SETTINGS
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSearchSettingsOpen(false)}
+                          className="size-7 rounded-md flex items-center justify-center cursor-pointer hover:bg-card transition-colors"
+                          style={{ color: theme.mutedForeground }}
+                          title="Close search settings"
+                        >
+                          <Icon name="x" size={14} color="currentColor" />
+                        </button>
                       </div>
-                    </div>
-                  )}
 
-                  {/* Environment Filter (Modrinth only) */}
-                  {provider === "modrinth" && (
-                    <div className="flex flex-col gap-1.5">
-                      <label
-                        className="flex items-center gap-1.5 text-[11px] font-semibold"
-                        style={{ color: theme.mutedForeground }}
-                      >
-                        <Icon name="globe" size={12} color={theme.mutedForeground} />
-                        Environment
-                      </label>
-                      <div className="w-full">
-                        <Dropdown
-                          value={environment}
-                          options={environmentOptions}
-                          render={(opt) => {
-                            if (opt === "all") return "Client & Server";
-                            if (opt === "client") return "Client Only";
-                            return "Server Only";
-                          }}
-                          onChange={(opt) => {
-                            setEnvironment(opt);
-                            setPage(1);
-                          }}
-                          theme={theme}
-                        />
+                      {/* Sort Filter */}
+                      <div className="flex flex-col gap-1.5">
+                        <label
+                          className="flex items-center gap-1.5 text-[11px] font-semibold"
+                          style={{ color: theme.mutedForeground }}
+                        >
+                          <Icon name="sortArrows" size={12} color={theme.mutedForeground} />
+                          Sort By
+                        </label>
+                        <div className="w-full">
+                          <Dropdown
+                            value={sort}
+                            options={sortOptions}
+                            render={(opt) => {
+                              if (opt === "relevance") return "Relevance";
+                              if (opt === "downloads") return "Most Downloads";
+                              if (opt === "updated") return "Recently Updated";
+                              return "Newest";
+                            }}
+                            onChange={(opt) => {
+                              setSort(opt);
+                              setPage(1);
+                            }}
+                            theme={theme}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </motion.aside>
-              </>
-            )}
-          </AnimatePresence>
+
+                      {/* Minecraft Version Filter */}
+                      <div className="flex flex-col gap-1.5">
+                        <label
+                          className="flex items-center gap-1.5 text-[11px] font-semibold"
+                          style={{ color: theme.mutedForeground }}
+                        >
+                          <Icon name="cubes" size={12} color={theme.mutedForeground} />
+                          Game Version
+                        </label>
+                        <div className="w-full">
+                          <Dropdown
+                            value={selectedVersion}
+                            options={versionOptions}
+                            render={(opt) => (opt === "all" ? "All Versions" : opt)}
+                            onChange={(opt) => {
+                              setSelectedVersion(opt);
+                              setPage(1);
+                            }}
+                            theme={theme}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Mod Loader Filter (Only applicable for Mods) */}
+                      {category === "mods" && (
+                        <div className="flex flex-col gap-1.5">
+                          <label
+                            className="flex items-center gap-1.5 text-[11px] font-semibold"
+                            style={{ color: theme.mutedForeground }}
+                          >
+                            <Icon name="settings" size={12} color={theme.mutedForeground} />
+                            Mod Loader
+                          </label>
+                          <div className="w-full">
+                            <Dropdown
+                              value={selectedLoader}
+                              options={loaderOptions}
+                              render={(opt) =>
+                                opt === "all" ? "All Loaders" : capitalizeFirst(opt)
+                              }
+                              onChange={(opt) => {
+                                setSelectedLoader(opt);
+                                setPage(1);
+                              }}
+                              theme={theme}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Environment Filter (Modrinth only) */}
+                      {provider === "modrinth" && (
+                        <div className="flex flex-col gap-1.5">
+                          <label
+                            className="flex items-center gap-1.5 text-[11px] font-semibold"
+                            style={{ color: theme.mutedForeground }}
+                          >
+                            <Icon name="globe" size={12} color={theme.mutedForeground} />
+                            Environment
+                          </label>
+                          <div className="w-full">
+                            <Dropdown
+                              value={environment}
+                              options={environmentOptions}
+                              render={(opt) => {
+                                if (opt === "all") return "Client & Server";
+                                if (opt === "client") return "Client Only";
+                                return "Server Only";
+                              }}
+                              onChange={(opt) => {
+                                setEnvironment(opt);
+                                setPage(1);
+                              }}
+                              theme={theme}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </motion.aside>
+                  </>
+                )}
+              </AnimatePresence>
+            </>
+          )}
+
+          <InstallLoaderModal
+            isOpen={showInstallLoaderModal}
+            onClose={() => setShowInstallLoaderModal(false)}
+            instance={instance}
+            theme={theme}
+            onInstalled={handleLoaderInstalled}
+          />
         </motion.div>
       )}
     </AnimatePresence>
