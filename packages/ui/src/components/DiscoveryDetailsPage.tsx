@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Icon } from "./Icon";
 import { SafeContentRenderer } from "./SafeContentRenderer";
@@ -8,6 +6,7 @@ import { Badge } from "./ui/badge";
 import type { Theme } from "../theme";
 import type {
   DiscoveryAuthor,
+  DiscoveryGalleryItem,
   DiscoveryProject,
   DiscoveryProjectDetails,
   DiscoveryVersion,
@@ -127,6 +126,76 @@ function handleOpenExternal(url?: string | null) {
   });
 }
 
+function GalleryCard({
+  item,
+  theme,
+  onClick,
+}: {
+  item: DiscoveryGalleryItem;
+  theme: Theme;
+  onClick: () => void;
+}) {
+  const [imgError, setImgError] = useState(false);
+
+  return (
+    <div
+      onClick={onClick}
+      className="group relative flex flex-col rounded-xl border border-border overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] shadow-xs"
+      style={{ background: theme.card }}
+    >
+      {!imgError ? (
+        <img
+          src={item.thumbnailUrl || item.url}
+          alt={item.title || "Screenshot"}
+          onError={() => setImgError(true)}
+          className="w-full aspect-[16/10] object-cover block"
+          loading="lazy"
+        />
+      ) : (
+        <div
+          className="w-full aspect-[16/10] flex flex-col items-center justify-center gap-1.5"
+          style={{ background: theme.secondary }}
+        >
+          <Icon name="photo" size={26} color={theme.mutedForeground} />
+          <span className="text-[11px] text-muted-foreground font-medium">Image unavailable</span>
+        </div>
+      )}
+      {item.title && (
+        <div className="p-2 text-xs font-medium truncate" style={{ color: theme.foreground }}>
+          {item.title}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CreatorAvatar({ creator, theme }: { creator: DiscoveryAuthor; theme: Theme }) {
+  const [avatarError, setAvatarError] = useState(false);
+
+  if (creator.avatarUrl && !avatarError) {
+    return (
+      <img
+        src={creator.avatarUrl}
+        alt=""
+        onError={() => setAvatarError(true)}
+        className="size-6 rounded-full object-cover shrink-0"
+      />
+    );
+  }
+
+  return (
+    <div
+      className="size-6 rounded-full flex items-center justify-center border border-border shrink-0"
+      style={{ background: theme.card }}
+    >
+      <Icon name="user" size={12} color={theme.mutedForeground} />
+    </div>
+  );
+}
+
+import { useEffect, useMemo, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+
 export function DiscoveryDetailsPage({
   theme,
   project,
@@ -166,6 +235,7 @@ export function DiscoveryDetailsPage({
   const [previewImage, setPreviewImage] = useState<{ url: string; title?: string | null } | null>(
     null,
   );
+  const [heroIconError, setHeroIconError] = useState(false);
 
   // Smart details prefetcher & background image preloader
   useEffect(() => {
@@ -328,10 +398,11 @@ export function DiscoveryDetailsPage({
         >
           {/* Thumbnail & Info */}
           <div className="flex items-start gap-4 min-w-0 flex-1">
-            {project.iconUrl ? (
+            {project.iconUrl && !heroIconError ? (
               <img
                 src={project.iconUrl}
                 alt=""
+                onError={() => setHeroIconError(true)}
                 className="w-18 h-18 rounded-xl object-cover flex-shrink-0"
                 loading="lazy"
               />
@@ -675,27 +746,12 @@ export function DiscoveryDetailsPage({
           <div className="flex-1 overflow-y-auto pr-2 pb-6">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
               {details.gallery.map((item, idx) => (
-                <div
+                <GalleryCard
                   key={idx}
+                  item={item}
+                  theme={theme}
                   onClick={() => setPreviewImage({ url: item.url, title: item.title })}
-                  className="group relative flex flex-col rounded-xl border border-border overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] shadow-xs"
-                  style={{ background: theme.card }}
-                >
-                  <img
-                    src={item.thumbnailUrl || item.url}
-                    alt={item.title || "Screenshot"}
-                    className="w-full aspect-[16/10] object-cover block"
-                    loading="lazy"
-                  />
-                  {item.title && (
-                    <div
-                      className="p-2 text-xs font-medium truncate"
-                      style={{ color: theme.foreground }}
-                    >
-                      {item.title}
-                    </div>
-                  )}
-                </div>
+                />
               ))}
             </div>
           </div>
@@ -910,20 +966,7 @@ export function DiscoveryDetailsPage({
             <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto">
               {details.creators.map((c: DiscoveryAuthor) => (
                 <div key={c.id || c.name} className="flex items-center gap-2 text-xs">
-                  {c.avatarUrl ? (
-                    <img
-                      src={c.avatarUrl}
-                      alt=""
-                      className="size-6 rounded-full object-cover shrink-0"
-                    />
-                  ) : (
-                    <div
-                      className="size-6 rounded-full flex items-center justify-center border border-border shrink-0"
-                      style={{ background: theme.card }}
-                    >
-                      <Icon name="user" size={12} color={theme.mutedForeground} />
-                    </div>
-                  )}
+                  <CreatorAvatar creator={c} theme={theme} />
                   <div className="flex flex-col min-w-0">
                     <span
                       className="text-xs font-semibold truncate leading-tight"

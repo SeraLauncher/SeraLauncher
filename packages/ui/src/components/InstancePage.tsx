@@ -16,7 +16,7 @@ import type { JavaRuntime, Settings } from "../settings";
 import { DEFAULT_MIN_MEMORY, DEFAULT_MAX_MEMORY, MEMORY_PRESETS } from "../settings";
 import { Dropdown } from "./Dropdown";
 import { EffectiveJavaArgsModal } from "./EffectiveJavaArgsModal";
-import { InstanceModsTab } from "./InstanceModsTab";
+import { InstanceAddonsTab } from "./InstanceAddonsTab";
 import {
   BLOCK_ICON_KEYS,
   PASTEL_GRADIENTS,
@@ -1596,14 +1596,21 @@ function InstanceManagementView({
     );
   }
 
-  if (activeTab === "mods") {
+  if (activeTab === "mods" || activeTab === "resourcepacks" || activeTab === "shaders") {
     return (
       <div className="relative flex-1 flex flex-col h-full min-h-full overflow-hidden">
-        <InstanceModsTab
+        <InstanceAddonsTab
           theme={theme}
           instance={instance}
           instances={instances}
           versions={versions}
+          category={
+            activeTab === "mods"
+              ? "mods"
+              : activeTab === "resourcepacks"
+                ? "resourcepack"
+                : "shader"
+          }
           onOpenFolder={onOpenFolder}
         />
       </div>
@@ -1859,52 +1866,6 @@ function InstanceManagementView({
               </div>
             </div>
           </>
-        )}
-
-        {activeTab === "resourcepacks" && (
-          <div className="flex flex-col gap-4 p-5 rounded-xl border border-border bg-card">
-            <div className="flex items-center justify-between w-full">
-              <h3 className="text-base font-semibold m-0">Resource Packs</h3>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors"
-                onClick={onOpenFolder}
-              >
-                <Icon name="folder" size={14} color="currentColor" />
-                <span>Open Resource Packs Folder</span>
-              </button>
-            </div>
-            <div className="flex flex-col items-center justify-center text-center py-12 px-4 gap-3 text-muted-foreground text-sm [&>p]:m-0 [&>p]:max-w-[400px] [&>p]:leading-relaxed">
-              <Icon name="palette" size={32} color={theme.mutedForeground} />
-              <p>
-                Place .zip resource packs into your instance folder to customize block textures and
-                music.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "shaders" && (
-          <div className="flex flex-col gap-4 p-5 rounded-xl border border-border bg-card">
-            <div className="flex items-center justify-between w-full">
-              <h3 className="text-base font-semibold m-0">Shader Packs</h3>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors"
-                onClick={onOpenFolder}
-              >
-                <Icon name="folder" size={14} color="currentColor" />
-                <span>Open Shaderpacks Folder</span>
-              </button>
-            </div>
-            <div className="flex flex-col items-center justify-center text-center py-12 px-4 gap-3 text-muted-foreground text-sm [&>p]:m-0 [&>p]:max-w-[400px] [&>p]:leading-relaxed">
-              <Icon name="wand" size={32} color={theme.mutedForeground} />
-              <p>
-                Install custom shaderpacks (.zip) to enhance shadows, lighting, and water
-                reflections.
-              </p>
-            </div>
-          </div>
         )}
 
         {activeTab === "screenshots" && (

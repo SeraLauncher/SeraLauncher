@@ -1,0 +1,522 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { AnimatePresence, motion } from "motion/react";
+import { Icon } from "./Icon";
+import { Dropdown } from "./Dropdown";
+import { DiscoveryDetailsPage } from "./DiscoveryDetailsPage";
+import { DiscoveryProviderToggle, type DiscoveryProvider } from "./DiscoveryProviderToggle";
+import { DiscoveryPagination } from "./DiscoveryPagination";
+import { DiscoveryProjectCard } from "./DiscoveryProjectCard";
+import { fade, pageFade } from "../motion";
+import type { Theme } from "../theme";
+import type {
+  DiscoveryProject,
+  DiscoverySearchResponse,
+  Instance,
+  MinecraftVersion,
+} from "../instance";
+
+import type { EnvironmentFilter } from "./DiscoveryPage";
+
+interface InstanceAddonsTabProps {
+  theme: Theme;
+  instance: Instance;
+  instances: Instance[];
+  versions: MinecraftVersion[];
+  category: "mods" | "resourcepack" | "shader";
+  onOpenFolder: () => Promise<void>;
+}
+
+function capitalizeFirst(str: string): string {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// In-memory cache to make provider and filter switches instantaneous
+const addonsSearchClientCache = new Map<
+  string,
+  { projects: DiscoveryProject[]; totalHits: number; timestamp: number }
+>();
+const CLIENT_CACHE_TTL_MS = 180000; // 3 minutes
+
+export function InstanceAddonsTab({
+  theme,
+  instance,
+  instances,
+  versions,
+  category,
+  onOpenFolder,
+}: InstanceAddonsTabProps) {
+  const [provider, setProvider] = useState<DiscoveryProvider>("modrinth");
+  const [search, setSearch] = useState("");
+
+  // Automatically initialize Game Version based on instance
+  const [selectedVersion, setSelectedVersion] = useState<string>(() => instance.mcVersion || "all");
+
+  // Automatically initialize Mod Loader based on instance (defaults to "all" if vanilla/not installed)
+  const [selectedLoader, setSelectedLoader] = useState<string>(() => {
+    const loader = instance.loader?.toLowerCase();
+    if (loader && loader !== "vanilla" && loader !== "none") {
+      return loader;
+    }
+    return "all";
+  });
+
+  const [environment, setEnvironment] = useState<EnvironmentFilter>("all");
+  const [sort, setSort] = useState<"relevance" | "downloads" | "updated" | "newest">("relevance");
+
+  const [page, setPage] = useState(1);
+  const limit = 25;
+
+  const [searchSettingsOpen, setSearchSettingsOpen] = useState(false);
+
+  // Results state
+  const [projects, setProjects] = useState<DiscoveryProject[]>([]);
+  const [totalHits, setTotalHits] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  // Quick install state
+  const [installingId, setInstallingId] = useState<string | null>(null);
+  const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
+  const [installSuccessMessage, setInstallSuccessMessage] = useState<string | null>(null);
+
+  // Drilldown detail page state
+  const [selectedProject, setSelectedProject] = useState<DiscoveryProject | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const savedScrollTopRef = useRef<number>(0);
+
+  const prevSearchRef = useRef(search);
+
+  const categoryLabel =
+    category === "mods" ? "mods" : category === "resourcepack" ? "resource packs" : "shaders";
+
+  const folderButtonLabel =
+    category === "mods"
+      ? "Open Mods Folder"
+      : category === "resourcepack"
+        ? "Open Resource Packs Folder"
+        : "Open Shaderpacks Folder";
+
+  useEffect(() => {
+    let active = true;
+    const isTextSearchChange = prevSearchRef.current !== search;
+    prevSearchRef.current = search;
+
+    const debounceMs = isTextSearchChange ? 300 : 0;
+    const cacheKey = `${provider}:${category}:${search.trim()}:${selectedVersion}:${category === "mods" ? selectedLoader : "none"}:${environment}:${sort}:${page}`;
+    const cached = addonsSearchClientCache.get(cacheKey);
+
+    const timer = setTimeout(() => {
+      if (cached && Date.now() - cached.timestamp < CLIENT_CACHE_TTL_MS) {
+        setProjects(cached.projects);
+        setTotalHits(cached.totalHits);
+        setLoading(false);
+        if (Date.now() - cached.timestamp < 30000) {
+          return;
+        }
+      } else {
+        setLoading(true);
+      }
+
+      invoke<DiscoverySearchResponse>("search_discovery", {
+        provider,
+        projectType: category,
+        query: search.trim() || null,
+        mcVersion: selectedVersion === "all" ? null : selectedVersion,
+        loader: category === "mods" && selectedLoader !== "all" ? selectedLoader : null,
+        environment: provider === "modrinth" && environment !== "all" ? environment : null,
+        sort,
+        offset: (page - 1) * limit,
+        limit,
+      })
+        .then((res) => {
+          if (!active) return;
+          const projs = res.projects || [];
+          const hits = res.totalHits || 0;
+          addonsSearchClientCache.set(cacheKey, {
+            projects: projs,
+            totalHits: hits,
+            timestamp: Date.now(),
+          });
+          setProjects(projs);
+          setTotalHits(hits);
+          setLoading(false);
+        })
+        .catch(() => {
+          if (!active) return;
+          if (!cached) {
+            setProjects([]);
+            setTotalHits(0);
+          }
+          setLoading(false);
+        });
+    }, debounceMs);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [provider, category, search, selectedVersion, selectedLoader, environment, sort, page]);
+
+  const versionOptions = useMemo(() => {
+    const list = versions
+      .filter((v) => v.type === "release")
+      .slice(0, 30)
+      .map((v) => v.id);
+    return ["all", ...list];
+  }, [versions]);
+
+  const loaderOptions = ["all", "fabric", "forge", "neoforge", "quilt"] as const;
+  const environmentOptions = ["all", "client", "server"] as const;
+  const sortOptions = ["relevance", "downloads", "updated", "newest"] as const;
+
+  const handleOpenProjectDetails = (item: DiscoveryProject) => {
+    savedScrollTopRef.current = scrollContainerRef.current?.scrollTop || 0;
+    setSelectedProject(item);
+  };
+
+  const handleBackFromDetails = () => {
+    setSelectedProject(null);
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = savedScrollTopRef.current;
+      }
+    }, 0);
+  };
+
+  const handleInstallAddon = async (item: DiscoveryProject, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInstallingId(item.id);
+    setInstallSuccessMessage(null);
+
+    try {
+      const ext = category === "mods" ? ".jar" : ".zip";
+      const fileName = `${item.slug || category}${ext}`;
+      const downloadUrl =
+        item.downloadUrl ||
+        (provider === "modrinth" ? `https://api.modrinth.com/v2/project/${item.id}/version` : "");
+
+      if (!downloadUrl) {
+        handleOpenProjectDetails(item);
+        setInstallingId(null);
+        return;
+      }
+
+      await invoke("install_discovery_project", {
+        instanceId: instance.id,
+        projectType: category,
+        downloadUrl,
+        fileName,
+      });
+
+      setInstalledIds((prev) => new Set(prev).add(item.id));
+      setInstallSuccessMessage(`Installed ${item.title}!`);
+      setTimeout(() => setInstallSuccessMessage(null), 2500);
+    } catch {
+      handleOpenProjectDetails(item);
+    } finally {
+      setInstallingId(null);
+    }
+  };
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      {selectedProject ? (
+        <motion.div
+          key={`addon-detail-${selectedProject.source}-${selectedProject.id}`}
+          {...pageFade}
+          transition={fade}
+          className="flex-1 w-full h-full min-h-0 flex flex-col overflow-hidden"
+        >
+          <DiscoveryDetailsPage
+            key={`${selectedProject.source}:${selectedProject.id}`}
+            theme={theme}
+            project={selectedProject}
+            instances={instances}
+            versions={versions}
+            onBack={handleBackFromDetails}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key={`addon-list-${category}`}
+          {...pageFade}
+          transition={fade}
+          className="relative flex-1 flex flex-col gap-3.5 w-full h-full min-h-full overflow-hidden p-6 pr-5"
+        >
+          {/* Top Header Row above Search: Provider switcher on the LEFT, Action & Settings trigger on the RIGHT */}
+          <div className="flex items-center justify-between w-full flex-wrap gap-2.5">
+            <DiscoveryProviderToggle
+              provider={provider}
+              onChange={(p) => {
+                setProvider(p);
+                setPage(1);
+              }}
+              theme={theme}
+            />
+
+            <div className="flex items-center gap-2">
+              {installSuccessMessage && (
+                <span className="text-xs font-medium text-emerald-500 animate-in fade-in">
+                  {installSuccessMessage}
+                </span>
+              )}
+
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+                onClick={onOpenFolder}
+                title={`Open instance ${categoryLabel} directory`}
+              >
+                <Icon name="folder" size={14} color="currentColor" />
+                <span>{folderButtonLabel}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSearchSettingsOpen((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-semibold cursor-pointer transition-colors select-none"
+                style={{
+                  background: searchSettingsOpen ? theme.primary : theme.secondary,
+                  color: searchSettingsOpen ? theme.primaryForeground : theme.foreground,
+                }}
+                title="Toggle search filters"
+              >
+                <Icon name="filter" size={13} color="currentColor" />
+                <span>Search Settings</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Search Input Bar */}
+          <div
+            className="w-full h-[38px] flex items-center gap-2 px-3 rounded-lg border border-border"
+            style={{ background: theme.secondary }}
+          >
+            <Icon name="search" size={14} color={theme.mutedForeground} />
+            <input
+              type="text"
+              placeholder={`Search ${categoryLabel}...`}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="w-full text-xs bg-transparent outline-none border-none h-full placeholder:text-muted-foreground"
+              style={{ color: theme.foreground }}
+            />
+          </div>
+
+          {/* Results Count & Pagination Controls */}
+          <DiscoveryPagination
+            page={page}
+            totalHits={totalHits}
+            limit={limit}
+            loading={loading}
+            itemLabel={categoryLabel}
+            theme={theme}
+            onPageChange={setPage}
+            onScrollToTop={() =>
+              scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+            }
+          />
+
+          {/* Results List: 1 Card per line */}
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pr-1">
+            {loading ? (
+              <div className="flex flex-col gap-2.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-24 rounded-xl border border-border animate-pulse"
+                    style={{ background: theme.card }}
+                  />
+                ))}
+              </div>
+            ) : projects.length === 0 ? (
+              <div
+                className="flex flex-col items-center justify-center h-64 rounded-xl border border-border text-center p-4"
+                style={{ background: theme.card }}
+              >
+                <Icon name="search" size={28} color={theme.mutedForeground} />
+                <span className="text-sm font-medium mt-3" style={{ color: theme.foreground }}>
+                  No {categoryLabel} found
+                </span>
+                <span className="text-xs mt-1" style={{ color: theme.mutedForeground }}>
+                  Try adjusting your search query or filters in Search Settings
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5 pb-2">
+                {projects.map((item) => (
+                  <DiscoveryProjectCard
+                    key={`${item.source}-${item.id}`}
+                    item={item}
+                    theme={theme}
+                    onClick={() => handleOpenProjectDetails(item)}
+                    onInstall={(e) => handleInstallAddon(item, e)}
+                    isInstalling={installingId === item.id}
+                    isInstalled={installedIds.has(item.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Floating SEARCH SETTINGS Drawer (Scoped below header, inside tab only) */}
+          <AnimatePresence>
+            {searchSettingsOpen && (
+              <>
+                {/* Backdrop contained within tab content below header */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute inset-0 bg-black/45 z-20 backdrop-blur-2xs"
+                  onClick={() => setSearchSettingsOpen(false)}
+                />
+
+                {/* Sliding Drawer Panel contained below header */}
+                <motion.aside
+                  initial={{ x: "100%", opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: "100%", opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 32 }}
+                  className="absolute top-0 bottom-0 right-0 w-64 z-30 shadow-2xl border-l border-border p-4.5 flex flex-col gap-4.5 overflow-y-auto"
+                  style={{ background: theme.sidebar }}
+                >
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <div className="flex items-center gap-2">
+                      <Icon name="filter" size={14} color={theme.primary} />
+                      <span
+                        className="text-xs font-bold uppercase tracking-wider"
+                        style={{ color: theme.foreground }}
+                      >
+                        SEARCH SETTINGS
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSearchSettingsOpen(false)}
+                      className="size-7 rounded-md flex items-center justify-center cursor-pointer hover:bg-card transition-colors"
+                      style={{ color: theme.mutedForeground }}
+                      title="Close search settings"
+                    >
+                      <Icon name="x" size={14} color="currentColor" />
+                    </button>
+                  </div>
+
+                  {/* Sort Filter */}
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      className="flex items-center gap-1.5 text-[11px] font-semibold"
+                      style={{ color: theme.mutedForeground }}
+                    >
+                      <Icon name="sortArrows" size={12} color={theme.mutedForeground} />
+                      Sort By
+                    </label>
+                    <div className="w-full">
+                      <Dropdown
+                        value={sort}
+                        options={sortOptions}
+                        render={(opt) => {
+                          if (opt === "relevance") return "Relevance";
+                          if (opt === "downloads") return "Most Downloads";
+                          if (opt === "updated") return "Recently Updated";
+                          return "Newest";
+                        }}
+                        onChange={(opt) => {
+                          setSort(opt);
+                          setPage(1);
+                        }}
+                        theme={theme}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Minecraft Version Filter */}
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      className="flex items-center gap-1.5 text-[11px] font-semibold"
+                      style={{ color: theme.mutedForeground }}
+                    >
+                      <Icon name="cubes" size={12} color={theme.mutedForeground} />
+                      Game Version
+                    </label>
+                    <div className="w-full">
+                      <Dropdown
+                        value={selectedVersion}
+                        options={versionOptions}
+                        render={(opt) => (opt === "all" ? "All Versions" : opt)}
+                        onChange={(opt) => {
+                          setSelectedVersion(opt);
+                          setPage(1);
+                        }}
+                        theme={theme}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mod Loader Filter (Only applicable for Mods) */}
+                  {category === "mods" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label
+                        className="flex items-center gap-1.5 text-[11px] font-semibold"
+                        style={{ color: theme.mutedForeground }}
+                      >
+                        <Icon name="settings" size={12} color={theme.mutedForeground} />
+                        Mod Loader
+                      </label>
+                      <div className="w-full">
+                        <Dropdown
+                          value={selectedLoader}
+                          options={loaderOptions}
+                          render={(opt) => (opt === "all" ? "All Loaders" : capitalizeFirst(opt))}
+                          onChange={(opt) => {
+                            setSelectedLoader(opt);
+                            setPage(1);
+                          }}
+                          theme={theme}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Environment Filter (Modrinth only) */}
+                  {provider === "modrinth" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label
+                        className="flex items-center gap-1.5 text-[11px] font-semibold"
+                        style={{ color: theme.mutedForeground }}
+                      >
+                        <Icon name="globe" size={12} color={theme.mutedForeground} />
+                        Environment
+                      </label>
+                      <div className="w-full">
+                        <Dropdown
+                          value={environment}
+                          options={environmentOptions}
+                          render={(opt) => {
+                            if (opt === "all") return "Client & Server";
+                            if (opt === "client") return "Client Only";
+                            return "Server Only";
+                          }}
+                          onChange={(opt) => {
+                            setEnvironment(opt);
+                            setPage(1);
+                          }}
+                          theme={theme}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </motion.aside>
+              </>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

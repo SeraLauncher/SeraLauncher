@@ -110,6 +110,9 @@ export function SafeContentRenderer({
               src={src}
               alt={alt}
               loading="lazy"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
               className="max-w-full h-auto rounded-lg my-1 mr-1.5 inline-block align-middle object-contain"
             />
           );

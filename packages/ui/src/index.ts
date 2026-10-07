@@ -30,4 +30,7 @@ export * from "./components/DiscoveryPage";
 export * from "./components/DiscoveryDetailsPage";
 export * from "./components/SafeContentRenderer";
 
-export { InstanceModsTab } from "./components/InstanceModsTab";
+export * from "./components/DiscoveryProviderToggle";
+export * from "./components/DiscoveryPagination";
+export * from "./components/DiscoveryProjectCard";
+export * from "./components/InstanceAddonsTab";
