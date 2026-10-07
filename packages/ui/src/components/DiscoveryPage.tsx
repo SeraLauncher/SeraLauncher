@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { fade, pageFade } from "../motion";
@@ -176,15 +177,16 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
         fileName,
       });
 
-      setInstallSuccess(
-        `Installed into ${instances.find((i) => i.id === selectedInstanceId)?.name}!`,
-      );
-      setTimeout(() => {
-        setInstallingProject(null);
-        setInstallSuccess(null);
-      }, 1800);
-    } catch {
-      // fallback
+      const targetInst = instances.find((i) => i.id === selectedInstanceId)?.name || "instance";
+      toast.success(`Installed ${installingProject.title}!`, {
+        description: `Successfully added to ${targetInst}.`,
+      });
+      setInstallingProject(null);
+      setInstallSuccess(null);
+    } catch (err) {
+      toast.error(`Failed to install ${installingProject.title}`, {
+        description: String(err),
+      });
     } finally {
       setIsInstalling(false);
     }

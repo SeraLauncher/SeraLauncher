@@ -869,8 +869,34 @@ pub async fn launch_minecraft_instance(
     // 2. Ensure Minecraft version, libraries, assets & natives are downloaded/extracted
     let pkg = install_minecraft_version(app, &instance.mc_version, &inst_dir).await?;
 
-    // 3. Assemble Classpath
-    let classpath_jars = collect_classpath(app, &pkg, &instance.mc_version)?;
+    // 3. Assemble Classpath (including mod loader libraries if installed)
+    let mut classpath_jars = collect_classpath(app, &pkg, &instance.mc_version)?;
+    let mut main_class_to_run = pkg.main_class.clone();
+
+    if let (Some(ldr), Some(ldr_ver)) = (&instance.loader, &instance.loader_version) {
+        let l = ldr.to_lowercase();
+        if l != "vanilla" && l != "none" {
+            let profile_name = format!("{}-loader-{}-{}", l, ldr_ver, instance.mc_version);
+            let profile_json_file = inst_dir.join(".minecraft").join("versions").join(&profile_name).join(format!("{}.json", profile_name));
+
+            if profile_json_file.exists() {
+                if let Ok(content) = std::fs::read_to_string(&profile_json_file) {
+                    if let Ok(profile_pkg) = serde_json::from_str::<crate::loaders::LoaderProfilePackage>(&content) {
+                        main_class_to_run = profile_pkg.main_class.clone();
+                        let libs_dir = libraries_dir(app)?;
+                        for lib in profile_pkg.libraries {
+                            let rel_path = crate::loaders::maven_to_relative_path(&lib.name);
+                            let lib_path = libs_dir.join(rel_path);
+                            if lib_path.exists() {
+                                classpath_jars.push(lib_path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     let sep = if cfg!(target_os = "windows") { ";" } else { ":" };
     let classpath_str = classpath_jars
         .iter()
@@ -913,7 +939,7 @@ pub async fn launch_minecraft_instance(
 
     cmd_args.push("-cp".to_string());
     cmd_args.push(classpath_str);
-    cmd_args.push(pkg.main_class.clone());
+    cmd_args.push(main_class_to_run);
 
     // 6. Build Game arguments
     let game_dir = inst_dir.join(".minecraft");

@@ -456,13 +456,86 @@ pub async fn install_file_to_instance(
         .build()
         .map_err(|e| e.to_string())?;
 
-    let res = client.get(download_url).send().await.map_err(|e| format!("Download failed: {}", e))?;
+    let inst_name = crate::instances::get_instance_name(app, instance_id).unwrap_or_else(|_| "Instance".to_string());
+    let task_id = format!("addon-{}-{}", instance_id, file_name);
+    let total_expected = None;
+
+    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
+        id: task_id.clone(),
+        title: inst_name.clone(),
+        phase: "libraries".to_string(),
+        phase_label: format!("Downloading {}", file_name),
+        downloaded_bytes: 0,
+        total_bytes: total_expected,
+        speed_bytes_per_sec: 0,
+        progress: 10.0,
+        status: "downloading".to_string(),
+        error: None,
+        order: 0,
+        instance_name: Some(inst_name.clone()),
+        instance_icon: None,
+    });
+
+    let mut res = client.get(download_url).send().await.map_err(|e| {
+        crate::downloads::fail_download(app, &task_id, &e.to_string());
+        format!("Download failed: {}", e)
+    })?;
+
     if !res.status().is_success() {
-        return Err(format!("Download returned status {}", res.status()));
+        let err_msg = format!("Download returned status {}", res.status());
+        crate::downloads::fail_download(app, &task_id, &err_msg);
+        return Err(err_msg);
     }
 
-    let bytes = res.bytes().await.map_err(|e| e.to_string())?;
-    std::fs::write(&target_file, &bytes).map_err(|e| format!("Failed to write file: {}", e))?;
+    let content_len = res.content_length();
+    use tokio::io::AsyncWriteExt;
+    let mut file = tokio::fs::File::create(&target_file).await.map_err(|e| e.to_string())?;
+    let mut downloaded: u64 = 0;
+
+    while let Some(chunk) = res.chunk().await.map_err(|e| e.to_string())? {
+        file.write_all(&chunk).await.map_err(|e| e.to_string())?;
+        downloaded += chunk.len() as u64;
+
+        let pct = if let Some(tot) = content_len {
+            if tot > 0 { ((downloaded as f64 / tot as f64) * 100.0).min(99.0) } else { 50.0 }
+        } else {
+            50.0
+        };
+
+        crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: inst_name.clone(),
+            phase: "libraries".to_string(),
+            phase_label: format!("Downloading {}", file_name),
+            downloaded_bytes: downloaded,
+            total_bytes: content_len,
+            speed_bytes_per_sec: 0,
+            progress: pct,
+            status: "downloading".to_string(),
+            error: None,
+            order: 0,
+            instance_name: Some(inst_name.clone()),
+            instance_icon: None,
+        });
+    }
+
+    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
+        id: task_id.clone(),
+        title: inst_name.clone(),
+        phase: "libraries".to_string(),
+        phase_label: format!("Installed {}", file_name),
+        downloaded_bytes: downloaded,
+        total_bytes: Some(downloaded),
+        speed_bytes_per_sec: 0,
+        progress: 100.0,
+        status: "completed".to_string(),
+        error: None,
+        order: 0,
+        instance_name: Some(inst_name),
+        instance_icon: None,
+    });
+
+    crate::downloads::finish_download(app, &task_id);
 
     Ok(target_file)
 }

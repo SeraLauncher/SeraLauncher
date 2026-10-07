@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 interface InstallLoaderModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -26,7 +27,7 @@ function InstallLoaderModal({
   const [versions, setVersions] = useState<LoaderVersionInfo[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string>("");
   const [loadingVersions, setLoadingVersions] = useState(false);
-  const [installing, setInstalling] = useState(false);
+  const [installing] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,32 +64,32 @@ function InstallLoaderModal({
     };
   }, [isOpen, selectedLoader, instance.mcVersion]);
 
-  const [installProgress, setInstallProgress] = useState(0);
-
-  const handleInstall = async () => {
+  const handleInstall = () => {
     if (!selectedVersion) return;
-    setInstalling(true);
-    setInstallProgress(25);
-    try {
-      const timer = setInterval(() => {
-        setInstallProgress((p) => (p < 85 ? p + 15 : p));
-      }, 350);
+    const ldrName = selectedLoader.charAt(0).toUpperCase() + selectedLoader.slice(1);
+    const ver = selectedVersion;
+    onClose();
 
-      await invoke("install_mod_loader", {
-        instanceId: instance.id,
-        loader: selectedLoader,
-        loaderVersion: selectedVersion,
+    toast.info(`Installing ${ldrName} Loader ${ver}...`, {
+      description: "Download started in the header.",
+    });
+
+    invoke("install_mod_loader", {
+      instanceId: instance.id,
+      loader: selectedLoader,
+      loaderVersion: ver,
+    })
+      .then(async () => {
+        await onInstalled(selectedLoader, ver);
+        toast.success(`${ldrName} Loader installed successfully!`, {
+          description: "Mods folder created and ready.",
+        });
+      })
+      .catch((err) => {
+        toast.error(`Failed to install ${ldrName} Loader`, {
+          description: String(err),
+        });
       });
-
-      clearInterval(timer);
-      setInstallProgress(100);
-
-      await onInstalled(selectedLoader, selectedVersion);
-      onClose();
-    } finally {
-      setInstalling(false);
-      setInstallProgress(0);
-    }
   };
 
   return (
@@ -188,21 +189,6 @@ function InstallLoaderModal({
             />
           )}
         </div>
-
-        {installing && (
-          <div className="flex flex-col gap-1.5 pt-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Installing {selectedLoader} loader...</span>
-              <span>{installProgress}%</span>
-            </div>
-            <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${installProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </Modal>
   );
@@ -293,7 +279,6 @@ export function InstanceAddonsTab({
   // Quick install state
   const [installingId, setInstallingId] = useState<string | null>(null);
   const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
-  const [installSuccessMessage, setInstallSuccessMessage] = useState<string | null>(null);
 
   // Drilldown detail page state
   const [selectedProject, setSelectedProject] = useState<DiscoveryProject | null>(null);
@@ -316,10 +301,6 @@ export function InstanceAddonsTab({
     if (onUpdate) {
       await onUpdate(updated);
     }
-    setInstallSuccessMessage(
-      `${loader.charAt(0).toUpperCase() + loader.slice(1)} Loader installed successfully! Mods directory created.`,
-    );
-    setTimeout(() => setInstallSuccessMessage(null), 3000);
   };
 
   const prevSearchRef = useRef(search);
@@ -424,7 +405,6 @@ export function InstanceAddonsTab({
   const handleInstallAddon = async (item: DiscoveryProject, e: React.MouseEvent) => {
     e.stopPropagation();
     setInstallingId(item.id);
-    setInstallSuccessMessage(null);
 
     try {
       const ext = category === "mods" ? ".jar" : ".zip";
@@ -439,6 +419,10 @@ export function InstanceAddonsTab({
         return;
       }
 
+      toast.info(`Downloading ${item.title}...`, {
+        description: "Check the header for download progress.",
+      });
+
       await invoke("install_discovery_project", {
         instanceId: instance.id,
         projectType: category,
@@ -447,9 +431,13 @@ export function InstanceAddonsTab({
       });
 
       setInstalledIds((prev) => new Set(prev).add(item.id));
-      setInstallSuccessMessage(`Installed ${item.title}!`);
-      setTimeout(() => setInstallSuccessMessage(null), 2500);
-    } catch {
+      toast.success(`Installed ${item.title}!`, {
+        description: `Saved to instance ${category} directory.`,
+      });
+    } catch (err) {
+      toast.error(`Failed to install ${item.title}`, {
+        description: String(err),
+      });
       handleOpenProjectDetails(item);
     } finally {
       setInstallingId(null);
@@ -529,12 +517,6 @@ export function InstanceAddonsTab({
                 />
 
                 <div className="flex items-center gap-2">
-                  {installSuccessMessage && (
-                    <span className="text-xs font-medium text-emerald-500 animate-in fade-in">
-                      {installSuccessMessage}
-                    </span>
-                  )}
-
                   <button
                     type="button"
                     className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
