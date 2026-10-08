@@ -16,6 +16,7 @@ mod urlencoding {
 }
 
 use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -427,12 +428,60 @@ async fn search_curseforge(
 }
 
 /// Installs a downloaded mod, resourcepack, or shader directly into an instance folder.
+fn write_addon_index(
+    sub_dir: &Path,
+    file_name: &str,
+    project_type: &str,
+    download_url: &str,
+    provider: Option<&str>,
+    project_id: Option<&str>,
+    version_id: Option<&str>,
+    sha1_hash: &str,
+    size_bytes: u64,
+) {
+    let index_dir = sub_dir.join(".index");
+    if let Err(_) = std::fs::create_dir_all(&index_dir) {
+        return;
+    }
+
+    let stem = Path::new(file_name)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(file_name);
+
+    let conf_path = index_dir.join(format!("{}.conf", stem));
+
+    let now = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        Ok(d) => d.as_secs(),
+        Err(_) => 0,
+    };
+
+    let conf_content = format!(
+        "# SeraLauncher Addon Index\n        [addon]\n        name = \"{stem}\"\n        filename = \"{file_name}\"\n        type = \"{project_type}\"\n\n        [source]\n        provider = \"{prov}\"\n        project_id = \"{proj_id}\"\n        version_id = \"{ver_id}\"\n        url = \"{download_url}\"\n\n        [integrity]\n        algorithm = \"sha1\"\n        hash = \"{sha1_hash}\"\n        size_bytes = {size_bytes}\n\n        [meta]\n        installed_at_unix = {now}\n        managed_by = \"sera\"\n",
+        stem = stem,
+        file_name = file_name,
+        project_type = project_type,
+        prov = provider.unwrap_or("unknown"),
+        proj_id = project_id.unwrap_or(""),
+        ver_id = version_id.unwrap_or(""),
+        download_url = download_url,
+        sha1_hash = sha1_hash,
+        size_bytes = size_bytes,
+        now = now
+    );
+
+    let _ = std::fs::write(conf_path, conf_content);
+}
+
 pub async fn install_file_to_instance(
     app: &tauri::AppHandle,
     instance_id: &str,
     project_type: &str,
     download_url: &str,
     file_name: &str,
+    provider: Option<&str>,
+    project_id: Option<&str>,
+    version_id: Option<&str>,
 ) -> Result<PathBuf, String> {
     let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
     let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
@@ -500,6 +549,7 @@ pub async fn install_file_to_instance(
     let mut file = tokio::fs::File::create(&target_file).await.map_err(|e| e.to_string())?;
     let mut downloaded: u64 = 0;
     let mut is_first_chunk = true;
+    let mut hasher = Sha1::new();
 
     while let Some(chunk) = res.chunk().await.map_err(|e| {
         let _ = std::fs::remove_file(&target_file);
@@ -520,6 +570,7 @@ pub async fn install_file_to_instance(
             let _ = std::fs::remove_file(&target_file);
             e.to_string()
         })?;
+        hasher.update(&chunk);
         downloaded += chunk.len() as u64;
 
         let pct = if let Some(tot) = content_len {
@@ -562,6 +613,24 @@ pub async fn install_file_to_instance(
     });
 
     crate::downloads::finish_download(app, &task_id);
+
+    let hash_bytes = hasher.finalize();
+    let mut digest = String::with_capacity(40);
+    for b in hash_bytes {
+        use std::fmt::Write;
+        let _ = write!(digest, "{:02x}", b);
+    }
+    write_addon_index(
+        &sub_dir,
+        file_name,
+        project_type,
+        download_url,
+        provider,
+        project_id,
+        version_id,
+        &digest,
+        downloaded,
+    );
 
     Ok(target_file)
 }
@@ -1331,13 +1400,13 @@ pub async fn install_project_with_dependencies(
     download_url: &str,
     file_name: &str,
     provider: Option<&str>,
-    _project_id: Option<&str>,
+    project_id: Option<&str>,
     version_id: Option<&str>,
 ) -> Result<Vec<String>, String> {
     let mut installed_list = Vec::new();
 
     // 1. Install primary file
-    install_file_to_instance(app, instance_id, project_type, download_url, file_name).await?;
+    install_file_to_instance(app, instance_id, project_type, download_url, file_name, provider, project_id, version_id).await?;
     installed_list.push(file_name.to_string());
 
     if !project_type.eq_ignore_ascii_case("mods") && !project_type.eq_ignore_ascii_case("mod") {
@@ -1384,7 +1453,7 @@ pub async fn install_project_with_dependencies(
                                         // Resolve version
                                         if let Ok(dep_versions) = get_project_versions("modrinth", &dep_proj_id, Some(mc_version), Some(&loader)).await {
                                             if let Some(best_ver) = dep_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| dep_versions.first()).cloned() {
-                                                if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best_ver.download_url, &best_ver.file_name).await {
+                                                if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best_ver.download_url, &best_ver.file_name, Some("modrinth"), Some(&dep_proj_id), Some(&best_ver.id)).await {
                                                     installed_list.push(best_ver.file_name.clone());
                                                     installed_map.insert(dep_proj_id.to_lowercase(), (best_ver.version_number, mc_mods.join(&best_ver.file_name)));
                                                 }
@@ -1424,7 +1493,7 @@ pub async fn install_project_with_dependencies(
                 if mc_version == "1.8.9" {
                     let dl_url = "https://edge.forgecdn.net/files/3758/10/legacy-fabric-api-1.4.0%2b1.8.9.jar";
                     let f_name = "legacy-fabric-api-1.4.0+1.8.9.jar";
-                    if let Ok(_) = install_file_to_instance(app, instance_id, "mods", dl_url, f_name).await {
+                    if let Ok(_) = install_file_to_instance(app, instance_id, "mods", dl_url, f_name, Some("curseforge"), Some("400281"), None).await {
                         installed_list.push(f_name.to_string());
                     }
                 } else {
@@ -1443,12 +1512,12 @@ pub async fn install_project_with_dependencies(
                     }.await;
 
                     if let Some((dl_url, f_name)) = cf_resolved {
-                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &dl_url, &f_name).await {
+                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &dl_url, &f_name, Some("curseforge"), Some("400281"), None).await {
                             installed_list.push(f_name);
                         }
                     } else if let Ok(api_versions) = get_project_versions("modrinth", "9CJED7xi", Some(mc_version), Some("fabric")).await {
                         if let Some(best) = api_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| api_versions.first()).cloned() {
-                            if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name).await {
+                            if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name, Some("modrinth"), Some("9CJED7xi"), Some(&best.id)).await {
                                 installed_list.push(best.file_name);
                             }
                         }
@@ -1464,7 +1533,7 @@ pub async fn install_project_with_dependencies(
             if !has_fabric_api {
                 if let Ok(api_versions) = get_project_versions("modrinth", "P7dR8mSH", Some(mc_version), Some("fabric")).await {
                     if let Some(best) = api_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| api_versions.first()).cloned() {
-                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name).await {
+                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name, Some("modrinth"), Some("9CJED7xi"), Some(&best.id)).await {
                             installed_list.push(best.file_name);
                         }
                     }
