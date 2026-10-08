@@ -243,9 +243,10 @@ export function useInstances() {
   );
 
   const updateInstance = useCallback(
-    async (instance: Instance) => {
-      await invoke("update_instance", { instance });
+    async (instance: Instance): Promise<Instance> => {
+      const updated = await invoke<Instance>("update_instance", { instance });
       refreshInstances();
+      return updated;
     },
     [refreshInstances],
   );

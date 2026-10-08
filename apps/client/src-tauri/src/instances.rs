@@ -64,7 +64,7 @@ pub fn list_instances(app: &tauri::AppHandle) -> Result<Vec<Instance>, String> {
 }
 
 /// Helper to sanitize name into a directory-safe identifier
-fn slugify(name: &str) -> String {
+pub fn slugify(name: &str) -> String {
     let slug: String = name
         .chars()
         .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
@@ -210,25 +210,47 @@ pub fn delete_instance(app: &tauri::AppHandle, id: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Update instance metadata
-pub fn update_instance(app: &tauri::AppHandle, instance: &Instance) -> Result<(), String> {
+/// Update instance metadata and automatically rename the folder on disk when the name changes
+pub fn update_instance(app: &tauri::AppHandle, mut instance: Instance) -> Result<Instance, String> {
     use tauri::Emitter;
     let base = instances_dir(app)?;
-    let target = base.join(&instance.id);
-    if !target.exists() {
-        return Err(format!("Instance {} not found", instance.id));
+    let old_id = instance.id.clone();
+    let old_target = base.join(&old_id);
+    if !old_target.exists() {
+        return Err(format!("Instance {} not found", old_id));
     }
 
-    let json = serde_json::to_string_pretty(instance)
+    // Rename directory on disk to match new instance name if slug changed
+    let desired_id = slugify(&instance.name);
+    let mut final_target = old_target.clone();
+
+    if desired_id != old_id {
+        let mut new_id = desired_id.clone();
+        let mut counter = 1;
+        while base.join(&new_id).exists() && base.join(&new_id) != old_target {
+            new_id = format!("{}-{}", desired_id, counter);
+            counter += 1;
+        }
+
+        if new_id != old_id {
+            let new_target = base.join(&new_id);
+            std::fs::rename(&old_target, &new_target)
+                .map_err(|err| format!("Failed to rename instance directory from {} to {}: {}", old_id, new_id, err))?;
+            instance.id = new_id;
+            final_target = new_target;
+        }
+    }
+
+    let json = serde_json::to_string_pretty(&instance)
         .map_err(|err| format!("Failed to serialize instance: {}", err))?;
-    std::fs::write(instance_file(&target), json)
+    std::fs::write(instance_file(&final_target), json)
         .map_err(|err| format!("Failed to write instance.json: {}", err))?;
 
     // Automatically create mods directory when a mod loader is configured
     if let Some(loader) = &instance.loader {
         let l = loader.to_lowercase();
         if l != "vanilla" && l != "none" {
-            let game_dir = get_instance_game_dir(&target);
+            let game_dir = get_instance_game_dir(&final_target);
             let mods_dir = game_dir.join("mods");
             if !mods_dir.exists() {
                 let _ = std::fs::create_dir_all(&mods_dir);
@@ -237,7 +259,7 @@ pub fn update_instance(app: &tauri::AppHandle, instance: &Instance) -> Result<()
     }
 
     let _ = app.emit("instances_changed", ());
-    Ok(())
+    Ok(instance)
 }
 
 /// Returns the absolute path of an instance directory

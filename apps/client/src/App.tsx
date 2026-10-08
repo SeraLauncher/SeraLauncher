@@ -339,7 +339,12 @@ export default function App() {
                       refreshJavaRuntimes();
                     }}
                     onDeleteInstance={deleteInstance}
-                    onUpdateInstance={updateInstance}
+                    onUpdateInstance={async (updated) => {
+                      const res = await updateInstance(updated);
+                      if (res && res.id !== updated.id && managingInstanceId === updated.id) {
+                        setManagingInstanceId(res.id);
+                      }
+                    }}
                     onOpenFolder={openFolder}
                     onLaunch={async (inst) => {
                       if (!activeAccount) {

@@ -1135,7 +1135,7 @@ pub async fn launch_minecraft_instance(
 
     // Update last_played on instance
     instance.last_played = Some(now_epoch.to_string());
-    let _ = crate::instances::update_instance(app, &instance);
+    let _ = crate::instances::update_instance(app, instance);
 
     Ok(())
 }

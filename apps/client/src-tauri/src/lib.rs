@@ -292,8 +292,8 @@ fn delete_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn update_instance(app: tauri::AppHandle, instance: instances::Instance) -> Result<(), String> {
-    instances::update_instance(&app, &instance)
+fn update_instance(app: tauri::AppHandle, instance: instances::Instance) -> Result<instances::Instance, String> {
+    instances::update_instance(&app, instance)
 }
 
 

@@ -346,13 +346,33 @@ pub async fn install_mod_loader(
     instance.loader_version = Some(loader_version.to_string());
 
     let old_default_name = format!("Vanilla {}", instance.mc_version);
+    let mut final_file = inst_file;
+
     if instance.name.eq_ignore_ascii_case(&old_default_name) || instance.name.to_lowercase().starts_with("vanilla ") {
         instance.name = format!("{} {}", ldr_name, instance.mc_version);
+
+        // Rename instance directory on disk to match new loader name
+        let desired_id = crate::instances::slugify(&instance.name);
+        let base = crate::paths::instances_dir(app)?;
+        let mut new_id = desired_id.clone();
+        let mut counter = 1;
+        while base.join(&new_id).exists() && base.join(&new_id) != inst_dir {
+            new_id = format!("{}-{}", desired_id, counter);
+            counter += 1;
+        }
+
+        if new_id != instance.id {
+            let new_dir = base.join(&new_id);
+            if std::fs::rename(&inst_dir, &new_dir).is_ok() {
+                instance.id = new_id;
+                final_file = new_dir.join("instance.json");
+            }
+        }
     }
 
     let updated_json = serde_json::to_string_pretty(&instance)
         .map_err(|e| format!("Failed to serialize instance: {}", e))?;
-    std::fs::write(&inst_file, updated_json)
+    std::fs::write(&final_file, updated_json)
         .map_err(|e| format!("Failed to write instance.json: {}", e))?;
 
     // 5. Complete download item
