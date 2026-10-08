@@ -877,7 +877,8 @@ pub async fn launch_minecraft_instance(
         let l = ldr.to_lowercase();
         if l != "vanilla" && l != "none" {
             let profile_name = format!("{}-loader-{}-{}", l, ldr_ver, instance.mc_version);
-            let profile_json_file = inst_dir.join(".minecraft").join("versions").join(&profile_name).join(format!("{}.json", profile_name));
+            let game_dir = crate::instances::get_instance_game_dir(&inst_dir);
+            let profile_json_file = game_dir.join("versions").join(&profile_name).join(format!("{}.json", profile_name));
 
             if profile_json_file.exists() {
                 if let Ok(content) = std::fs::read_to_string(&profile_json_file) {
@@ -942,7 +943,7 @@ pub async fn launch_minecraft_instance(
     cmd_args.push(main_class_to_run);
 
     // 6. Build Game arguments
-    let game_dir = inst_dir.join(".minecraft");
+    let game_dir = crate::instances::get_instance_game_dir(&inst_dir);
     let assets_root = assets_dir(app)?;
 
     let (access_token, user_type) = match account.account_type.as_str() {

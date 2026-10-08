@@ -26,6 +26,13 @@ pub struct Instance {
     pub loader_version: Option<String>,
 }
 
+/// Returns the path to the internal Minecraft game directory for an instance ("minecraft").
+pub fn get_instance_game_dir(instance_dir: &Path) -> PathBuf {
+    let mc = instance_dir.join("minecraft");
+    let _ = std::fs::create_dir_all(&mc);
+    mc
+}
+
 fn instance_file(instance_dir: &Path) -> PathBuf {
     instance_dir.join("instance.json")
 }
@@ -98,7 +105,7 @@ pub async fn create_instance(
     std::fs::create_dir_all(&candidate_dir)
         .map_err(|err| format!("Failed to create instance directory: {}", err))?;
 
-    let game_dir = candidate_dir.join(".minecraft");
+    let game_dir = get_instance_game_dir(&candidate_dir);
     let _ = std::fs::create_dir_all(&game_dir);
 
     let now = std::time::SystemTime::now()
@@ -221,7 +228,8 @@ pub fn update_instance(app: &tauri::AppHandle, instance: &Instance) -> Result<()
     if let Some(loader) = &instance.loader {
         let l = loader.to_lowercase();
         if l != "vanilla" && l != "none" {
-            let mods_dir = target.join(".minecraft").join("mods");
+            let game_dir = get_instance_game_dir(&target);
+            let mods_dir = game_dir.join("mods");
             if !mods_dir.exists() {
                 let _ = std::fs::create_dir_all(&mods_dir);
             }

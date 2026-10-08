@@ -207,7 +207,7 @@ pub async fn install_mod_loader(
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mc_dir = inst_dir.join(".minecraft");
+    let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
     let versions_dir = mc_dir.join("versions");
     let _ = std::fs::create_dir_all(&versions_dir);
     let libs_dir = crate::paths::libraries_dir(app)?;
@@ -331,24 +331,14 @@ pub async fn install_mod_loader(
         instance_icon: instance.icon.clone(),
     });
 
-    // 3. Ensure mods folder exists at BOTH root {inst_dir}/mods and {inst_dir}/.minecraft/mods
+    // 3. Ensure mods folder exists inside the instance minecraft directory
     let mc_mods = mc_dir.join("mods");
-    let root_mods = inst_dir.join("mods");
-
     let _ = std::fs::create_dir_all(&mc_mods);
-    let _ = std::fs::create_dir_all(&root_mods);
 
-    #[cfg(unix)]
-    {
-        // If root_mods is empty and not a symlink, create a symlink to .minecraft/mods so both mirror each other
-        if !root_mods.is_symlink() {
-            if let Ok(entries) = std::fs::read_dir(&root_mods) {
-                if entries.count() == 0 {
-                    let _ = std::fs::remove_dir(&root_mods);
-                    let _ = std::os::unix::fs::symlink(".minecraft/mods", &root_mods);
-                }
-            }
-        }
+    // Remove legacy root mods symlink if present
+    let root_mods = inst_dir.join("mods");
+    if root_mods.is_symlink() {
+        let _ = std::fs::remove_file(&root_mods);
     }
 
     // 4. Update instance.json with loader and rename default Vanilla instances

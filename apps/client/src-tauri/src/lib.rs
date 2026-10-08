@@ -448,8 +448,8 @@ fn get_instance_logs(app: tauri::AppHandle, id: String) -> Result<String, String
 #[tauri::command]
 fn open_instance_folder(app: tauri::AppHandle, id: String) -> Result<(), String> {
     let dir = instances::get_instance_dir(&app, &id)?;
-    let _ = std::fs::create_dir_all(dir.join("mods"));
-    let _ = std::fs::create_dir_all(dir.join(".minecraft").join("mods"));
+    let game_dir = instances::get_instance_game_dir(&dir);
+    let _ = std::fs::create_dir_all(game_dir.join("mods"));
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")

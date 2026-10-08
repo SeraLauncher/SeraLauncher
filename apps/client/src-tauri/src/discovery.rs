@@ -435,7 +435,7 @@ pub async fn install_file_to_instance(
     file_name: &str,
 ) -> Result<PathBuf, String> {
     let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
-    let mc_dir = inst_dir.join(".minecraft");
+    let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
 
     let sub_dir = match project_type.to_lowercase().as_str() {
         "mods" | "mod" => mc_dir.join("mods"),
@@ -1352,7 +1352,7 @@ pub async fn install_project_with_dependencies(
 
     let mc_version = &instance.mc_version;
     let loader = instance.loader.as_deref().unwrap_or("").to_lowercase();
-    let mc_mods = inst_dir.join(".minecraft").join("mods");
+    let mc_mods = crate::instances::get_instance_game_dir(&inst_dir).join("mods");
 
     let client = reqwest::Client::builder()
         .user_agent("SeraLauncher/0.1.6")
