@@ -446,28 +446,57 @@ fn get_instance_logs(app: tauri::AppHandle, id: String) -> Result<String, String
 }
 
 #[tauri::command]
-fn open_instance_folder(app: tauri::AppHandle, id: String) -> Result<(), String> {
+fn open_instance_folder(app: tauri::AppHandle, id: String, subfolder: Option<String>) -> Result<(), String> {
     let dir = instances::get_instance_dir(&app, &id)?;
     let game_dir = instances::get_instance_game_dir(&dir);
-    let _ = std::fs::create_dir_all(game_dir.join("mods"));
+
+    let target = match subfolder.as_deref() {
+        Some("mods") => {
+            let p = game_dir.join("mods");
+            let _ = std::fs::create_dir_all(&p);
+            p
+        }
+        Some("resourcepack") | Some("resourcepacks") => {
+            let p = game_dir.join("resourcepacks");
+            let _ = std::fs::create_dir_all(&p);
+            p
+        }
+        Some("shader") | Some("shaders") | Some("shaderpacks") => {
+            let p = game_dir.join("shaderpacks");
+            let _ = std::fs::create_dir_all(&p);
+            p
+        }
+        Some("screenshots") => {
+            let p = game_dir.join("screenshots");
+            let _ = std::fs::create_dir_all(&p);
+            p
+        }
+        Some(sub) => {
+            let p = game_dir.join(sub);
+            let _ = std::fs::create_dir_all(&p);
+            p
+        }
+        None => dir,
+    };
+
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
-            .arg(&dir)
+            .arg(&target)
             .spawn()
             .map_err(|err| err.to_string())?;
     }
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
-            .arg(&dir)
+            .arg(&target)
             .spawn()
             .map_err(|err| err.to_string())?;
     }
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("explorer")
-            .arg(&dir)
+            .arg(&target)
             .spawn()
             .map_err(|err| err.to_string())?;
     }

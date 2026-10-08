@@ -439,8 +439,8 @@ pub async fn install_file_to_instance(
 
     let sub_dir = match project_type.to_lowercase().as_str() {
         "mods" | "mod" => mc_dir.join("mods"),
-        "resourcepack" | "resourcepacks" => mc_dir.join("resourcepacks"),
-        "shader" | "shaders" => mc_dir.join("shaderpacks"),
+        "resourcepack" | "resourcepacks" | "resource_pack" | "resource-pack" => mc_dir.join("resourcepacks"),
+        "shader" | "shaders" | "shaderpack" | "shaderpacks" => mc_dir.join("shaderpacks"),
         _ => mc_dir.join("mods"),
     };
 

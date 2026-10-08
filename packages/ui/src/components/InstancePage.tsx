@@ -94,7 +94,7 @@ export function InstancePage({
   ) => Promise<void>;
   onDeleteInstance: (id: string) => Promise<void>;
   onUpdateInstance: (instance: Instance) => Promise<void>;
-  onOpenFolder: (id: string) => Promise<void>;
+  onOpenFolder: (id: string, subfolder?: string) => Promise<void>;
   onLaunch: (instance: Instance) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -188,7 +188,7 @@ export function InstancePage({
           onSelectTab={setEffectiveTab}
           onBack={() => setEffectiveManagingId(null)}
           onLaunch={() => onLaunch(managingInstance)}
-          onOpenFolder={() => onOpenFolder(managingInstance.id)}
+          onOpenFolder={(subfolder?: string) => onOpenFolder(managingInstance.id, subfolder)}
           onUpdate={onUpdateInstance}
           onDelete={() => setDeleteConfirmId(managingInstance.id)}
         />
@@ -930,7 +930,7 @@ function InstanceManagementView({
   onSelectTab?: (tab: InstanceManagementTab) => void;
   onBack?: () => void;
   onLaunch: () => void;
-  onOpenFolder: () => Promise<void>;
+  onOpenFolder: (subfolder?: string) => Promise<void>;
   onUpdate: (updated: Instance) => Promise<void>;
   onDelete: () => void;
 }) {
@@ -1654,7 +1654,7 @@ function InstanceManagementView({
                 ? "resourcepack"
                 : "shader"
           }
-          onOpenFolder={onOpenFolder}
+          onOpenFolder={() => onOpenFolder(activeTab)}
           onUpdate={onUpdate}
         />
       </div>
@@ -1919,7 +1919,7 @@ function InstanceManagementView({
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors"
-                onClick={onOpenFolder}
+                onClick={() => onOpenFolder("screenshots")}
               >
                 <Icon name="folder" size={14} color="currentColor" />
                 <span>Open Screenshots Folder</span>

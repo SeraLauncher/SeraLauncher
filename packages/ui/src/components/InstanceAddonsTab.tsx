@@ -425,14 +425,29 @@ export function InstanceAddonsTab({
           projectId: item.id,
           mcVersion: instance.mcVersion,
           loader:
-            instance.loader && instance.loader !== "vanilla" && instance.loader !== "none"
+            category === "mods" &&
+            instance.loader &&
+            instance.loader !== "vanilla" &&
+            instance.loader !== "none"
               ? instance.loader
               : null,
         });
 
-        const compatible =
+        let compatible =
           fetchedVersions.find((v) => v.versionType.toLowerCase() === "release") ||
           fetchedVersions[0];
+
+        // Fallback for resource packs & shaders if strict MC version tag yielded no files
+        if (!compatible && category !== "mods") {
+          const anyVersions = await invoke<DiscoveryVersion[]>("get_discovery_project_versions", {
+            provider: item.source,
+            projectId: item.id,
+            mcVersion: null,
+            loader: null,
+          });
+          compatible =
+            anyVersions.find((v) => v.versionType.toLowerCase() === "release") || anyVersions[0];
+        }
 
         if (!compatible || !compatible.downloadUrl) {
           toast.error(`No compatible version found for Minecraft ${instance.mcVersion}`, {
@@ -475,8 +490,14 @@ export function InstanceAddonsTab({
           },
         );
       } else {
+        const folderName =
+          category === "mods"
+            ? "mods"
+            : category === "resourcepack"
+              ? "resourcepacks"
+              : "shaderpacks";
         toast.success(`Installed ${item.title}!`, {
-          description: `Saved to instance ${category} directory.`,
+          description: `Saved to instance ${folderName} directory.`,
         });
       }
     } catch (err) {
@@ -787,8 +808,8 @@ export function InstanceAddonsTab({
                         </div>
                       )}
 
-                      {/* Environment Filter (Modrinth only) */}
-                      {provider === "modrinth" && (
+                      {/* Environment Filter (Mods on Modrinth only) */}
+                      {category === "mods" && provider === "modrinth" && (
                         <div className="flex flex-col gap-1.5">
                           <label
                             className="flex items-center gap-1.5 text-[11px] font-semibold"

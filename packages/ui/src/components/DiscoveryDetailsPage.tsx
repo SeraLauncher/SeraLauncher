@@ -537,7 +537,19 @@ export function DiscoveryDetailsPage({
               type="button"
               disabled={isInstalling}
               onClick={() => {
+                const targetInst = targetInstanceId
+                  ? instances.find((i) => i.id === targetInstanceId)
+                  : null;
+                const targetMcVer = targetInst?.mcVersion;
+                const matchingVer = targetMcVer
+                  ? versionsList.find(
+                      (v) =>
+                        v.gameVersions.includes(targetMcVer) &&
+                        v.versionType.toLowerCase() === "release",
+                    ) || versionsList.find((v) => v.gameVersions.includes(targetMcVer))
+                  : null;
                 const ver =
+                  matchingVer ||
                   versionsList.find((v) => v.versionType.toLowerCase() === "release") ||
                   versionsList[0];
                 if (ver && ver.downloadUrl) {
@@ -801,11 +813,19 @@ export function DiscoveryDetailsPage({
                       <button
                         type="button"
                         onClick={() => {
-                          setInstallingVersion({
-                            downloadUrl: v.downloadUrl,
-                            fileName: v.fileName,
-                            title: `${project.title} (${v.versionNumber})`,
-                          });
+                          if (targetInstanceId) {
+                            handleDirectInstall(
+                              v.downloadUrl,
+                              v.fileName,
+                              `${project.title} (${v.versionNumber})`,
+                            );
+                          } else {
+                            setInstallingVersion({
+                              downloadUrl: v.downloadUrl,
+                              fileName: v.fileName,
+                              title: `${project.title} (${v.versionNumber})`,
+                            });
+                          }
                         }}
                         className="px-3 py-1 text-xs font-semibold rounded-md border-0 bg-primary text-primary-foreground cursor-pointer transition-opacity hover:opacity-90 shrink-0"
                       >

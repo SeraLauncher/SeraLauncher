@@ -251,8 +251,8 @@ export function useInstances() {
     [refreshInstances],
   );
 
-  const openFolder = useCallback(async (id: string) => {
-    await invoke("open_instance_folder", { id });
+  const openFolder = useCallback(async (id: string, subfolder?: string) => {
+    await invoke("open_instance_folder", { id, subfolder });
   }, []);
 
   const launchInstance = useCallback(
