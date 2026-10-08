@@ -12,6 +12,7 @@ import { DiscoveryProjectCard } from "./DiscoveryProjectCard";
 import type { Theme } from "../theme";
 import type {
   DiscoveryProject,
+  DiscoveryVersion,
   DiscoverySearchResponse,
   Instance,
   MinecraftVersion,
@@ -165,22 +166,71 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
     setInstallSuccess(null);
 
     try {
-      const fileName = `${installingProject.slug || "addon"}.jar`;
-      const downloadUrl =
-        installingProject.downloadUrl ||
-        `https://api.modrinth.com/v2/project/${installingProject.id}/version`;
+      const targetInst = instances.find((i) => i.id === selectedInstanceId);
+      let downloadUrl = installingProject.downloadUrl || "";
+      let fileName = "";
 
-      await invoke("install_discovery_project", {
+      if (!downloadUrl) {
+        toast.info(`Resolving compatible file for ${installingProject.title}...`);
+        const fetchedVersions = await invoke<DiscoveryVersion[]>("get_discovery_project_versions", {
+          provider: installingProject.source,
+          projectId: installingProject.id,
+          mcVersion: targetInst?.mcVersion,
+          loader:
+            targetInst?.loader && targetInst.loader !== "vanilla" && targetInst.loader !== "none"
+              ? targetInst.loader
+              : null,
+        });
+
+        const compatible =
+          fetchedVersions.find((v) => v.versionType.toLowerCase() === "release") ||
+          fetchedVersions[0];
+
+        if (!compatible || !compatible.downloadUrl) {
+          toast.error(`No compatible version found for ${targetInst?.name || "instance"}`, {
+            description: "Opening details page to view all versions.",
+          });
+          handleOpenProjectDetails(installingProject);
+          setInstallingProject(null);
+          setIsInstalling(false);
+          return;
+        }
+
+        downloadUrl = compatible.downloadUrl;
+        fileName = compatible.fileName;
+      }
+
+      if (!fileName) {
+        const ext =
+          installingProject.projectType === "mods" || installingProject.projectType === "mod"
+            ? ".jar"
+            : ".zip";
+        fileName = `${installingProject.slug || "addon"}${ext}`;
+      }
+
+      const installed = await invoke<string[]>("install_discovery_project", {
         instanceId: selectedInstanceId,
         projectType: installingProject.projectType,
         downloadUrl,
         fileName,
+        provider: installingProject.source,
+        projectId: installingProject.id,
+        versionId: null,
       });
 
-      const targetInst = instances.find((i) => i.id === selectedInstanceId)?.name || "instance";
-      toast.success(`Installed ${installingProject.title}!`, {
-        description: `Successfully added to ${targetInst}.`,
-      });
+      const targetInstName = targetInst?.name || "instance";
+      if (installed && installed.length > 1) {
+        toast.success(
+          `Installed ${installingProject.title} and ${installed.length - 1} dependencies!`,
+          {
+            description: `Added to ${targetInstName} (${installed.slice(1).join(", ")})`,
+          },
+        );
+      } else {
+        toast.success(`Installed ${installingProject.title}!`, {
+          description: `Successfully added to ${targetInstName}.`,
+        });
+      }
       setInstallingProject(null);
       setInstallSuccess(null);
     } catch (err) {

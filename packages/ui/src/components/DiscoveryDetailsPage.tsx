@@ -328,15 +328,24 @@ export function DiscoveryDetailsPage({
     setInstallSuccess(null);
 
     try {
-      await invoke("install_discovery_project", {
+      const installed = await invoke<string[]>("install_discovery_project", {
         instanceId: selectedInstanceId,
         projectType: details?.projectType || project.projectType,
         downloadUrl: installingVersion.downloadUrl,
         fileName: installingVersion.fileName,
+        provider: project.source,
+        projectId: project.id,
+        versionId: null,
       });
 
       const targetInst = instances.find((i) => i.id === selectedInstanceId)?.name || "instance";
-      setInstallSuccess(`Installed into ${targetInst}!`);
+      if (installed && installed.length > 1) {
+        setInstallSuccess(
+          `Installed into ${targetInst} with ${installed.length - 1} dependencies!`,
+        );
+      } else {
+        setInstallSuccess(`Installed into ${targetInst}!`);
+      }
       setTimeout(() => {
         setInstallingVersion(null);
         setInstallSuccess(null);
@@ -474,11 +483,18 @@ export function DiscoveryDetailsPage({
             <button
               type="button"
               onClick={() => {
-                setInstallingVersion({
-                  downloadUrl: project.downloadUrl || "",
-                  fileName: `${project.slug || "addon"}.jar`,
-                  title: project.title,
-                });
+                const ver =
+                  versionsList.find((v) => v.versionType.toLowerCase() === "release") ||
+                  versionsList[0];
+                if (ver && ver.downloadUrl) {
+                  setInstallingVersion({
+                    downloadUrl: ver.downloadUrl,
+                    fileName: ver.fileName,
+                    title: `${project.title} (${ver.versionNumber})`,
+                  });
+                } else {
+                  setActiveTab("versions");
+                }
               }}
               className="h-8 px-4 text-xs font-bold rounded-lg border-0 bg-primary text-primary-foreground cursor-pointer transition-opacity hover:opacity-90 shadow-sm"
             >

@@ -17,7 +17,7 @@ mod urlencoding {
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -476,6 +476,14 @@ pub async fn install_file_to_instance(
         instance_icon: None,
     });
 
+    // Guard: Prevent downloading API metadata endpoints as jar/zip files
+    let url_trimmed = download_url.trim_end_matches("/");
+    if url_trimmed.ends_with("/version") || url_trimmed.ends_with("/versions") {
+        let err_msg = "Cannot install: API metadata endpoint provided instead of a binary JAR/ZIP archive.".to_string();
+        crate::downloads::fail_download(app, &task_id, &err_msg);
+        return Err(err_msg);
+    }
+
     let mut res = client.get(download_url).send().await.map_err(|e| {
         crate::downloads::fail_download(app, &task_id, &e.to_string());
         format!("Download failed: {}", e)
@@ -491,9 +499,27 @@ pub async fn install_file_to_instance(
     use tokio::io::AsyncWriteExt;
     let mut file = tokio::fs::File::create(&target_file).await.map_err(|e| e.to_string())?;
     let mut downloaded: u64 = 0;
+    let mut is_first_chunk = true;
 
-    while let Some(chunk) = res.chunk().await.map_err(|e| e.to_string())? {
-        file.write_all(&chunk).await.map_err(|e| e.to_string())?;
+    while let Some(chunk) = res.chunk().await.map_err(|e| {
+        let _ = std::fs::remove_file(&target_file);
+        e.to_string()
+    })? {
+        if is_first_chunk {
+            is_first_chunk = false;
+            // Verify that mods/archives are not raw JSON text
+            if chunk.starts_with(b"[") || chunk.starts_with(b"{") {
+                let _ = std::fs::remove_file(&target_file);
+                let err_msg = "Download aborted: received JSON API response instead of a JAR/ZIP archive".to_string();
+                crate::downloads::fail_download(app, &task_id, &err_msg);
+                return Err(err_msg);
+            }
+        }
+
+        file.write_all(&chunk).await.map_err(|e| {
+            let _ = std::fs::remove_file(&target_file);
+            e.to_string()
+        })?;
         downloaded += chunk.len() as u64;
 
         let pct = if let Some(tot) = content_len {
@@ -685,6 +711,24 @@ struct ModrinthUser {
     avatar_url: Option<String>,
 }
 
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize)]
+pub struct ModrinthDependencyItem {
+    pub version_id: Option<String>,
+    pub project_id: Option<String>,
+    pub file_name: Option<String>,
+    pub dependency_type: String, // "required", "optional", "incompatible", "embedded"
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CurseForgeFileDependency {
+    pub mod_id: u64,
+    pub relation_type: u32, // 3 = RequiredDependency
+}
+
 #[derive(Deserialize)]
 struct ModrinthVersionItem {
     id: String,
@@ -696,6 +740,7 @@ struct ModrinthVersionItem {
     downloads: Option<u64>,
     version_type: Option<String>,
     files: Option<Vec<ModrinthFileItem>>,
+    dependencies: Option<Vec<ModrinthDependencyItem>>,
 }
 
 #[derive(Deserialize)]
@@ -725,6 +770,8 @@ struct CurseForgeFileItem {
     download_count: Option<u64>,
     release_type: Option<u32>,
     game_versions: Option<Vec<String>>,
+    #[allow(dead_code)]
+    dependencies: Option<Vec<CurseForgeFileDependency>>,
 }
 
 #[derive(Deserialize)]
@@ -1205,4 +1252,226 @@ async fn get_curseforge_versions(
     }).collect();
 
     Ok(versions)
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+struct FabricModMetadata {
+    id: Option<String>,
+    version: Option<String>,
+    name: Option<String>,
+    provides: Option<Vec<String>>,
+}
+
+/// Scans the instance .minecraft/mods folder and inspects each jar archive
+/// to discover installed mod IDs, provided submodules, and version strings.
+pub fn scan_installed_mods(mods_dir: &Path) -> HashMap<String, (String, PathBuf)> {
+    let mut map = HashMap::new();
+    if let Ok(entries) = std::fs::read_dir(mods_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("jar") {
+                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
+                // Store base stem
+                map.insert(stem.clone(), ("unknown".to_string(), path.clone()));
+
+                // Open archive to read metadata
+                if let Ok(file) = std::fs::File::open(&path) {
+                    if let Ok(mut archive) = zip::ZipArchive::new(file) {
+                        // Check fabric.mod.json
+                        if let Ok(mut mod_json) = archive.by_name("fabric.mod.json") {
+                            use std::io::Read;
+                            let mut buf = String::new();
+                            if mod_json.read_to_string(&mut buf).is_ok() {
+                                if let Ok(parsed) = serde_json::from_str::<FabricModMetadata>(&buf) {
+                                    let ver = parsed.version.unwrap_or_else(|| "1.0.0".to_string());
+                                    if let Some(id) = parsed.id {
+                                        map.insert(id.to_lowercase(), (ver.clone(), path.clone()));
+                                    }
+                                    if let Some(name) = parsed.name {
+                                        map.insert(name.to_lowercase(), (ver.clone(), path.clone()));
+                                    }
+                                    if let Some(provides) = parsed.provides {
+                                        for p in provides {
+                                            map.insert(p.to_lowercase(), (ver.clone(), path.clone()));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    map
+}
+
+/// Simple version comparison: returns true if v1 is strictly older than v2
+#[allow(dead_code)]
+fn is_version_older(v1: &str, v2: &str) -> bool {
+    let p1: Vec<u64> = v1.split(|c: char| !c.is_ascii_digit()).filter_map(|s| s.parse().ok()).collect();
+    let p2: Vec<u64> = v2.split(|c: char| !c.is_ascii_digit()).filter_map(|s| s.parse().ok()).collect();
+    let len = p1.len().min(p2.len());
+    for i in 0..len {
+        if p1[i] < p2[i] {
+            return true;
+        } else if p1[i] > p2[i] {
+            return false;
+        }
+    }
+    p1.len() < p2.len()
+}
+
+/// Installs a project file and automatically checks and downloads any required dependencies
+/// that are missing or outdated, including base loader libraries like Legacy Fabric API.
+pub async fn install_project_with_dependencies(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+    project_type: &str,
+    download_url: &str,
+    file_name: &str,
+    provider: Option<&str>,
+    _project_id: Option<&str>,
+    version_id: Option<&str>,
+) -> Result<Vec<String>, String> {
+    let mut installed_list = Vec::new();
+
+    // 1. Install primary file
+    install_file_to_instance(app, instance_id, project_type, download_url, file_name).await?;
+    installed_list.push(file_name.to_string());
+
+    if !project_type.eq_ignore_ascii_case("mods") && !project_type.eq_ignore_ascii_case("mod") {
+        return Ok(installed_list);
+    }
+
+    // 2. Read instance metadata
+    let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
+    let inst_file = inst_dir.join("instance.json");
+    let inst_data = std::fs::read_to_string(&inst_file).map_err(|e| e.to_string())?;
+    let instance: crate::instances::Instance = serde_json::from_str(&inst_data).map_err(|e| e.to_string())?;
+
+    let mc_version = &instance.mc_version;
+    let loader = instance.loader.as_deref().unwrap_or("").to_lowercase();
+    let mc_mods = inst_dir.join(".minecraft").join("mods");
+
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.6")
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    // 3. Scan installed mods
+    let mut installed_map = scan_installed_mods(&mc_mods);
+
+    // 4. Resolve API-declared required dependencies
+    let prov = provider.unwrap_or("modrinth");
+    if prov.eq_ignore_ascii_case("modrinth") {
+        if let Some(v_id) = version_id {
+            let v_url = format!("https://api.modrinth.com/v2/version/{}", v_id);
+            if let Ok(res) = client.get(&v_url).send().await {
+                if let Ok(v_data) = res.json::<ModrinthVersionItem>().await {
+                    if let Some(deps) = v_data.dependencies {
+                        for dep in deps {
+                            if dep.dependency_type == "required" {
+                                if let Some(dep_proj_id) = dep.project_id {
+                                    // Check if already installed
+                                    let mut need_install = true;
+                                    if let Some((_inst_ver, _)) = installed_map.get(&dep_proj_id.to_lowercase()) {
+                                        need_install = false;
+                                    }
+
+                                    if need_install {
+                                        // Resolve version
+                                        if let Ok(dep_versions) = get_project_versions("modrinth", &dep_proj_id, Some(mc_version), Some(&loader)).await {
+                                            if let Some(best_ver) = dep_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| dep_versions.first()).cloned() {
+                                                if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best_ver.download_url, &best_ver.file_name).await {
+                                                    installed_list.push(best_ver.file_name.clone());
+                                                    installed_map.insert(dep_proj_id.to_lowercase(), (best_ver.version_number, mc_mods.join(&best_ver.file_name)));
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 5. Essential Base Loader API detection
+    // Many legacy Fabric mods require Legacy Fabric API but do not explicitly declare it in Modrinth metadata
+    if loader == "fabric" || loader == "quilt" {
+        let is_legacy = mc_version.starts_with("1.8")
+            || mc_version.starts_with("1.7")
+            || mc_version.starts_with("1.6")
+            || mc_version.starts_with("1.9")
+            || mc_version.starts_with("1.10")
+            || mc_version.starts_with("1.11")
+            || mc_version.starts_with("1.12")
+            || mc_version.starts_with("1.13")
+            || mc_version.starts_with("b1.");
+
+        if is_legacy {
+            let has_legacy_api = installed_map.contains_key("legacy-fabric-api")
+                || installed_map.contains_key("legacy-fabric-keybinding-api-v1-common")
+                || installed_map.contains_key("legacy-fabric-api-base");
+
+            if !has_legacy_api {
+                // For Minecraft 1.8.9, use the dedicated stable Legacy Fabric API 1.4.0+1.8.9
+                // Later all-in-one Modrinth builds embed incompatible 1.12 jars and require external OSL
+                if mc_version == "1.8.9" {
+                    let dl_url = "https://edge.forgecdn.net/files/3758/10/legacy-fabric-api-1.4.0%2b1.8.9.jar";
+                    let f_name = "legacy-fabric-api-1.4.0+1.8.9.jar";
+                    if let Ok(_) = install_file_to_instance(app, instance_id, "mods", dl_url, f_name).await {
+                        installed_list.push(f_name.to_string());
+                    }
+                } else {
+                    // Query CurseForge project 400281 files specifically matching game version
+                    let cf_resolved = async {
+                        let cf_url = format!("https://api.curseforge.com/v1/mods/400281/files?gameVersion={}", urlencoding::encode(mc_version));
+                        let res = client.get(&cf_url).header("x-api-key", DEFAULT_CURSEFORGE_KEY).send().await.ok()?;
+                        let parsed: CurseForgeModFilesResponse = res.json().await.ok()?;
+                        let needle = format!("+{}", mc_version);
+                        let file_item = parsed.data.iter().find(|f| f.file_name.contains(&needle))
+                            .or_else(|| parsed.data.first())?;
+                        let dl = file_item.download_url.clone().unwrap_or_else(|| {
+                            format!("https://edge.forgecdn.net/files/{}/{}/{}", file_item.id / 1000, file_item.id % 1000, file_item.file_name)
+                        });
+                        Some((dl, file_item.file_name.clone()))
+                    }.await;
+
+                    if let Some((dl_url, f_name)) = cf_resolved {
+                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &dl_url, &f_name).await {
+                            installed_list.push(f_name);
+                        }
+                    } else if let Ok(api_versions) = get_project_versions("modrinth", "9CJED7xi", Some(mc_version), Some("fabric")).await {
+                        if let Some(best) = api_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| api_versions.first()).cloned() {
+                            if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name).await {
+                                installed_list.push(best.file_name);
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Modern Fabric (1.14+)
+            let has_fabric_api = installed_map.contains_key("fabric-api")
+                || installed_map.contains_key("fabric")
+                || installed_map.contains_key("fabric-resource-loader-v0");
+
+            if !has_fabric_api {
+                if let Ok(api_versions) = get_project_versions("modrinth", "P7dR8mSH", Some(mc_version), Some("fabric")).await {
+                    if let Some(best) = api_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| api_versions.first()).cloned() {
+                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name).await {
+                            installed_list.push(best.file_name);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(installed_list)
 }

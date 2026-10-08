@@ -270,9 +270,20 @@ async fn install_discovery_project(
     project_type: String,
     download_url: String,
     file_name: String,
-) -> Result<String, String> {
-    let path = discovery::install_file_to_instance(&app, &instance_id, &project_type, &download_url, &file_name).await?;
-    Ok(path.to_string_lossy().to_string())
+    provider: Option<String>,
+    project_id: Option<String>,
+    version_id: Option<String>,
+) -> Result<Vec<String>, String> {
+    discovery::install_project_with_dependencies(
+        &app,
+        &instance_id,
+        &project_type,
+        &download_url,
+        &file_name,
+        provider.as_deref(),
+        project_id.as_deref(),
+        version_id.as_deref(),
+    ).await
 }
 
 #[tauri::command]

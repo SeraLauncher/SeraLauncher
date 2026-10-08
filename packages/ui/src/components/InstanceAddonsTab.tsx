@@ -208,6 +208,7 @@ import { fade, pageFade } from "../motion";
 import type { Theme } from "../theme";
 import type {
   DiscoveryProject,
+  DiscoveryVersion,
   DiscoverySearchResponse,
   Instance,
   LoaderVersionInfo,
@@ -407,33 +408,71 @@ export function InstanceAddonsTab({
     setInstallingId(item.id);
 
     try {
-      const ext = category === "mods" ? ".jar" : ".zip";
-      const fileName = `${item.slug || category}${ext}`;
-      const downloadUrl =
-        item.downloadUrl ||
-        (provider === "modrinth" ? `https://api.modrinth.com/v2/project/${item.id}/version` : "");
+      let downloadUrl = item.downloadUrl || "";
+      let fileName = "";
 
+      // Resolve actual file version for this instance
       if (!downloadUrl) {
-        handleOpenProjectDetails(item);
-        setInstallingId(null);
-        return;
+        toast.info(`Resolving compatible version for ${item.title}...`);
+        const fetchedVersions = await invoke<DiscoveryVersion[]>("get_discovery_project_versions", {
+          provider: item.source,
+          projectId: item.id,
+          mcVersion: instance.mcVersion,
+          loader:
+            instance.loader && instance.loader !== "vanilla" && instance.loader !== "none"
+              ? instance.loader
+              : null,
+        });
+
+        const compatible =
+          fetchedVersions.find((v) => v.versionType.toLowerCase() === "release") ||
+          fetchedVersions[0];
+
+        if (!compatible || !compatible.downloadUrl) {
+          toast.error(`No compatible version found for Minecraft ${instance.mcVersion}`, {
+            description: "Opening details page to view available versions.",
+          });
+          handleOpenProjectDetails(item);
+          setInstallingId(null);
+          return;
+        }
+
+        downloadUrl = compatible.downloadUrl;
+        fileName = compatible.fileName;
+      }
+
+      if (!fileName) {
+        const ext = category === "mods" ? ".jar" : ".zip";
+        fileName = `${item.slug || category}${ext}`;
       }
 
       toast.info(`Downloading ${item.title}...`, {
         description: "Check the header for download progress.",
       });
 
-      await invoke("install_discovery_project", {
+      const installed = await invoke<string[]>("install_discovery_project", {
         instanceId: instance.id,
         projectType: category,
         downloadUrl,
         fileName,
+        provider: item.source,
+        projectId: item.id,
+        versionId: null,
       });
 
       setInstalledIds((prev) => new Set(prev).add(item.id));
-      toast.success(`Installed ${item.title}!`, {
-        description: `Saved to instance ${category} directory.`,
-      });
+      if (installed && installed.length > 1) {
+        toast.success(
+          `Installed ${item.title} and ${installed.length - 1} required dependencies!`,
+          {
+            description: installed.slice(1).join(", "),
+          },
+        );
+      } else {
+        toast.success(`Installed ${item.title}!`, {
+          description: `Saved to instance ${category} directory.`,
+        });
+      }
     } catch (err) {
       toast.error(`Failed to install ${item.title}`, {
         description: String(err),
