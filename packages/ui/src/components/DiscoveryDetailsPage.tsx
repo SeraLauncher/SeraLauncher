@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Icon } from "./Icon";
 import { SafeContentRenderer } from "./SafeContentRenderer";
@@ -19,6 +20,8 @@ interface DiscoveryDetailsPageProps {
   project: DiscoveryProject;
   instances: Instance[];
   versions: MinecraftVersion[];
+  targetInstanceId?: string;
+  targetInstanceName?: string;
   onBack: () => void;
 }
 
@@ -200,6 +203,8 @@ export function DiscoveryDetailsPage({
   theme,
   project,
   instances,
+  targetInstanceId,
+  targetInstanceName,
   onBack,
 }: DiscoveryDetailsPageProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>("description");
@@ -357,6 +362,53 @@ export function DiscoveryDetailsPage({
     }
   };
 
+  const handleDirectInstall = async (downloadUrl: string, fileName: string, title?: string) => {
+    const instId = targetInstanceId || selectedInstanceId;
+    if (!instId) return;
+
+    setIsInstalling(true);
+    setInstallSuccess(null);
+
+    const instName =
+      targetInstanceName || instances.find((i) => i.id === instId)?.name || "instance";
+    toast.info(`Downloading ${title || project.title}...`, {
+      description: `Installing directly into ${instName}.`,
+    });
+
+    try {
+      const installed = await invoke<string[]>("install_discovery_project", {
+        instanceId: instId,
+        projectType: details?.projectType || project.projectType,
+        downloadUrl,
+        fileName,
+        provider: project.source,
+        projectId: project.id,
+        versionId: null,
+      });
+
+      if (installed && installed.length > 1) {
+        toast.success(
+          `Installed ${title || project.title} and ${installed.length - 1} dependencies!`,
+          {
+            description: installed.slice(1).join(", "),
+          },
+        );
+        setInstallSuccess(`Installed with ${installed.length - 1} dependencies!`);
+      } else {
+        toast.success(`Installed ${title || project.title} into ${instName}!`);
+        setInstallSuccess("Installed successfully!");
+      }
+
+      setTimeout(() => setInstallSuccess(null), 2500);
+    } catch (err) {
+      toast.error(`Failed to install ${title || project.title}`, {
+        description: String(err),
+      });
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+
   const handleCopyLink = () => {
     const webUrl = details?.webUrl || project.slug;
     if (webUrl) {
@@ -482,23 +534,32 @@ export function DiscoveryDetailsPage({
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               type="button"
+              disabled={isInstalling}
               onClick={() => {
                 const ver =
                   versionsList.find((v) => v.versionType.toLowerCase() === "release") ||
                   versionsList[0];
                 if (ver && ver.downloadUrl) {
-                  setInstallingVersion({
-                    downloadUrl: ver.downloadUrl,
-                    fileName: ver.fileName,
-                    title: `${project.title} (${ver.versionNumber})`,
-                  });
+                  if (targetInstanceId) {
+                    handleDirectInstall(
+                      ver.downloadUrl,
+                      ver.fileName,
+                      `${project.title} (${ver.versionNumber})`,
+                    );
+                  } else {
+                    setInstallingVersion({
+                      downloadUrl: ver.downloadUrl,
+                      fileName: ver.fileName,
+                      title: `${project.title} (${ver.versionNumber})`,
+                    });
+                  }
                 } else {
                   setActiveTab("versions");
                 }
               }}
-              className="h-8 px-4 text-xs font-bold rounded-lg border-0 bg-primary text-primary-foreground cursor-pointer transition-opacity hover:opacity-90 shadow-sm"
+              className="h-8 px-4 text-xs font-bold rounded-lg border-0 bg-primary text-primary-foreground cursor-pointer transition-opacity hover:opacity-90 shadow-sm disabled:opacity-60"
             >
-              Install
+              {isInstalling ? "Installing..." : installSuccess ? "Installed!" : "Install"}
             </button>
 
             {/* 3-Dots Action Menu */}
@@ -1061,8 +1122,8 @@ export function DiscoveryDetailsPage({
         </div>
       </aside>
 
-      {/* Quick Install Dialog */}
-      {installingVersion && (
+      {/* Quick Install Dialog (only shown when outside instance management) */}
+      {!targetInstanceId && installingVersion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div
             className="w-full max-w-md rounded-2xl border border-border p-5 shadow-2xl flex flex-col gap-4"

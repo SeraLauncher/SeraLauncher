@@ -351,9 +351,14 @@ pub async fn install_mod_loader(
         }
     }
 
-    // 4. Update instance.json with loader
+    // 4. Update instance.json with loader and rename default Vanilla instances
     instance.loader = Some(loader.to_string());
     instance.loader_version = Some(loader_version.to_string());
+
+    let old_default_name = format!("Vanilla {}", instance.mc_version);
+    if instance.name.eq_ignore_ascii_case(&old_default_name) || instance.name.to_lowercase().starts_with("vanilla ") {
+        instance.name = format!("{} {}", ldr_name, instance.mc_version);
+    }
 
     let updated_json = serde_json::to_string_pretty(&instance)
         .map_err(|e| format!("Failed to serialize instance: {}", e))?;

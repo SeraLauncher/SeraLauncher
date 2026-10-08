@@ -1,3 +1,27 @@
+export function getLoaderDisplay(inst: {
+  loader?: string | null;
+  versionType?: string | null;
+  mcVersion: string;
+}): string {
+  if (inst.loader) {
+    const l = inst.loader.toLowerCase();
+    if (l !== "vanilla" && l !== "none") {
+      const prefix =
+        l === "fabric"
+          ? "Fabric"
+          : l === "forge"
+            ? "Forge"
+            : l === "neoforge"
+              ? "NeoForge"
+              : l === "quilt"
+                ? "Quilt"
+                : inst.loader;
+      return `${prefix} ${inst.mcVersion}`;
+    }
+  }
+  return `${inst.versionType === "snapshot" ? "Snapshot" : "Vanilla"} ${inst.mcVersion}`;
+}
+
 import { useMemo, useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -398,7 +422,7 @@ export function InstancePage({
                     {inst.name}
                   </span>
                   <span className="text-[0.76rem] leading-[1.2] truncate text-muted-foreground">
-                    Vanilla {inst.mcVersion}
+                    {getLoaderDisplay(inst)}
                   </span>
                 </div>
               </div>
@@ -1114,7 +1138,7 @@ function InstanceManagementView({
     };
   }, [customJava, minMemory, maxMemory, jvmArgs]);
 
-  const loaderLabel = `${instance.versionType === "snapshot" ? "Snapshot" : "Vanilla"} ${instance.mcVersion}`;
+  const loaderLabel = getLoaderDisplay(instance);
 
   if (activeTab === "settings") {
     return (

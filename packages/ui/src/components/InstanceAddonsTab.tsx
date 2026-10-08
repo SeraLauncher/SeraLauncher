@@ -294,8 +294,14 @@ export function InstanceAddonsTab({
 
   const handleLoaderInstalled = async (loader: string, loaderVersion: string) => {
     setSelectedLoader(loader);
+    const ldrPrefix = capitalizeFirst(loader);
+    const isVanillaName =
+      instance.name.toLowerCase() === `vanilla ${instance.mcVersion.toLowerCase()}` ||
+      instance.name.toLowerCase().startsWith("vanilla ");
+
     const updated = {
       ...instance,
+      name: isVanillaName ? `${ldrPrefix} ${instance.mcVersion}` : instance.name,
       loader,
       loaderVersion,
     };
@@ -498,6 +504,8 @@ export function InstanceAddonsTab({
             project={selectedProject}
             instances={instances}
             versions={versions}
+            targetInstanceId={instance.id}
+            targetInstanceName={instance.name}
             onBack={handleBackFromDetails}
           />
         </motion.div>
