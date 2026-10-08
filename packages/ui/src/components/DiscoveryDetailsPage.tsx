@@ -4,6 +4,7 @@ import { Icon } from "./Icon";
 import { SafeContentRenderer } from "./SafeContentRenderer";
 import { Dropdown } from "./Dropdown";
 import { Badge } from "./ui/badge";
+import { Modal } from "./ui/modal";
 import type { Theme } from "../theme";
 import type {
   DiscoveryAuthor,
@@ -1122,28 +1123,41 @@ export function DiscoveryDetailsPage({
         </div>
       </aside>
 
-      {/* Quick Install Dialog (only shown when outside instance management) */}
+      {/* Quick Install Modal using shared Modal component (only shown when outside instance management) */}
       {!targetInstanceId && installingVersion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div
-            className="w-full max-w-md rounded-2xl border border-border p-5 shadow-2xl flex flex-col gap-4"
-            style={{ background: theme.card }}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold" style={{ color: theme.foreground }}>
-                Install {installingVersion.title}
-              </h2>
+        <Modal
+          isOpen={true}
+          onClose={() => setInstallingVersion(null)}
+          theme={theme}
+          title={`Install ${installingVersion.title}`}
+          maxWidth={440}
+          footer={
+            <>
               <button
                 type="button"
                 onClick={() => setInstallingVersion(null)}
-                className="text-xs p-1 rounded cursor-pointer"
+                className="h-7.5 px-3 text-xs font-medium rounded-md border-0 bg-transparent cursor-pointer transition-colors hover:bg-foreground/5 select-none"
                 style={{ color: theme.mutedForeground }}
               >
-                ✕
+                Cancel
               </button>
-            </div>
-
-            <p className="text-xs" style={{ color: theme.mutedForeground }}>
+              <button
+                type="button"
+                disabled={instances.length === 0 || isInstalling}
+                onClick={handleInstall}
+                className="inline-flex items-center justify-center h-7.5 px-3 text-xs font-semibold rounded-md border-0 cursor-pointer transition-[opacity,filter] hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
+                style={{
+                  background: theme.primary,
+                  color: theme.primaryForeground,
+                }}
+              >
+                {isInstalling ? "Installing..." : "Install Now"}
+              </button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-3 py-1">
+            <p className="text-xs m-0" style={{ color: theme.mutedForeground }}>
               Choose which instance to install this {details?.projectType || project.projectType}{" "}
               into:
             </p>
@@ -1177,31 +1191,8 @@ export function DiscoveryDetailsPage({
                 ✓ {installSuccess}
               </div>
             )}
-
-            <div className="flex items-center justify-end gap-2 mt-2">
-              <button
-                type="button"
-                onClick={() => setInstallingVersion(null)}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-border cursor-pointer"
-                style={{ color: theme.foreground }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={instances.length === 0 || isInstalling}
-                onClick={handleInstall}
-                className="px-4 py-1.5 text-xs font-semibold rounded-lg disabled:opacity-50 transition-opacity cursor-pointer"
-                style={{
-                  background: theme.primary,
-                  color: theme.primaryForeground,
-                }}
-              >
-                {isInstalling ? "Installing..." : "Install Now"}
-              </button>
-            </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Gallery Lightbox Preview Modal */}

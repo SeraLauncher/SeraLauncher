@@ -63,11 +63,11 @@ export function Modal({
             transition={snappy}
           >
             {title && (
-              <div className="flex items-center justify-between px-4.5 py-3 border-b border-border/60">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60">
                 <div className="flex items-center gap-2 min-w-0">
                   {typeof title === "string" ? (
                     <h2
-                      className="text-[0.92rem] font-semibold m-0 tracking-[-0.01em] leading-tight truncate"
+                      className="text-[0.84rem] font-semibold m-0 tracking-[-0.01em] leading-tight truncate"
                       style={{ color: theme.foreground }}
                     >
                       {title}
@@ -79,7 +79,7 @@ export function Modal({
                 {showCloseButton && (
                   <button
                     type="button"
-                    className="bg-foreground/10 hover:bg-foreground/18 border-0 cursor-pointer size-6 flex items-center justify-center rounded-full transition-colors duration-120 p-0 text-foreground"
+                    className="bg-foreground/10 hover:bg-foreground/18 border-0 cursor-pointer size-5.5 flex items-center justify-center rounded-full transition-colors duration-120 p-0 text-foreground"
                     onClick={onClose}
                     aria-label="Close modal"
                   >
@@ -99,7 +99,7 @@ export function Modal({
             </div>
 
             {footer && (
-              <div className="relative z-0 flex items-center justify-end gap-2 px-4.5 py-3 border-t border-border/60">
+              <div className="relative z-0 flex items-center justify-end gap-2 px-4 py-2.5 border-t border-border/60">
                 {footer}
               </div>
             )}

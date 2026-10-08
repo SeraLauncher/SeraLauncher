@@ -317,7 +317,7 @@ function AccountModalDialog({
         <div className="flex items-center justify-between w-full">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-secondary hover:bg-card text-xs font-semibold cursor-pointer transition-colors"
+            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-md border border-border bg-secondary hover:bg-card text-xs font-semibold cursor-pointer transition-colors"
             onClick={() => {
               stopPolling();
               setMode("view");
@@ -334,7 +334,7 @@ function AccountModalDialog({
           {account && onRemoveAccount && (
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border-0 bg-transparent text-xs font-semibold cursor-pointer hover:bg-destructive/12 transition-colors"
+              className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-md border-0 bg-transparent text-xs font-semibold cursor-pointer hover:bg-destructive/12 transition-colors"
               onClick={() => {
                 onRemoveAccount(account.id);
               }}
@@ -360,7 +360,7 @@ function AccountModalDialog({
           </button>
           <button
             type="button"
-            className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center h-7.5 px-3 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={onClose}
             style={{ background: theme.primary, color: theme.primaryForeground }}
           >

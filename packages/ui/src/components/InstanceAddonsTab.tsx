@@ -104,7 +104,7 @@ function InstallLoaderModal({
         <>
           <button
             type="button"
-            className="h-8 px-3.5 rounded-md border-0 bg-transparent text-[0.82rem] font-medium cursor-pointer transition-colors hover:bg-foreground/5 select-none"
+            className="h-7.5 px-3 rounded-md border-0 bg-transparent text-xs font-medium cursor-pointer transition-colors hover:bg-foreground/5 select-none"
             style={{ color: theme.mutedForeground }}
             onClick={onClose}
             disabled={installing}
@@ -113,7 +113,7 @@ function InstallLoaderModal({
           </button>
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-md border-0 text-[0.82rem] font-semibold cursor-pointer transition-[opacity,filter] hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
+            className="inline-flex items-center justify-center gap-1.5 h-7.5 px-3 rounded-md border-0 text-xs font-semibold cursor-pointer transition-[opacity,filter] hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
             style={{ background: theme.primary, color: theme.primaryForeground }}
             onClick={handleInstall}
             disabled={installing || loadingVersions}

@@ -599,7 +599,7 @@ function CreateInstanceModal({
         <>
           <button
             type="button"
-            className="h-8 px-3.5 rounded-md border-0 bg-transparent text-[0.82rem] font-medium cursor-pointer transition-colors duration-120 hover:bg-foreground/5"
+            className="h-7.5 px-3 rounded-md border-0 bg-transparent text-xs font-medium cursor-pointer transition-colors duration-120 hover:bg-foreground/5 select-none"
             style={{ color: theme.mutedForeground }}
             onClick={onClose}
           >
@@ -607,7 +607,7 @@ function CreateInstanceModal({
           </button>
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-md border-0 text-[0.82rem] font-semibold cursor-pointer transition-[opacity,filter] duration-120 hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center gap-1.5 h-7.5 px-3 rounded-md border-0 text-xs font-semibold cursor-pointer transition-[opacity,filter] duration-120 hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
             style={{ background: theme.primary, color: theme.primaryForeground }}
             onClick={handleCreate}
             disabled={!selectedVersion || !name.trim()}
@@ -1967,7 +1967,7 @@ function DeleteConfirmModal({
         <>
           <button
             type="button"
-            className="h-8 px-3.5 rounded-md border-0 bg-transparent text-[0.82rem] font-medium cursor-pointer transition-colors duration-120 hover:bg-foreground/5"
+            className="h-7.5 px-3 rounded-md border-0 bg-transparent text-xs font-medium cursor-pointer transition-colors duration-120 hover:bg-foreground/5 select-none"
             style={{ color: theme.mutedForeground }}
             onClick={onClose}
             disabled={busy}
@@ -1976,7 +1976,7 @@ function DeleteConfirmModal({
           </button>
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-md border-0 bg-red-500 hover:bg-red-600 text-white text-[0.82rem] font-semibold cursor-pointer transition-all hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center gap-1.5 h-7.5 px-3 rounded-md border-0 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold cursor-pointer transition-all hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
             onClick={handleDelete}
             disabled={busy}
           >

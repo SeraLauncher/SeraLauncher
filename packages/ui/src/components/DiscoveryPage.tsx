@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "./Icon";
 import { Dropdown } from "./Dropdown";
 import { DiscoveryDetailsPage } from "./DiscoveryDetailsPage";
+import { Modal } from "./ui/modal";
 import { DiscoveryProviderToggle, type DiscoveryProvider } from "./DiscoveryProviderToggle";
 import { DiscoveryPagination } from "./DiscoveryPagination";
 import { DiscoveryProjectCard } from "./DiscoveryProjectCard";
@@ -511,28 +512,41 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
               )}
             </aside>
 
-            {/* Quick Install Dialog */}
+            {/* Quick Install Modal using shared Modal component */}
             {installingProject && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-                <div
-                  className="w-full max-w-md rounded-2xl border border-border p-5 shadow-2xl flex flex-col gap-4"
-                  style={{ background: theme.card }}
-                >
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-base font-semibold" style={{ color: theme.foreground }}>
-                      Install {installingProject.title}
-                    </h2>
+              <Modal
+                isOpen={true}
+                onClose={() => setInstallingProject(null)}
+                theme={theme}
+                title={`Install ${installingProject.title}`}
+                maxWidth={440}
+                footer={
+                  <>
                     <button
                       type="button"
                       onClick={() => setInstallingProject(null)}
-                      className="text-xs p-1 rounded cursor-pointer"
+                      className="h-7.5 px-3 text-xs font-medium rounded-md border-0 bg-transparent cursor-pointer transition-colors hover:bg-foreground/5 select-none"
                       style={{ color: theme.mutedForeground }}
                     >
-                      ✕
+                      Cancel
                     </button>
-                  </div>
-
-                  <p className="text-xs" style={{ color: theme.mutedForeground }}>
+                    <button
+                      type="button"
+                      disabled={instances.length === 0 || isInstalling}
+                      onClick={handleInstallFile}
+                      className="inline-flex items-center justify-center h-7.5 px-3 text-xs font-semibold rounded-md border-0 cursor-pointer transition-[opacity,filter] hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
+                      style={{
+                        background: theme.primary,
+                        color: theme.primaryForeground,
+                      }}
+                    >
+                      {isInstalling ? "Installing..." : "Install Now"}
+                    </button>
+                  </>
+                }
+              >
+                <div className="flex flex-col gap-3 py-1">
+                  <p className="text-xs m-0" style={{ color: theme.mutedForeground }}>
                     Choose which instance to install this {installingProject.projectType} into:
                   </p>
 
@@ -565,31 +579,8 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                       ✓ {installSuccess}
                     </div>
                   )}
-
-                  <div className="flex items-center justify-end gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setInstallingProject(null)}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg border border-border cursor-pointer"
-                      style={{ color: theme.foreground }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      disabled={instances.length === 0 || isInstalling}
-                      onClick={handleInstallFile}
-                      className="px-4 py-1.5 text-xs font-semibold rounded-lg disabled:opacity-50 transition-opacity cursor-pointer"
-                      style={{
-                        background: theme.primary,
-                        color: theme.primaryForeground,
-                      }}
-                    >
-                      {isInstalling ? "Installing..." : "Install Now"}
-                    </button>
-                  </div>
                 </div>
-              </div>
+              </Modal>
             )}
           </main>
         </motion.div>
