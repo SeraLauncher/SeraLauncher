@@ -23,6 +23,7 @@ import {
   themes,
   type Appearance,
   type SettingsTab,
+  toast,
 } from "@sera/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useSettings, useInstances, useAccounts, useDownloads, useDownloadHistory } from "./store";
@@ -338,7 +339,13 @@ export default function App() {
                       }
                       refreshJavaRuntimes();
                     }}
-                    onDeleteInstance={deleteInstance}
+                    onDeleteInstance={async (id) => {
+                      if (managingInstanceId === id) {
+                        setManagingInstanceId(null);
+                      }
+                      await deleteInstance(id);
+                      toast.success("Instance deleted permanently");
+                    }}
                     onUpdateInstance={async (updated) => {
                       const res = await updateInstance(updated);
                       if (res && res.id !== updated.id && managingInstanceId === updated.id) {

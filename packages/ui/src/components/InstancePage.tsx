@@ -173,24 +173,43 @@ export function InstancePage({
 
   if (managingInstance) {
     return (
-      <InstanceManagementView
-        theme={theme}
-        instance={managingInstance}
-        activeTab={effectiveTab}
-        javaRuntimes={javaRuntimes}
-        systemMemoryMb={systemMemoryMb}
-        onRefreshJava={onRefreshJava}
-        runningInstances={runningInstances}
-        onKillInstance={onKillInstance}
-        instances={instances}
-        versions={versions}
-        onSelectTab={setEffectiveTab}
-        onBack={() => setEffectiveManagingId(null)}
-        onLaunch={() => onLaunch(managingInstance)}
-        onOpenFolder={() => onOpenFolder(managingInstance.id)}
-        onUpdate={onUpdateInstance}
-        onDelete={() => setDeleteConfirmId(managingInstance.id)}
-      />
+      <>
+        <InstanceManagementView
+          theme={theme}
+          instance={managingInstance}
+          activeTab={effectiveTab}
+          javaRuntimes={javaRuntimes}
+          systemMemoryMb={systemMemoryMb}
+          onRefreshJava={onRefreshJava}
+          runningInstances={runningInstances}
+          onKillInstance={onKillInstance}
+          instances={instances}
+          versions={versions}
+          onSelectTab={setEffectiveTab}
+          onBack={() => setEffectiveManagingId(null)}
+          onLaunch={() => onLaunch(managingInstance)}
+          onOpenFolder={() => onOpenFolder(managingInstance.id)}
+          onUpdate={onUpdateInstance}
+          onDelete={() => setDeleteConfirmId(managingInstance.id)}
+        />
+        <AnimatePresence>
+          {deleteConfirmId && (
+            <DeleteConfirmModal
+              theme={theme}
+              instanceId={deleteConfirmId}
+              instanceName={
+                instances.find((i) => i.id === deleteConfirmId)?.name ?? managingInstance.name
+              }
+              onClose={() => setDeleteConfirmId(null)}
+              onConfirm={async () => {
+                setEffectiveManagingId(null);
+                await onDeleteInstance(deleteConfirmId);
+                setDeleteConfirmId(null);
+              }}
+            />
+          )}
+        </AnimatePresence>
+      </>
     );
   }
 
@@ -1942,7 +1961,7 @@ function DeleteConfirmModal({
       isOpen={true}
       onClose={onClose}
       theme={theme}
-      title={<span style={{ color: theme.destructive }}>Delete Instance</span>}
+      title={<span className="text-red-500 font-bold">Delete Instance</span>}
       maxWidth={420}
       footer={
         <>
@@ -1957,8 +1976,7 @@ function DeleteConfirmModal({
           </button>
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-md border-0 text-[0.82rem] font-semibold cursor-pointer transition-[opacity,filter] duration-120 hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: theme.destructive, color: "#fff" }}
+            className="inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-md border-0 bg-red-500 hover:bg-red-600 text-white text-[0.82rem] font-semibold cursor-pointer transition-all hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleDelete}
             disabled={busy}
           >
@@ -1967,10 +1985,18 @@ function DeleteConfirmModal({
         </>
       }
     >
-      <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
-        Are you sure you want to delete <strong>{instanceName}</strong>? All worlds, configurations,
-        and saves inside its directory will be deleted.
-      </p>
+      <div
+        className="flex flex-col gap-2 select-none text-sm leading-relaxed"
+        style={{ color: theme.foreground }}
+      >
+        <p className="m-0">
+          Are you sure you want to delete <strong>{instanceName}</strong>?
+        </p>
+        <p className="m-0 text-xs text-muted-foreground">
+          This instance and its entire folder will be deleted permanently. All worlds, mods, and
+          configurations cannot be recovered.
+        </p>
+      </div>
     </Modal>
   );
 }
