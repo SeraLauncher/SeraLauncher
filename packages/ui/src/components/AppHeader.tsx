@@ -511,33 +511,58 @@ export function AppHeader({
                               item.instanceIcon,
                             );
                             const iconSrc = getBlockIconSrc(blockKey);
+
+                            const typeLabel =
+                              item.type === "mod"
+                                ? "Mod"
+                                : item.type === "modpack"
+                                  ? "Modpack"
+                                  : item.type === "resourcepack"
+                                    ? "Resource Pack"
+                                    : item.type === "shader"
+                                      ? "Shader"
+                                      : item.type === "loader"
+                                        ? "Mod Loader"
+                                        : "New instance";
+
                             const statusLabel =
                               item.status === "completed"
-                                ? "New instance"
+                                ? typeLabel
                                 : item.status === "canceled"
                                   ? "Canceled"
                                   : "Failed";
+
+                            const displayTitle = item.title || item.instanceName;
 
                             return (
                               <div
                                 key={item.id}
                                 className="group flex items-center justify-between px-3.5 py-1.5 hover:bg-secondary/30 transition-colors text-xs"
                               >
-                                <div
-                                  className="size-6 rounded-md flex items-center justify-center shrink-0"
-                                  style={{
-                                    background: `linear-gradient(135deg, ${gradient.top}, ${gradient.bottom})`,
-                                  }}
-                                >
-                                  <img src={iconSrc} alt="" className="size-5 object-contain" />
-                                </div>
+                                {item.iconUrl ? (
+                                  <img
+                                    src={item.iconUrl}
+                                    alt=""
+                                    className="size-6 rounded-md object-cover shrink-0 border border-border"
+                                  />
+                                ) : (
+                                  <div
+                                    className="size-6 rounded-md flex items-center justify-center shrink-0"
+                                    style={{
+                                      background: `linear-gradient(135deg, ${gradient.top}, ${gradient.bottom})`,
+                                    }}
+                                  >
+                                    <img src={iconSrc} alt="" className="size-5 object-contain" />
+                                  </div>
+                                )}
 
                                 <div className="flex flex-col min-w-0 flex-1 ml-2">
                                   <span
                                     className="truncate text-xs font-medium"
                                     style={{ color: theme.foreground }}
+                                    title={displayTitle}
                                   >
-                                    {item.instanceName}
+                                    {displayTitle}
                                   </span>
                                   <div
                                     className="text-[10px] font-mono flex items-center"
@@ -545,7 +570,17 @@ export function AppHeader({
                                   >
                                     <span>{formatTimeAgo(item.timestamp)}</span>
                                     <span className="mx-1 opacity-60">•</span>
-                                    <span>{statusLabel}</span>
+                                    <span className="capitalize">{statusLabel}</span>
+                                    {item.title &&
+                                      item.instanceName &&
+                                      item.title !== item.instanceName && (
+                                        <>
+                                          <span className="mx-1 opacity-60">•</span>
+                                          <span className="truncate max-w-[90px]">
+                                            {item.instanceName}
+                                          </span>
+                                        </>
+                                      )}
                                   </div>
                                 </div>
 
@@ -557,7 +592,7 @@ export function AppHeader({
                                     onDeleteHistoryItem?.(item.id);
                                   }}
                                   title="Remove from history"
-                                  aria-label={`Remove ${item.instanceName} from history`}
+                                  aria-label={`Remove ${displayTitle} from history`}
                                 >
                                   <Icon name="trash" size={14} color={theme.mutedForeground} />
                                 </button>
@@ -574,134 +609,132 @@ export function AppHeader({
           </AnimatePresence>
         </div>
 
-        {(!isAnyActive || runningCount > 0) && (
-          <div className="relative flex items-center" ref={tasksRef}>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 h-6 px-2.5 rounded-lg border border-border text-xs font-medium cursor-pointer transition-colors duration-120"
-              style={{
-                background: theme.background,
-                color: runningCount > 0 ? theme.foreground : theme.mutedForeground,
-              }}
-              onClick={() => setShowTasks((prev) => !prev)}
-              aria-haspopup="dialog"
-              aria-expanded={showTasks}
-            >
-              <div className="relative flex items-center justify-center size-2">
-                {runningCount > 0 && (
-                  <span
-                    className="absolute -inset-0.5 rounded-full animate-header-task-pulse"
-                    style={{ background: theme.success }}
-                  />
-                )}
+        <div className="relative flex items-center" ref={tasksRef}>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 h-6 px-2.5 rounded-lg border border-border text-xs font-medium cursor-pointer transition-colors duration-120"
+            style={{
+              background: theme.background,
+              color: runningCount > 0 ? theme.foreground : theme.mutedForeground,
+            }}
+            onClick={() => setShowTasks((prev) => !prev)}
+            aria-haspopup="dialog"
+            aria-expanded={showTasks}
+          >
+            <div className="relative flex items-center justify-center size-2">
+              {runningCount > 0 && (
                 <span
-                  className="size-1.5 rounded-full"
-                  style={{
-                    background: runningCount > 0 ? theme.success : theme.mutedForeground,
-                    opacity: runningCount > 0 ? 1 : 0.45,
-                  }}
+                  className="absolute -inset-0.5 rounded-full animate-header-task-pulse"
+                  style={{ background: theme.success }}
                 />
-              </div>
-              <span className="text-[0.75rem] font-semibold leading-none">{runningText}</span>
-              <motion.span
-                className="inline-flex items-center justify-center shrink-0"
-                animate={{ rotate: showTasks ? 180 : 0 }}
-                transition={snappy}
-              >
-                <Icon name="chevronDown" size={13} color={theme.mutedForeground} />
-              </motion.span>
-            </button>
-
-            <AnimatePresence>
-              {showTasks && (
-                <motion.div
-                  key="task-popover"
-                  className="absolute right-0 top-[calc(100%+8px)] w-[260px] rounded-xl border border-border shadow-[0_16px_36px_rgba(0,0,0,0.35)] z-50 overflow-hidden"
-                  initial={{ opacity: 0, scale: 0.96, y: -4 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                  transition={snappy}
-                  style={{
-                    background: theme.card,
-                    borderColor: theme.border,
-                  }}
-                >
-                  <div
-                    className="flex items-center justify-between px-3.5 py-2.5 border-b border-border text-xs font-semibold"
-                    style={{ borderColor: theme.border }}
-                  >
-                    <span className="text-xs font-semibold">Running Tasks</span>
-                    <span
-                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none"
-                      style={{
-                        background: runningCount > 0 ? theme.success : theme.secondary,
-                        color: runningCount > 0 ? "#ffffff" : theme.mutedForeground,
-                      }}
-                    >
-                      {runningCount}
-                    </span>
-                  </div>
-
-                  {runningCount === 0 ? (
-                    <div
-                      className="flex items-center justify-center p-4 text-xs"
-                      style={{ color: theme.mutedForeground }}
-                    >
-                      No instance running
-                    </div>
-                  ) : (
-                    <div className="flex flex-col p-1.5 max-h-[220px] overflow-y-auto gap-1">
-                      {runningInstances.map((inst) => (
-                        <div
-                          key={inst.id}
-                          className="flex items-center justify-between p-2 rounded-lg transition-colors"
-                          style={{ background: theme.secondary }}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className="size-2 rounded-full shrink-0"
-                              style={{ background: theme.success }}
-                            />
-                            <div className="flex flex-col min-w-0">
-                              <span
-                                className="text-xs font-medium truncate leading-tight"
-                                style={{ color: theme.foreground }}
-                              >
-                                {inst.name}
-                              </span>
-                              {inst.mcVersion && (
-                                <span
-                                  className="text-[10px] leading-tight"
-                                  style={{ color: theme.mutedForeground }}
-                                >
-                                  {inst.mcVersion}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          {onKillInstance && (
-                            <button
-                              type="button"
-                              className="size-5 flex items-center justify-center rounded cursor-pointer transition-colors shrink-0"
-                              title="Stop instance"
-                              aria-label={`Stop ${inst.name}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onKillInstance(inst.id);
-                              }}
-                            >
-                              <Icon name="x" size={13} color={theme.mutedForeground} />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
               )}
-            </AnimatePresence>
-          </div>
-        )}
+              <span
+                className="size-1.5 rounded-full"
+                style={{
+                  background: runningCount > 0 ? theme.success : theme.mutedForeground,
+                  opacity: runningCount > 0 ? 1 : 0.45,
+                }}
+              />
+            </div>
+            <span className="text-[0.75rem] font-semibold leading-none">{runningText}</span>
+            <motion.span
+              className="inline-flex items-center justify-center shrink-0"
+              animate={{ rotate: showTasks ? 180 : 0 }}
+              transition={snappy}
+            >
+              <Icon name="chevronDown" size={13} color={theme.mutedForeground} />
+            </motion.span>
+          </button>
+
+          <AnimatePresence>
+            {showTasks && (
+              <motion.div
+                key="task-popover"
+                className="absolute right-0 top-[calc(100%+8px)] w-[260px] rounded-xl border border-border shadow-[0_16px_36px_rgba(0,0,0,0.35)] z-50 overflow-hidden"
+                initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                transition={snappy}
+                style={{
+                  background: theme.card,
+                  borderColor: theme.border,
+                }}
+              >
+                <div
+                  className="flex items-center justify-between px-3.5 py-2.5 border-b border-border text-xs font-semibold"
+                  style={{ borderColor: theme.border }}
+                >
+                  <span className="text-xs font-semibold">Running Tasks</span>
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none"
+                    style={{
+                      background: runningCount > 0 ? theme.success : theme.secondary,
+                      color: runningCount > 0 ? "#ffffff" : theme.mutedForeground,
+                    }}
+                  >
+                    {runningCount}
+                  </span>
+                </div>
+
+                {runningCount === 0 ? (
+                  <div
+                    className="flex items-center justify-center p-4 text-xs"
+                    style={{ color: theme.mutedForeground }}
+                  >
+                    No instance running
+                  </div>
+                ) : (
+                  <div className="flex flex-col p-1.5 max-h-[220px] overflow-y-auto gap-1">
+                    {runningInstances.map((inst) => (
+                      <div
+                        key={inst.id}
+                        className="flex items-center justify-between p-2 rounded-lg transition-colors"
+                        style={{ background: theme.secondary }}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="size-2 rounded-full shrink-0"
+                            style={{ background: theme.success }}
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <span
+                              className="text-xs font-medium truncate leading-tight"
+                              style={{ color: theme.foreground }}
+                            >
+                              {inst.name}
+                            </span>
+                            {inst.mcVersion && (
+                              <span
+                                className="text-[10px] leading-tight"
+                                style={{ color: theme.mutedForeground }}
+                              >
+                                {inst.mcVersion}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {onKillInstance && (
+                          <button
+                            type="button"
+                            className="size-5 flex items-center justify-center rounded cursor-pointer transition-colors shrink-0"
+                            title="Stop instance"
+                            aria-label={`Stop ${inst.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onKillInstance(inst.id);
+                            }}
+                          >
+                            <Icon name="x" size={13} color={theme.mutedForeground} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <button
           type="button"

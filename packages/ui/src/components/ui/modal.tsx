@@ -49,7 +49,7 @@ export function Modal({
           onClick={onClose}
         >
           <motion.div
-            className={`w-full rounded-[14px] border border-border shadow-[0_16px_40px_rgba(0,0,0,0.45)] flex flex-col overflow-hidden ${className}`}
+            className={`w-full rounded-[14px] border border-border shadow-[0_16px_40px_rgba(0,0,0,0.45)] flex flex-col ${className.includes("overflow-") ? "" : "overflow-hidden"} ${className}`}
             style={{
               background: theme.card,
               borderColor: theme.border,

@@ -211,7 +211,7 @@ async fn install_mod_loader(
     instance_id: String,
     loader: String,
     loader_version: String,
-) -> Result<(), String> {
+) -> Result<instances::Instance, String> {
     loaders::install_mod_loader(&app, &instance_id, &loader, &loader_version).await
 }
 
@@ -261,6 +261,54 @@ async fn get_discovery_project_versions(
     loader: Option<String>,
 ) -> Result<Vec<discovery::DiscoveryVersion>, String> {
     discovery::get_project_versions(&provider, &project_id, mc_version.as_deref(), loader.as_deref()).await
+}
+
+#[tauri::command]
+fn get_installed_addons_list(
+    app: tauri::AppHandle,
+    instance_id: String,
+    project_type: String,
+) -> Result<Vec<discovery::InstalledAddonItem>, String> {
+    discovery::get_installed_addons_list(&app, &instance_id, &project_type)
+}
+
+#[tauri::command]
+fn toggle_addon_enabled(
+    app: tauri::AppHandle,
+    instance_id: String,
+    project_type: String,
+    file_name: String,
+    enabled: bool,
+) -> Result<String, String> {
+    discovery::toggle_addon_enabled(&app, &instance_id, &project_type, &file_name, enabled)
+}
+
+#[tauri::command]
+async fn check_addon_updates(
+    app: tauri::AppHandle,
+    instance_id: String,
+    project_type: String,
+) -> Result<Vec<discovery::AddonUpdateInfo>, String> {
+    discovery::check_addon_updates(&app, &instance_id, &project_type).await
+}
+
+#[tauri::command]
+fn delete_addon(
+    app: tauri::AppHandle,
+    instance_id: String,
+    project_type: String,
+    file_name: String,
+) -> Result<(), String> {
+    discovery::delete_addon(&app, &instance_id, &project_type, &file_name)
+}
+
+#[tauri::command]
+fn get_installed_addon_ids(
+    app: tauri::AppHandle,
+    instance_id: String,
+    project_type: String,
+) -> Result<Vec<String>, String> {
+    discovery::get_installed_addon_ids(&app, &instance_id, &project_type)
 }
 
 #[tauri::command]
@@ -676,6 +724,11 @@ pub fn run() {
             install_mod_loader,
             search_discovery,
             install_discovery_project,
+            get_installed_addon_ids,
+            get_installed_addons_list,
+            toggle_addon_enabled,
+            delete_addon,
+            check_addon_updates,
             get_discovery_project_details,
             get_discovery_project_versions,
             delete_instance,

@@ -164,7 +164,7 @@ pub async fn install_mod_loader(
     instance_id: &str,
     loader: &str,
     loader_version: &str,
-) -> Result<(), String> {
+) -> Result<crate::instances::Instance, String> {
     use tauri::Emitter;
 
     let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
@@ -263,10 +263,20 @@ pub async fn install_mod_loader(
             profile_id = parsed.id.clone();
             let total_libs = parsed.libraries.len();
 
+            let loader_dl_start = std::time::Instant::now();
+            let mut total_downloaded_bytes: u64 = 0;
+
             // Download every library in the loader profile
             for (idx, lib) in parsed.libraries.iter().enumerate() {
                 let rel_path = maven_to_relative_path(&lib.name);
                 let dest_file = libs_dir.join(&rel_path);
+
+                let elapsed_secs = loader_dl_start.elapsed().as_secs_f64();
+                let current_speed = if elapsed_secs > 0.05 && total_downloaded_bytes > 0 {
+                    (total_downloaded_bytes as f64 / elapsed_secs) as u64
+                } else {
+                    0
+                };
 
                 let progress = 10.0 + ((idx as f64 / total_libs.max(1) as f64) * 80.0);
                 crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
@@ -276,7 +286,7 @@ pub async fn install_mod_loader(
                     phase_label: format!("Downloading {} ({}/{})", lib.name.split(":").nth(1).unwrap_or(&lib.name), idx + 1, total_libs),
                     downloaded_bytes: (idx + 1) as u64,
                     total_bytes: Some(total_libs as u64),
-                    speed_bytes_per_sec: 0,
+                    speed_bytes_per_sec: current_speed,
                     progress,
                     status: "downloading".to_string(),
                     error: None,
@@ -301,6 +311,7 @@ pub async fn install_mod_loader(
                     if let Ok(resp) = client.get(&full_url).send().await {
                         if resp.status().is_success() {
                             if let Ok(lib_bytes) = resp.bytes().await {
+                                total_downloaded_bytes += lib_bytes.len() as u64;
                                 let _ = std::fs::write(&dest_file, &lib_bytes);
                             }
                         }
@@ -345,14 +356,13 @@ pub async fn install_mod_loader(
     instance.loader = Some(loader.to_string());
     instance.loader_version = Some(loader_version.to_string());
 
-    let old_default_name = format!("Vanilla {}", instance.mc_version);
     let mut final_file = inst_file;
 
-    if instance.name.eq_ignore_ascii_case(&old_default_name) || instance.name.to_lowercase().starts_with("vanilla ") {
-        instance.name = format!("{} {}", ldr_name, instance.mc_version);
-
-        // Rename instance directory on disk to match new loader name
-        let desired_id = crate::instances::slugify(&instance.name);
+    // Rename instance identifier (directory on disk) to reflect the loader if it was a default vanilla identifier,
+    // leaving instance.name intact as requested.
+    let old_default_id = format!("vanilla-{}", crate::instances::slugify(&instance.mc_version));
+    if instance.id == old_default_id || instance.id.starts_with("vanilla-") {
+        let desired_id = format!("{}-{}", crate::instances::slugify(loader), crate::instances::slugify(&instance.mc_version));
         let base = crate::paths::instances_dir(app)?;
         let mut new_id = desired_id.clone();
         let mut counter = 1;
@@ -395,5 +405,5 @@ pub async fn install_mod_loader(
     crate::downloads::finish_download(app, &task_id);
 
     let _ = app.emit("instances_changed", ());
-    Ok(())
+    Ok(instance)
 }

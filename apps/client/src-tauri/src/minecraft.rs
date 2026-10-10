@@ -453,6 +453,12 @@ fn extract_native_jar(jar_path: &Path, natives_dir: &Path, excludes: Option<&[St
                 .map_err(|e| format!("Failed to create extracted file {}: {}", outpath.display(), e))?;
             std::io::copy(&mut file, &mut outfile)
                 .map_err(|e| format!("Failed to extract file {}: {}", outpath.display(), e))?;
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(0o755));
+            }
         }
     }
 
@@ -916,6 +922,7 @@ pub async fn launch_minecraft_instance(
 
     let natives_dir = inst_dir.join("natives");
     cmd_args.push(format!("-Djava.library.path={}", natives_dir.to_string_lossy()));
+    cmd_args.push(format!("-Dorg.lwjgl.librarypath={}", natives_dir.to_string_lossy()));
 
     if let Some(extra_jvm) = &instance.jvm_args {
         for part in extra_jvm.split_whitespace() {
@@ -1006,6 +1013,48 @@ pub async fn launch_minecraft_instance(
     command.current_dir(&game_dir);
     command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
+
+    // On Linux/Unix, ensure LD_LIBRARY_PATH contains natives and JRE AWT library directories for LWJGL 2
+    #[cfg(unix)]
+    {
+        let mut ld_paths = vec![natives_dir.clone()];
+
+        // Discover JRE library directories for libawt.so / libjawt.so
+        let java_path = Path::new(&java_exec);
+        if let Some(bin_dir) = java_path.parent() {
+            if let Some(jdk_root) = bin_dir.parent() {
+                let candidates = [
+                    jdk_root.join("jre/lib/amd64"),
+                    jdk_root.join("jre/lib/amd64/server"),
+                    jdk_root.join("jre/lib/amd64/xawt"),
+                    jdk_root.join("lib/amd64"),
+                    jdk_root.join("lib/amd64/server"),
+                    jdk_root.join("lib/amd64/xawt"),
+                    jdk_root.join("lib/server"),
+                    jdk_root.join("lib"),
+                ];
+                for cand in candidates {
+                    if cand.is_dir() {
+                        ld_paths.push(cand);
+                    }
+                }
+            }
+        }
+
+        let mut ld_string = ld_paths
+            .into_iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect::<Vec<String>>()
+            .join(":");
+
+        if let Ok(existing) = std::env::var("LD_LIBRARY_PATH") {
+            if !existing.is_empty() {
+                ld_string.push(':');
+                ld_string.push_str(&existing);
+            }
+        }
+        command.env("LD_LIBRARY_PATH", ld_string);
+    }
 
     let mut child = command
         .spawn()

@@ -163,19 +163,30 @@ export function DiscoveryProjectCard({
       <div className="h-[72px] flex flex-col justify-between items-end flex-shrink-0 pl-2">
         <button
           type="button"
-          disabled={isInstalling}
+          disabled={isInstalling || isInstalled}
           onClick={(e) => {
+            e.stopPropagation();
+            if (isInstalled || isInstalling) return;
             if (onInstall) {
-              e.stopPropagation();
               onInstall(e);
             } else {
               onClick();
             }
           }}
-          className="h-[26px] px-3 text-xs font-semibold rounded-md transition-opacity hover:opacity-90 cursor-pointer flex items-center justify-center leading-none disabled:opacity-60"
+          className={`h-[26px] px-3 text-xs font-semibold rounded-md flex items-center justify-center leading-none select-none transition-opacity ${
+            isInstalled
+              ? "cursor-default opacity-90"
+              : isInstalling
+                ? "cursor-not-allowed opacity-60"
+                : "cursor-pointer hover:opacity-90"
+          }`}
           style={{
-            background: isInstalled ? theme.success : theme.primary,
-            color: theme.primaryForeground,
+            background: isInstalled
+              ? "color-mix(in srgb, var(--primary) 70%, black)"
+              : theme.primary,
+            color: isInstalled
+              ? "color-mix(in srgb, var(--primary-foreground) 90%, transparent)"
+              : theme.primaryForeground,
           }}
         >
           {isInstalling ? "Installing..." : isInstalled ? "Installed" : installLabel}

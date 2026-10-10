@@ -166,10 +166,19 @@ export function InstancePage({
     version: "Minecraft version",
   };
 
-  const managingInstance = useMemo(
-    () => instances.find((i) => i.id === effectiveManagingId) ?? null,
-    [instances, effectiveManagingId],
-  );
+  const managingInstance = useMemo(() => {
+    if (!effectiveManagingId) return null;
+    const exact = instances.find((i) => i.id === effectiveManagingId);
+    if (exact) return exact;
+
+    // Prevent UI flicker during asynchronous reload or rename transitions (e.g. vanilla-1-8-9 -> fabric-1-8-9)
+    const versionPart = effectiveManagingId.replace(/^[a-z]+-/, "");
+    const renamed = instances.find(
+      (i) =>
+        i.id.endsWith(versionPart) || effectiveManagingId.includes(i.mcVersion.replace(/\./g, "-")),
+    );
+    return renamed ?? null;
+  }, [instances, effectiveManagingId]);
 
   if (managingInstance) {
     return (

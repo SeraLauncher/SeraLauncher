@@ -245,6 +245,13 @@ export function useInstances() {
   const updateInstance = useCallback(
     async (instance: Instance): Promise<Instance> => {
       const updated = await invoke<Instance>("update_instance", { instance });
+      setInstances((prev) => {
+        const found = prev.some((i) => i.id === updated.id);
+        if (found) {
+          return prev.map((i) => (i.id === updated.id ? updated : i));
+        }
+        return prev.map((i) => (i.id === instance.id ? updated : i));
+      });
       refreshInstances();
       return updated;
     },
@@ -433,6 +440,18 @@ export function useDownloads() {
 }
 
 const DOWNLOAD_HISTORY_STORAGE_KEY = "sera_download_history";
+
+export function recordDownloadHistory(item: DownloadHistoryItem) {
+  try {
+    const saved = localStorage.getItem(DOWNLOAD_HISTORY_STORAGE_KEY);
+    const prev: DownloadHistoryItem[] = saved ? JSON.parse(saved) : [];
+    const updated = [item, ...prev.filter((i) => i.id !== item.id)].slice(0, 60);
+    localStorage.setItem(DOWNLOAD_HISTORY_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new Event("sera_download_history_changed"));
+  } catch {
+    // ignore
+  }
+}
 
 export function useDownloadHistory(instances: Instance[] = []) {
   const [history, setHistory] = useState<DownloadHistoryItem[]>(() => {

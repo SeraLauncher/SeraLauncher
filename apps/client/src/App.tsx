@@ -348,8 +348,9 @@ export default function App() {
                     }}
                     onUpdateInstance={async (updated) => {
                       const res = await updateInstance(updated);
-                      if (res && res.id !== updated.id && managingInstanceId === updated.id) {
-                        setManagingInstanceId(res.id);
+                      const targetId = res?.id || updated.id;
+                      if (managingInstanceId && managingInstanceId !== targetId) {
+                        setManagingInstanceId(targetId);
                       }
                     }}
                     onOpenFolder={openFolder}

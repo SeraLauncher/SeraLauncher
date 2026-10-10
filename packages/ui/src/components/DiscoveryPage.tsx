@@ -10,6 +10,8 @@ import { Modal } from "./ui/modal";
 import { DiscoveryProviderToggle, type DiscoveryProvider } from "./DiscoveryProviderToggle";
 import { DiscoveryPagination } from "./DiscoveryPagination";
 import { DiscoveryProjectCard } from "./DiscoveryProjectCard";
+import { SelectVersionModal } from "./SelectVersionModal";
+import { recordDownloadHistory } from "../downloads";
 import type { Theme } from "../theme";
 import type {
   DiscoveryProject,
@@ -65,6 +67,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>(instances[0]?.id || "");
   const [isInstalling, setIsInstalling] = useState(false);
   const [installSuccess, setInstallSuccess] = useState<string | null>(null);
+  const [shiftVersionProject, setShiftVersionProject] = useState<DiscoveryProject | null>(null);
 
   // Active project drilldown detail state & preserved scroll offset
   const [selectedProject, setSelectedProject] = useState<DiscoveryProject | null>(null);
@@ -220,6 +223,17 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
       });
 
       const targetInstName = targetInst?.name || "instance";
+
+      recordDownloadHistory({
+        title: installingProject.title,
+        instanceName: targetInstName,
+        instanceIcon: targetInst?.icon,
+        mcVersion: targetInst?.mcVersion,
+        status: "completed",
+        type: installingProject.projectType || "mod",
+        iconUrl: installingProject.iconUrl,
+      });
+
       if (installed && installed.length > 1) {
         toast.success(
           `Installed ${installingProject.title} and ${installed.length - 1} dependencies!`,
@@ -391,7 +405,13 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                         item={item}
                         theme={theme}
                         onClick={() => handleOpenProjectDetails(item)}
-                        onInstall={() => setInstallingProject(item)}
+                        onInstall={(e) => {
+                          if (e.shiftKey) {
+                            setShiftVersionProject(item);
+                            return;
+                          }
+                          setInstallingProject(item);
+                        }}
                       />
                     ))}
                   </div>
@@ -511,6 +531,26 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
                 </div>
               )}
             </aside>
+
+            {shiftVersionProject && (
+              <SelectVersionModal
+                isOpen={true}
+                onClose={() => setShiftVersionProject(null)}
+                project={shiftVersionProject}
+                targetInstanceId={selectedInstanceId || instances[0]?.id || ""}
+                targetInstanceName={
+                  instances.find((i) => i.id === selectedInstanceId)?.name ||
+                  instances[0]?.name ||
+                  "Instance"
+                }
+                mcVersion={
+                  instances.find((i) => i.id === selectedInstanceId)?.mcVersion ||
+                  instances[0]?.mcVersion
+                }
+                loader={instances.find((i) => i.id === selectedInstanceId)?.loader || null}
+                theme={theme}
+              />
+            )}
 
             {/* Quick Install Modal using shared Modal component */}
             {installingProject && (

@@ -16,6 +16,29 @@ mod urlencoding {
 }
 
 use serde::{Deserialize, Serialize};
+fn base64_encode(bytes: &[u8]) -> String {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0];
+        let b1 = if chunk.len() > 1 { chunk[1] } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] } else { 0 };
+        out.push(CHARS[(b0 >> 2) as usize] as char);
+        out.push(CHARS[(((b0 & 0x03) << 4) | (b1 >> 4)) as usize] as char);
+        if chunk.len() > 1 {
+            out.push(CHARS[(((b1 & 0x0f) << 2) | (b2 >> 6)) as usize] as char);
+        } else {
+            out.push('=');
+        }
+        if chunk.len() > 2 {
+            out.push(CHARS[(b2 & 0x3f) as usize] as char);
+        } else {
+            out.push('=');
+        }
+    }
+    out
+}
+
 use sha1::{Digest, Sha1};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -456,14 +479,26 @@ fn write_addon_index(
         Err(_) => 0,
     };
 
+    // Infer version_id from Modrinth URL if not explicitly supplied
+    let resolved_version_id = version_id.map(|s| s.to_string()).unwrap_or_else(|| {
+        if download_url.contains("/versions/") {
+            download_url.split("/versions/").nth(1)
+                .and_then(|rest| rest.split('/').next())
+                .unwrap_or("")
+                .to_string()
+        } else {
+            String::new()
+        }
+    });
+
     let conf_content = format!(
-        "# SeraLauncher Addon Index\n        [addon]\n        name = \"{stem}\"\n        filename = \"{file_name}\"\n        type = \"{project_type}\"\n\n        [source]\n        provider = \"{prov}\"\n        project_id = \"{proj_id}\"\n        version_id = \"{ver_id}\"\n        url = \"{download_url}\"\n\n        [integrity]\n        algorithm = \"sha1\"\n        hash = \"{sha1_hash}\"\n        size_bytes = {size_bytes}\n\n        [meta]\n        installed_at_unix = {now}\n        managed_by = \"sera\"\n",
+        "# SeraLauncher Addon Index\n[addon]\nname = \"{stem}\"\nfilename = \"{file_name}\"\ntype = \"{project_type}\"\n\n[source]\nprovider = \"{prov}\"\nproject_id = \"{proj_id}\"\nversion_id = \"{ver_id}\"\nurl = \"{download_url}\"\n\n[integrity]\nalgorithm = \"sha1\"\nhash = \"{sha1_hash}\"\nsize_bytes = {size_bytes}\n\n[meta]\ninstalled_at_unix = {now}\nmanaged_by = \"sera\"\n",
         stem = stem,
         file_name = file_name,
         project_type = project_type,
         prov = provider.unwrap_or("unknown"),
         proj_id = project_id.unwrap_or(""),
-        ver_id = version_id.unwrap_or(""),
+        ver_id = resolved_version_id,
         download_url = download_url,
         sha1_hash = sha1_hash,
         size_bytes = size_bytes,
@@ -551,6 +586,11 @@ pub async fn install_file_to_instance(
     let mut is_first_chunk = true;
     let mut hasher = Sha1::new();
 
+    let start_time = std::time::Instant::now();
+    let mut last_emit = std::time::Instant::now();
+    let mut last_bytes: u64 = 0;
+    let mut current_speed: u64 = 0;
+
     while let Some(chunk) = res.chunk().await.map_err(|e| {
         let _ = std::fs::remove_file(&target_file);
         e.to_string()
@@ -573,27 +613,43 @@ pub async fn install_file_to_instance(
         hasher.update(&chunk);
         downloaded += chunk.len() as u64;
 
-        let pct = if let Some(tot) = content_len {
-            if tot > 0 { ((downloaded as f64 / tot as f64) * 100.0).min(99.0) } else { 50.0 }
-        } else {
-            50.0
-        };
+        // Calculate download speed and emit progress periodically or on the first non-empty chunk
+        let elapsed_emit = last_emit.elapsed();
+        if elapsed_emit >= std::time::Duration::from_millis(120) || current_speed == 0 {
+            let delta = elapsed_emit.as_secs_f64();
+            if delta > 0.05 {
+                current_speed = ((downloaded.saturating_sub(last_bytes)) as f64 / delta) as u64;
+                last_bytes = downloaded;
+                last_emit = std::time::Instant::now();
+            } else {
+                let total_elapsed = start_time.elapsed().as_secs_f64();
+                if total_elapsed > 0.05 {
+                    current_speed = (downloaded as f64 / total_elapsed) as u64;
+                }
+            }
 
-        crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-            id: task_id.clone(),
-            title: inst_name.clone(),
-            phase: "libraries".to_string(),
-            phase_label: format!("Downloading {}", file_name),
-            downloaded_bytes: downloaded,
-            total_bytes: content_len,
-            speed_bytes_per_sec: 0,
-            progress: pct,
-            status: "downloading".to_string(),
-            error: None,
-            order: 0,
-            instance_name: Some(inst_name.clone()),
-            instance_icon: None,
-        });
+            let pct = if let Some(tot) = content_len {
+                if tot > 0 { ((downloaded as f64 / tot as f64) * 100.0).min(99.0) } else { 50.0 }
+            } else {
+                50.0
+            };
+
+            crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
+                id: task_id.clone(),
+                title: inst_name.clone(),
+                phase: "libraries".to_string(),
+                phase_label: format!("Downloading {}", file_name),
+                downloaded_bytes: downloaded,
+                total_bytes: content_len,
+                speed_bytes_per_sec: current_speed,
+                progress: pct,
+                status: "downloading".to_string(),
+                error: None,
+                order: 0,
+                instance_name: Some(inst_name.clone()),
+                instance_icon: None,
+            });
+        }
     }
 
     crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
@@ -1543,4 +1599,503 @@ pub async fn install_project_with_dependencies(
     }
 
     Ok(installed_list)
+}
+
+
+/// Scans the instance addon folder (mods, resourcepacks, shaderpacks) and returns
+/// all known installed project IDs, slugs, stems, and mod IDs in lowercase.
+pub fn get_installed_addon_ids(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+    project_type: &str,
+) -> Result<Vec<String>, String> {
+    let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
+    let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
+
+    let sub_dir = match project_type.to_lowercase().as_str() {
+        "mods" | "mod" => mc_dir.join("mods"),
+        "resourcepack" | "resourcepacks" | "resource_pack" | "resource-pack" => mc_dir.join("resourcepacks"),
+        "shader" | "shaders" | "shaderpack" | "shaderpacks" => mc_dir.join("shaderpacks"),
+        _ => mc_dir.join("mods"),
+    };
+
+    let mut ids = std::collections::HashSet::new();
+
+    if !sub_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let index_dir = sub_dir.join(".index");
+
+    if let Ok(entries) = std::fs::read_dir(&sub_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    let ext_lower = ext.to_lowercase();
+                    if ext_lower == "jar" || ext_lower == "zip" {
+                        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                            let stem_lower = stem.to_lowercase();
+                            ids.insert(stem_lower.clone());
+
+                            // Strip version suffix patterns like -1.2.3 or +1.20
+                            if let Some(idx) = stem_lower.find('-') {
+                                ids.insert(stem_lower[..idx].to_string());
+                            }
+                            if let Some(idx) = stem_lower.find('_') {
+                                ids.insert(stem_lower[..idx].to_string());
+                            }
+
+                            // Check .index/{stem}.conf
+                            let conf_file = index_dir.join(format!("{}.conf", stem));
+                            if conf_file.exists() {
+                                if let Ok(conf_data) = std::fs::read_to_string(&conf_file) {
+                                    for line in conf_data.lines() {
+                                        let trimmed = line.trim();
+                                        if trimmed.starts_with("project_id =") || trimmed.starts_with("name =") {
+                                            if let Some(val) = trimmed.split('=').nth(1) {
+                                                let cleaned = val.trim().trim_matches(|c| c == '"' || c == '\'').to_lowercase();
+                                                if !cleaned.is_empty() {
+                                                    ids.insert(cleaned);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if project_type.eq_ignore_ascii_case("mods") || project_type.eq_ignore_ascii_case("mod") {
+        let mod_map = scan_installed_mods(&sub_dir);
+        for (k, _) in mod_map {
+            ids.insert(k.to_lowercase());
+        }
+    }
+
+    Ok(ids.into_iter().collect())
+}
+
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstalledAddonItem {
+    pub id: String,
+    pub name: String,
+    pub file_name: String,
+    pub version: Option<String>,
+    pub description: Option<String>,
+    pub size_bytes: u64,
+    pub enabled: bool,
+    pub mod_id: Option<String>,
+    pub date_modified: Option<String>,
+    pub source: Option<String>,
+    pub icon_url: Option<String>,
+    pub project_id: Option<String>,
+}
+
+/// Lists all installed addon files in the instance directory (including .disabled files)
+/// with metadata parsed from .index configs and JAR archives.
+pub fn get_installed_addons_list(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+    project_type: &str,
+) -> Result<Vec<InstalledAddonItem>, String> {
+    let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
+    let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
+
+    let sub_dir = match project_type.to_lowercase().as_str() {
+        "mods" | "mod" => mc_dir.join("mods"),
+        "resourcepack" | "resourcepacks" | "resource_pack" | "resource-pack" => mc_dir.join("resourcepacks"),
+        "shader" | "shaders" | "shaderpack" | "shaderpacks" => mc_dir.join("shaderpacks"),
+        _ => mc_dir.join("mods"),
+    };
+
+    if !sub_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let index_dir = sub_dir.join(".index");
+    let mut items = Vec::new();
+
+    if let Ok(entries) = std::fs::read_dir(&sub_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let is_disabled = file_name.ends_with(".disabled");
+            let clean_name = if is_disabled {
+                file_name.trim_end_matches(".disabled").to_string()
+            } else {
+                file_name.clone()
+            };
+
+            let ext = clean_name.rsplit('.').next().unwrap_or("").to_lowercase();
+            if ext != "jar" && ext != "zip" {
+                continue;
+            }
+
+            let size_bytes = entry.metadata().map(|m| m.len()).unwrap_or(0);
+            let date_modified = entry.metadata().and_then(|m| m.modified()).ok().and_then(|st| {
+                st.duration_since(std::time::UNIX_EPOCH).ok().map(|d| {
+                    format!("{}", d.as_secs())
+                })
+            });
+
+            let stem = clean_name.strip_suffix(&format!(".{}", ext)).unwrap_or(&clean_name).to_string();
+
+            // Default values
+            let mut name = stem.clone();
+            let mut version = None;
+            let mut description = None;
+            let mut source = None;
+            let mut mod_id = None;
+            let mut icon_url = None;
+            let mut project_id = None;
+
+            // 1. Try reading .index/{stem}.conf
+            let conf_file = index_dir.join(format!("{}.conf", stem));
+            if conf_file.exists() {
+                if let Ok(conf_data) = std::fs::read_to_string(&conf_file) {
+                    for line in conf_data.lines() {
+                        let trimmed = line.trim();
+                        if trimmed.starts_with("name =") {
+                            if let Some(val) = trimmed.split('=').nth(1) {
+                                let n = val.trim().trim_matches(|c| c == '"' || c == '\'');
+                                if !n.is_empty() && n != stem {
+                                    name = n.to_string();
+                                }
+                            }
+                        } else if trimmed.starts_with("provider =") {
+                            if let Some(val) = trimmed.split('=').nth(1) {
+                                source = Some(val.trim().trim_matches(|c| c == '"' || c == '\'').to_string());
+                            }
+                        } else if trimmed.starts_with("project_id =") {
+                            if let Some(val) = trimmed.split('=').nth(1) {
+                                let pid = val.trim().trim_matches(|c| c == '"' || c == '\'');
+                                if !pid.is_empty() {
+                                    project_id = Some(pid.to_string());
+                                }
+                            }
+                        } else if trimmed.starts_with("icon_url =") {
+                            if let Some(val) = trimmed.split('=').nth(1) {
+                                let u = val.trim().trim_matches(|c| c == '"' || c == '\'');
+                                if !u.is_empty() {
+                                    icon_url = Some(u.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Inspect archive for metadata and embedded icons (fabric.mod.json, pack.png)
+            if ext == "jar" || ext == "zip" {
+                if let Ok(f) = std::fs::File::open(&path) {
+                    if let Ok(mut archive) = zip::ZipArchive::new(f) {
+                        use std::io::Read;
+                        let mut declared_icon_path: Option<String> = None;
+
+                        if ext == "jar" {
+                            if let Ok(mut mod_json) = archive.by_name("fabric.mod.json") {
+                                let mut buf = String::new();
+                                if mod_json.read_to_string(&mut buf).is_ok() {
+                                    #[derive(Deserialize)]
+                                    struct ModMeta {
+                                        id: Option<String>,
+                                        name: Option<String>,
+                                        version: Option<String>,
+                                        description: Option<String>,
+                                        icon: Option<serde_json::Value>,
+                                    }
+                                    if let Ok(parsed) = serde_json::from_str::<ModMeta>(&buf) {
+                                        if let Some(n) = parsed.name {
+                                            if !n.is_empty() {
+                                                name = n;
+                                            }
+                                        }
+                                        mod_id = parsed.id;
+                                        version = parsed.version;
+                                        description = parsed.description;
+
+                                        // Resolve icon string or map from fabric.mod.json
+                                        if let Some(icon_val) = parsed.icon {
+                                            if let Some(s) = icon_val.as_str() {
+                                                declared_icon_path = Some(s.to_string());
+                                            } else if let Some(obj) = icon_val.as_object() {
+                                                if let Some(best) = obj.get("128").or_else(|| obj.get("64")).or_else(|| obj.values().next()) {
+                                                    if let Some(s) = best.as_str() {
+                                                        declared_icon_path = Some(s.to_string());
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Extract embedded icon if icon_url not already set
+                        if icon_url.is_none() {
+                            let icon_candidates = [
+                                declared_icon_path.as_deref(),
+                                Some("icon.png"),
+                                Some("pack.png"),
+                                Some("logo.png"),
+                            ];
+
+                            for cand in icon_candidates.into_iter().flatten() {
+                                let cand_clean = cand.trim_start_matches('/');
+                                if let Ok(mut icon_file) = archive.by_name(cand_clean) {
+                                    if icon_file.size() > 0 && icon_file.size() < 1_500_000 {
+                                        let mut bytes = Vec::with_capacity(icon_file.size() as usize);
+                                        if icon_file.read_to_end(&mut bytes).is_ok() {
+                                            let mime = if cand_clean.ends_with(".jpg") || cand_clean.ends_with(".jpeg") {
+                                                "image/jpeg"
+                                            } else {
+                                                "image/png"
+                                            };
+                                            icon_url = Some(format!("data:{};base64,{}", mime, base64_encode(&bytes)));
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            items.push(InstalledAddonItem {
+                id: stem,
+                name,
+                file_name,
+                version,
+                description,
+                size_bytes,
+                enabled: !is_disabled,
+                mod_id,
+                date_modified,
+                source,
+                icon_url,
+                project_id,
+            });
+        }
+    }
+
+    items.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    Ok(items)
+}
+
+/// Toggles whether an installed addon is enabled or disabled by renaming
+/// the file with or without the `.disabled` suffix.
+pub fn toggle_addon_enabled(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+    project_type: &str,
+    file_name: &str,
+    enabled: bool,
+) -> Result<String, String> {
+    let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
+    let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
+
+    let sub_dir = match project_type.to_lowercase().as_str() {
+        "mods" | "mod" => mc_dir.join("mods"),
+        "resourcepack" | "resourcepacks" | "resource_pack" | "resource-pack" => mc_dir.join("resourcepacks"),
+        "shader" | "shaders" | "shaderpack" | "shaderpacks" => mc_dir.join("shaderpacks"),
+        _ => mc_dir.join("mods"),
+    };
+
+    let current_path = sub_dir.join(file_name);
+    if !current_path.exists() {
+        return Err(format!("File {} not found", file_name));
+    }
+
+    let new_name = if enabled {
+        file_name.trim_end_matches(".disabled").to_string()
+    } else {
+        if file_name.ends_with(".disabled") {
+            file_name.to_string()
+        } else {
+            format!("{}.disabled", file_name)
+        }
+    };
+
+    let target_path = sub_dir.join(&new_name);
+    if current_path != target_path {
+        std::fs::rename(&current_path, &target_path).map_err(|e| e.to_string())?;
+    }
+
+    Ok(new_name)
+}
+
+/// Deletes an addon file and any associated .index configuration.
+pub fn delete_addon(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+    project_type: &str,
+    file_name: &str,
+) -> Result<(), String> {
+    let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
+    let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
+
+    let sub_dir = match project_type.to_lowercase().as_str() {
+        "mods" | "mod" => mc_dir.join("mods"),
+        "resourcepack" | "resourcepacks" | "resource_pack" | "resource-pack" => mc_dir.join("resourcepacks"),
+        "shader" | "shaders" | "shaderpack" | "shaderpacks" => mc_dir.join("shaderpacks"),
+        _ => mc_dir.join("mods"),
+    };
+
+    let file_path = sub_dir.join(file_name);
+    if file_path.exists() {
+        let _ = std::fs::remove_file(&file_path);
+    }
+
+    let clean_name = file_name.trim_end_matches(".disabled");
+    let stem = Path::new(clean_name).file_stem().and_then(|s| s.to_str()).unwrap_or(clean_name);
+    let conf_path = sub_dir.join(".index").join(format!("{}.conf", stem));
+    if conf_path.exists() {
+        let _ = std::fs::remove_file(&conf_path);
+    }
+
+    Ok(())
+}
+
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddonUpdateInfo {
+    pub file_name: String,
+    pub current_version: Option<String>,
+    pub latest_version: String,
+    pub latest_version_id: String,
+    pub latest_download_url: String,
+    pub latest_file_name: String,
+    pub project_id: String,
+    pub provider: String,
+}
+
+/// Checks for available updates for installed addons in an instance.
+/// Verifies that any newer version strictly supports the instance's Minecraft version
+/// and active mod loader, and returns only valid, compatible newer releases.
+pub async fn check_addon_updates(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+    project_type: &str,
+) -> Result<Vec<AddonUpdateInfo>, String> {
+    let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
+    let inst_file = inst_dir.join("instance.json");
+    if !inst_file.exists() {
+        return Ok(Vec::new());
+    }
+    let inst_data = std::fs::read_to_string(&inst_file).map_err(|e| e.to_string())?;
+    let instance: crate::instances::Instance = serde_json::from_str(&inst_data).map_err(|e| e.to_string())?;
+
+    let mc_version = instance.mc_version.clone();
+    let loader = if project_type.eq_ignore_ascii_case("mods") || project_type.eq_ignore_ascii_case("mod") {
+        instance.loader.as_deref().filter(|l| !l.eq_ignore_ascii_case("vanilla") && !l.eq_ignore_ascii_case("none"))
+    } else {
+        None
+    };
+
+    let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
+    let sub_dir = match project_type.to_lowercase().as_str() {
+        "mods" | "mod" => mc_dir.join("mods"),
+        "resourcepack" | "resourcepacks" | "resource_pack" | "resource-pack" => mc_dir.join("resourcepacks"),
+        "shader" | "shaders" | "shaderpack" | "shaderpacks" => mc_dir.join("shaderpacks"),
+        _ => mc_dir.join("mods"),
+    };
+
+    let index_dir = sub_dir.join(".index");
+    if !index_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut update_results = Vec::new();
+
+    if let Ok(entries) = std::fs::read_dir(&index_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() || path.extension().and_then(|e| e.to_str()) != Some("conf") {
+                continue;
+            }
+
+            if let Ok(data) = std::fs::read_to_string(&path) {
+                let mut filename = String::new();
+                let mut provider = String::new();
+                let mut project_id = String::new();
+                let mut current_version_id = String::new();
+                let mut current_version = None;
+
+                for line in data.lines() {
+                    let trimmed = line.trim();
+                    if trimmed.starts_with("filename =") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            filename = val.trim().trim_matches(|c| c == '"' || c == '\'').to_string();
+                        }
+                    } else if trimmed.starts_with("provider =") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            provider = val.trim().trim_matches(|c| c == '"' || c == '\'').to_string();
+                        }
+                    } else if trimmed.starts_with("project_id =") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            project_id = val.trim().trim_matches(|c| c == '"' || c == '\'').to_string();
+                        }
+                    } else if trimmed.starts_with("version_id =") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            current_version_id = val.trim().trim_matches(|c| c == '"' || c == '\'').to_string();
+                        }
+                    } else if trimmed.starts_with("version =") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            current_version = Some(val.trim().trim_matches(|c| c == '"' || c == '\'').to_string());
+                        }
+                    }
+                }
+
+                // Verify target file actually exists in sub_dir
+                let file_exists = sub_dir.join(&filename).exists() || sub_dir.join(format!("{}.disabled", filename)).exists();
+                if !file_exists || project_id.is_empty() {
+                    continue;
+                }
+
+                // Query compatible releases for this project
+                let prov = if provider.is_empty() { "modrinth" } else { &provider };
+                if let Ok(versions) = get_project_versions(prov, &project_id, Some(&mc_version), loader).await {
+                    // Pick best release version matching Minecraft version
+                    if let Some(latest) = versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| versions.first()) {
+                        // Compare version identifiers
+                        let is_newer = if !current_version_id.is_empty() {
+                            latest.id != current_version_id
+                        } else if let Some(cur_v) = &current_version {
+                            latest.version_number != *cur_v
+                        } else {
+                            !filename.contains(&latest.version_number)
+                        };
+
+                        if is_newer && !latest.download_url.is_empty() {
+                            update_results.push(AddonUpdateInfo {
+                                file_name: filename,
+                                current_version,
+                                latest_version: latest.version_number.clone(),
+                                latest_version_id: latest.id.clone(),
+                                latest_download_url: latest.download_url.clone(),
+                                latest_file_name: latest.file_name.clone(),
+                                project_id: project_id.clone(),
+                                provider: prov.to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(update_results)
 }

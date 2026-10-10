@@ -11,6 +11,7 @@ interface DiscoveryPaginationProps {
   theme: Theme;
   onPageChange: (newPage: number) => void;
   onScrollToTop?: () => void;
+  updatesAvailable?: number;
 }
 
 export function DiscoveryPagination({
@@ -22,6 +23,7 @@ export function DiscoveryPagination({
   theme,
   onPageChange,
   onScrollToTop,
+  updatesAvailable,
 }: DiscoveryPaginationProps) {
   const [isEditingPage, setIsEditingPage] = useState(false);
   const [pageInputVal, setPageInputVal] = useState("");
@@ -51,12 +53,19 @@ export function DiscoveryPagination({
       className="flex items-center justify-between text-xs px-1 select-none"
       style={{ color: theme.mutedForeground }}
     >
-      <span>
-        {loading
-          ? `Searching ${itemLabel}...`
-          : totalHits === 0
-            ? `No ${itemLabel} found`
-            : `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalHits)} of ${totalHits.toLocaleString()} ${itemLabel}`}
+      <span className="flex items-center gap-1.5 flex-wrap">
+        <span>
+          {loading
+            ? `Searching ${itemLabel}...`
+            : totalHits === 0
+              ? `No ${itemLabel} found`
+              : `Showing ${(page - 1) * limit + 1}–${Math.min(page * limit, totalHits)} of ${totalHits.toLocaleString()} ${itemLabel}`}
+        </span>
+        {updatesAvailable !== undefined && updatesAvailable > 0 && (
+          <span className="font-semibold text-[11px]" style={{ color: theme.primary }}>
+            ( {updatesAvailable} {updatesAvailable === 1 ? "update" : "updates"} available )
+          </span>
+        )}
       </span>
 
       <div className="flex items-center gap-1.5">

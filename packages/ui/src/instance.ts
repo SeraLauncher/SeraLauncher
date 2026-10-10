@@ -171,3 +171,29 @@ export interface DiscoveryProjectDetails {
   webUrl: string;
   reportUrl: string;
 }
+
+export interface InstalledAddonItem {
+  id: string;
+  name: string;
+  fileName: string;
+  version?: string | null;
+  description?: string | null;
+  sizeBytes: number;
+  enabled: boolean;
+  modId?: string | null;
+  dateModified?: string | null;
+  source?: string | null;
+  iconUrl?: string | null;
+  projectId?: string | null;
+}
+
+export interface AddonUpdateInfo {
+  fileName: string;
+  currentVersion?: string | null;
+  latestVersion: string;
+  latestVersionId: string;
+  latestDownloadUrl: string;
+  latestFileName: string;
+  projectId: string;
+  provider: string;
+}

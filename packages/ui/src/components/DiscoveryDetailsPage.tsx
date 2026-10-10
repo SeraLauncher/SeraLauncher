@@ -1,3 +1,4 @@
+import { recordDownloadHistory } from "../downloads";
 import { toast } from "sonner";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Icon } from "./Icon";
@@ -5,6 +6,7 @@ import { SafeContentRenderer } from "./SafeContentRenderer";
 import { Dropdown } from "./Dropdown";
 import { Badge } from "./ui/badge";
 import { Modal } from "./ui/modal";
+import { SelectVersionModal } from "./SelectVersionModal";
 import type { Theme } from "../theme";
 import type {
   DiscoveryAuthor,
@@ -23,6 +25,7 @@ interface DiscoveryDetailsPageProps {
   versions: MinecraftVersion[];
   targetInstanceId?: string;
   targetInstanceName?: string;
+  isInstalled?: boolean;
   onBack: () => void;
 }
 
@@ -206,6 +209,7 @@ export function DiscoveryDetailsPage({
   instances,
   targetInstanceId,
   targetInstanceName,
+  isInstalled = false,
   onBack,
 }: DiscoveryDetailsPageProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>("description");
@@ -242,6 +246,7 @@ export function DiscoveryDetailsPage({
     null,
   );
   const [heroIconError, setHeroIconError] = useState(false);
+  const [showSelectVersionModal, setShowSelectVersionModal] = useState(false);
 
   // Smart details prefetcher & background image preloader
   useEffect(() => {
@@ -385,6 +390,18 @@ export function DiscoveryDetailsPage({
         provider: project.source,
         projectId: project.id,
         versionId: null,
+      });
+
+      const targetObj = instances.find((i) => i.id === instId);
+      const catType = details?.projectType || project.projectType || "mod";
+      recordDownloadHistory({
+        title: title || project.title,
+        instanceName: instName,
+        instanceIcon: targetObj?.icon,
+        mcVersion: targetObj?.mcVersion,
+        status: "completed",
+        type: catType,
+        iconUrl: project.iconUrl || details?.iconUrl,
       });
 
       if (installed && installed.length > 1) {
@@ -535,44 +552,34 @@ export function DiscoveryDetailsPage({
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               type="button"
-              disabled={isInstalling}
+              disabled={isInstalling || isInstalled}
               onClick={() => {
-                const targetInst = targetInstanceId
-                  ? instances.find((i) => i.id === targetInstanceId)
-                  : null;
-                const targetMcVer = targetInst?.mcVersion;
-                const matchingVer = targetMcVer
-                  ? versionsList.find(
-                      (v) =>
-                        v.gameVersions.includes(targetMcVer) &&
-                        v.versionType.toLowerCase() === "release",
-                    ) || versionsList.find((v) => v.gameVersions.includes(targetMcVer))
-                  : null;
-                const ver =
-                  matchingVer ||
-                  versionsList.find((v) => v.versionType.toLowerCase() === "release") ||
-                  versionsList[0];
-                if (ver && ver.downloadUrl) {
-                  if (targetInstanceId) {
-                    handleDirectInstall(
-                      ver.downloadUrl,
-                      ver.fileName,
-                      `${project.title} (${ver.versionNumber})`,
-                    );
-                  } else {
-                    setInstallingVersion({
-                      downloadUrl: ver.downloadUrl,
-                      fileName: ver.fileName,
-                      title: `${project.title} (${ver.versionNumber})`,
-                    });
-                  }
-                } else {
-                  setActiveTab("versions");
-                }
+                if (isInstalled || isInstalling) return;
+                setShowSelectVersionModal(true);
               }}
-              className="h-8 px-4 text-xs font-bold rounded-lg border-0 bg-primary text-primary-foreground cursor-pointer transition-opacity hover:opacity-90 shadow-sm disabled:opacity-60"
+              className={`h-8 px-4 text-xs font-bold rounded-lg border-0 shadow-sm select-none transition-opacity ${
+                isInstalled || installSuccess
+                  ? "cursor-default opacity-90"
+                  : isInstalling
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer hover:opacity-90"
+              }`}
+              style={{
+                background:
+                  isInstalled || installSuccess
+                    ? "color-mix(in srgb, var(--primary) 70%, black)"
+                    : theme.primary,
+                color:
+                  isInstalled || installSuccess
+                    ? "color-mix(in srgb, var(--primary-foreground) 90%, transparent)"
+                    : theme.primaryForeground,
+              }}
             >
-              {isInstalling ? "Installing..." : installSuccess ? "Installed!" : "Install"}
+              {isInstalling
+                ? "Installing..."
+                : isInstalled || installSuccess
+                  ? "Installed"
+                  : "Install"}
             </button>
 
             {/* 3-Dots Action Menu */}
@@ -1142,6 +1149,33 @@ export function DiscoveryDetailsPage({
           </div>
         </div>
       </aside>
+
+      {showSelectVersionModal && (
+        <SelectVersionModal
+          isOpen={true}
+          onClose={() => setShowSelectVersionModal(false)}
+          project={project}
+          targetInstanceId={targetInstanceId || selectedInstanceId || instances[0]?.id || ""}
+          targetInstanceName={
+            targetInstanceName ||
+            instances.find((i) => i.id === (targetInstanceId || selectedInstanceId))?.name ||
+            instances[0]?.name ||
+            "Instance"
+          }
+          mcVersion={
+            instances.find((i) => i.id === (targetInstanceId || selectedInstanceId))?.mcVersion ||
+            instances[0]?.mcVersion
+          }
+          loader={
+            instances.find((i) => i.id === (targetInstanceId || selectedInstanceId))?.loader || null
+          }
+          theme={theme}
+          onInstalled={() => {
+            setInstallSuccess("Installed successfully!");
+            setTimeout(() => setInstallSuccess(null), 2500);
+          }}
+        />
+      )}
 
       {/* Quick Install Modal using shared Modal component (only shown when outside instance management) */}
       {!targetInstanceId && installingVersion && (
