@@ -197,3 +197,10 @@ export interface AddonUpdateInfo {
   projectId: string;
   provider: string;
 }
+
+export interface ScreenshotItem {
+  fileName: string;
+  sizeBytes: number;
+  createdAt: number;
+  dataUrl: string;
+}

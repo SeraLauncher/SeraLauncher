@@ -317,3 +317,117 @@ pub fn get_instance_name(app: &tauri::AppHandle, id: &str) -> Result<String, Str
     let instance: Instance = serde_json::from_str(&inst_data).map_err(|e| e.to_string())?;
     Ok(instance.name)
 }
+
+
+fn base64_encode(bytes: &[u8]) -> String {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0];
+        let b1 = if chunk.len() > 1 { chunk[1] } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] } else { 0 };
+        out.push(CHARS[(b0 >> 2) as usize] as char);
+        out.push(CHARS[(((b0 & 0x03) << 4) | (b1 >> 4)) as usize] as char);
+        if chunk.len() > 1 {
+            out.push(CHARS[(((b1 & 0x0f) << 2) | (b2 >> 6)) as usize] as char);
+        } else {
+            out.push('=');
+        }
+        if chunk.len() > 2 {
+            out.push(CHARS[(b2 & 0x3f) as usize] as char);
+        } else {
+            out.push('=');
+        }
+    }
+    out
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScreenshotItem {
+    pub file_name: String,
+    pub size_bytes: u64,
+    pub created_at: u64,
+    pub data_url: String,
+}
+
+/// Lists all screenshots in the instance's minecraft/screenshots folder.
+pub fn get_instance_screenshots(
+    app: &tauri::AppHandle,
+    id: &str,
+) -> Result<Vec<ScreenshotItem>, String> {
+    let inst_dir = get_instance_dir(app, id)?;
+    let screenshots_dir = get_instance_game_dir(&inst_dir).join("screenshots");
+
+    if !screenshots_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut list = Vec::new();
+
+    if let Ok(entries) = std::fs::read_dir(&screenshots_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            let name = entry.file_name().to_string_lossy().to_string();
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+            if ext != "png" && ext != "jpg" && ext != "jpeg" && ext != "webp" {
+                continue;
+            }
+
+            let meta = match entry.metadata() {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+
+            let size_bytes = meta.len();
+            let created_at = meta
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+
+            // Read image bytes and encode as data URL
+            if let Ok(bytes) = std::fs::read(&path) {
+                let mime = if ext == "jpg" || ext == "jpeg" {
+                    "image/jpeg"
+                } else if ext == "webp" {
+                    "image/webp"
+                } else {
+                    "image/png"
+                };
+                let data_url = format!("data:{};base64,{}", mime, base64_encode(&bytes));
+                list.push(ScreenshotItem {
+                    file_name: name,
+                    size_bytes,
+                    created_at,
+                    data_url,
+                });
+            }
+        }
+    }
+
+    // Sort descending by created_at (newest first)
+    list.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    Ok(list)
+}
+
+/// Deletes a specific screenshot file from an instance's screenshots directory.
+pub fn delete_instance_screenshot(
+    app: &tauri::AppHandle,
+    id: &str,
+    file_name: &str,
+) -> Result<(), String> {
+    let inst_dir = get_instance_dir(app, id)?;
+    let screenshot_path = get_instance_game_dir(&inst_dir).join("screenshots").join(file_name);
+
+    if screenshot_path.exists() {
+        std::fs::remove_file(&screenshot_path).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}

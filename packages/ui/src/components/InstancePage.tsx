@@ -28,12 +28,14 @@ import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "./Icon";
 import { Modal } from "./ui/modal";
+import { toast } from "sonner";
 import type { Theme } from "../theme";
 import type {
   Instance,
   MinecraftVersion,
   InstanceManagementTab,
   RunningInstanceInfo,
+  ScreenshotItem,
 } from "../instance";
 import { formatPlayTime } from "../instance";
 import type { JavaRuntime, Settings } from "../settings";
@@ -54,6 +56,29 @@ import {
 } from "../blocks";
 
 type SortOption = "lastPlayed" | "name" | "version";
+
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+}
+
+function formatScreenshotDate(timestamp: number): string {
+  if (!timestamp) return "";
+  try {
+    const d = new Date(timestamp * 1000);
+    return d.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
 
 export function InstancePage({
   theme,
@@ -991,6 +1016,106 @@ function InstanceManagementView({
 
   const terminalScreenRef = useRef<HTMLDivElement>(null);
 
+  // Screenshots gallery state
+  const [screenshots, setScreenshots] = useState<ScreenshotItem[]>([]);
+  const [loadingScreenshots, setLoadingScreenshots] = useState(false);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
+  const [deleteScreenshotConfirm, setDeleteScreenshotConfirm] = useState<ScreenshotItem | null>(
+    null,
+  );
+  type ScreenshotSortOption = "newest" | "oldest" | "name_asc" | "name_desc" | "size_desc";
+  const [screenshotSort, setScreenshotSort] = useState<ScreenshotSortOption>("newest");
+
+  const copyScreenshotImage = async (s: ScreenshotItem, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    try {
+      const res = await fetch(s.dataUrl);
+      const blob = await res.blob();
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type || "image/png"]: blob })]);
+      toast.success("Image copied to clipboard");
+    } catch {
+      try {
+        await navigator.clipboard.writeText(s.fileName);
+        toast.info("Image copy restricted, copied filename instead");
+      } catch {
+        toast.error("Failed to copy image");
+      }
+    }
+  };
+
+  const sortedScreenshots = useMemo(() => {
+    const list = [...screenshots];
+    switch (screenshotSort) {
+      case "oldest":
+        return list.sort((a, b) => a.createdAt - b.createdAt);
+      case "name_asc":
+        return list.sort((a, b) =>
+          a.fileName.localeCompare(b.fileName, undefined, { numeric: true }),
+        );
+      case "name_desc":
+        return list.sort((a, b) =>
+          b.fileName.localeCompare(a.fileName, undefined, { numeric: true }),
+        );
+      case "size_desc":
+        return list.sort((a, b) => b.sizeBytes - a.sizeBytes);
+      case "newest":
+      default:
+        return list.sort((a, b) => b.createdAt - a.createdAt);
+    }
+  }, [screenshots, screenshotSort]);
+
+  const refreshScreenshots = () => {
+    setLoadingScreenshots(true);
+    invoke<ScreenshotItem[]>("get_instance_screenshots", { id: instance.id })
+      .then((res) => {
+        setScreenshots(res || []);
+      })
+      .catch((err) => {
+        console.warn("Failed to load screenshots:", err);
+        setScreenshots([]);
+      })
+      .finally(() => {
+        setLoadingScreenshots(false);
+      });
+  };
+
+  useEffect(() => {
+    if (activeTab !== "screenshots") return;
+    let active = true;
+
+    invoke<ScreenshotItem[]>("get_instance_screenshots", { id: instance.id })
+      .then((res) => {
+        if (!active) return;
+        setScreenshots(res || []);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.warn("Failed to load screenshots:", err);
+        setScreenshots([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [activeTab, instance.id]);
+
+  const handleDeleteScreenshot = async (item: ScreenshotItem) => {
+    try {
+      await invoke("delete_instance_screenshot", {
+        id: instance.id,
+        fileName: item.fileName,
+      });
+      toast.success("Screenshot deleted");
+      if (selectedScreenshot?.fileName === item.fileName) {
+        setSelectedScreenshot(null);
+      }
+      setDeleteScreenshotConfirm(null);
+      refreshScreenshots();
+    } catch (err) {
+      toast.error(`Failed to delete screenshot: ${err}`);
+    }
+  };
+
   // Initial load of current session logs
   useEffect(() => {
     if (activeTab !== "overview") return;
@@ -1922,23 +2047,271 @@ function InstanceManagementView({
         )}
 
         {activeTab === "screenshots" && (
-          <div className="flex flex-col gap-4 p-5 rounded-xl border border-border bg-card">
-            <div className="flex items-center justify-between w-full">
-              <h3 className="text-base font-semibold m-0">Screenshots</h3>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors"
-                onClick={() => onOpenFolder("screenshots")}
-              >
-                <Icon name="folder" size={14} color="currentColor" />
-                <span>Open Screenshots Folder</span>
-              </button>
+          <div className="flex flex-col gap-4 w-full">
+            {/* Top Toolbar */}
+            <div className="flex items-center justify-between w-full flex-wrap gap-2.5">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold m-0" style={{ color: theme.foreground }}>
+                  Screenshots
+                </h3>
+                <span className="text-xs font-medium text-muted-foreground">
+                  ({screenshots.length})
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Sorting Dropdown */}
+                {screenshots.length > 0 && (
+                  <div className="w-36">
+                    <Dropdown
+                      value={screenshotSort}
+                      options={["newest", "oldest", "name_asc", "name_desc", "size_desc"]}
+                      render={(opt) => {
+                        switch (opt) {
+                          case "oldest":
+                            return "Oldest first";
+                          case "name_asc":
+                            return "Name (A–Z)";
+                          case "name_desc":
+                            return "Name (Z–A)";
+                          case "size_desc":
+                            return "Largest size";
+                          case "newest":
+                          default:
+                            return "Newest first";
+                        }
+                      }}
+                      onChange={(opt) => setScreenshotSort(opt as ScreenshotSortOption)}
+                      theme={theme}
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  disabled={loadingScreenshots}
+                  onClick={refreshScreenshots}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors disabled:opacity-50 select-none"
+                  style={{ color: theme.foreground }}
+                  title="Reload screenshots"
+                >
+                  <Icon name="refresh" size={13} color="currentColor" />
+                  <span>Refresh</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+                  onClick={() => onOpenFolder("screenshots")}
+                  title="Open folder on disk"
+                >
+                  <Icon name="folder" size={14} color="currentColor" />
+                  <span>Open Folder</span>
+                </button>
+              </div>
             </div>
-            <div className="flex flex-col items-center justify-center text-center py-12 px-4 gap-3 text-muted-foreground text-sm [&>p]:m-0 [&>p]:max-w-[400px] [&>p]:leading-relaxed">
-              <Icon name="photo" size={32} color={theme.mutedForeground} />
-              <p>In-game screenshots taken with the F2 key are saved directly in this folder.</p>
+
+            {/* Gallery Content */}
+            {loadingScreenshots ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 pt-1">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="aspect-[16/10] rounded-xl border border-border bg-secondary animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : screenshots.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center py-14 px-4 gap-3 text-muted-foreground text-sm select-none">
+                <div
+                  className="size-12 rounded-2xl flex items-center justify-center border border-border"
+                  style={{ background: theme.secondary }}
+                >
+                  <Icon name="photo" size={24} color={theme.mutedForeground} />
+                </div>
+                <div className="flex flex-col gap-1 max-w-[340px]">
+                  <span className="font-semibold text-sm" style={{ color: theme.foreground }}>
+                    No screenshots yet
+                  </span>
+                  <p className="text-xs text-muted-foreground leading-relaxed m-0">
+                    Screenshots taken in-game using the <strong>F2</strong> key will automatically
+                    appear here.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 pt-1">
+                {sortedScreenshots.map((s) => (
+                  <div
+                    key={s.fileName}
+                    onClick={() => setSelectedScreenshot(s)}
+                    className="group relative flex flex-col rounded-xl border border-border bg-secondary overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-primary/50 select-none"
+                  >
+                    {/* Image Thumbnail */}
+                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/20">
+                      <img
+                        src={s.dataUrl}
+                        alt={s.fileName}
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                        loading="lazy"
+                      />
+
+                      {/* Hover Overlay with 3 Action Buttons: View, Copy, Delete */}
+                      <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedScreenshot(s);
+                          }}
+                          className="size-8 rounded-lg bg-black/65 text-white flex items-center justify-center cursor-pointer hover:bg-black/90 hover:scale-105 transition-all border-0 shadow-sm"
+                          title="View full size"
+                        >
+                          <Icon name="eye" size={14} color="currentColor" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => copyScreenshotImage(s, e)}
+                          className="size-8 rounded-lg bg-black/65 text-white flex items-center justify-center cursor-pointer hover:bg-primary hover:text-primary-foreground hover:scale-105 transition-all border-0 shadow-sm"
+                          title="Copy image to clipboard"
+                        >
+                          <Icon name="copy" size={13} color="currentColor" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteScreenshotConfirm(s);
+                          }}
+                          className="size-8 rounded-lg bg-black/65 text-white flex items-center justify-center cursor-pointer hover:bg-red-600 hover:scale-105 transition-all border-0 shadow-sm"
+                          title="Delete screenshot"
+                        >
+                          <Icon name="trash" size={14} color="currentColor" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Metadata Footer */}
+                    <div className="p-2.5 flex flex-col gap-0.5">
+                      <span
+                        className="text-xs font-semibold truncate leading-tight"
+                        style={{ color: theme.foreground }}
+                        title={s.fileName}
+                      >
+                        {s.fileName}
+                      </span>
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5">
+                        <span>{formatScreenshotDate(s.createdAt)}</span>
+                        <span>{formatBytes(s.sizeBytes)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Lightbox Preview Modal */}
+        {selectedScreenshot && (
+          <div
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 cursor-pointer select-none"
+            onClick={() => setSelectedScreenshot(null)}
+          >
+            <div
+              className="relative max-w-5xl max-h-[90vh] flex flex-col gap-3 cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header Bar */}
+              <div className="flex items-center justify-between gap-3 text-white px-1">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-semibold truncate">
+                    {selectedScreenshot.fileName}
+                  </span>
+                  <span className="text-xs opacity-75 font-mono">
+                    {formatScreenshotDate(selectedScreenshot.createdAt)} •{" "}
+                    {formatBytes(selectedScreenshot.sizeBytes)}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => copyScreenshotImage(selectedScreenshot)}
+                    className="h-7.5 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium text-white cursor-pointer border-0 transition-colors flex items-center gap-1.5"
+                    title="Copy image to clipboard"
+                  >
+                    <Icon name="copy" size={13} color="currentColor" />
+                    <span>Copy Image</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeleteScreenshotConfirm(selectedScreenshot)}
+                    className="h-7.5 px-2.5 rounded-lg bg-red-500/20 hover:bg-red-600 text-xs font-medium text-white cursor-pointer border-0 transition-colors flex items-center gap-1.5"
+                    title="Delete screenshot"
+                  >
+                    <Icon name="trash" size={13} color="currentColor" />
+                    <span>Delete</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedScreenshot(null)}
+                    className="size-7.5 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer border-0 transition-colors"
+                    title="Close preview"
+                  >
+                    <Icon name="x" size={16} color="currentColor" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Full Image */}
+              <img
+                src={selectedScreenshot.dataUrl}
+                alt={selectedScreenshot.fileName}
+                className="max-h-[75vh] w-auto max-w-full rounded-xl object-contain border border-white/10 shadow-2xl block"
+              />
             </div>
           </div>
+        )}
+
+        {/* Delete Screenshot Confirmation Modal */}
+        {deleteScreenshotConfirm && (
+          <Modal
+            isOpen={true}
+            onClose={() => setDeleteScreenshotConfirm(null)}
+            theme={theme}
+            title={<span className="text-red-500 font-bold">Delete Screenshot</span>}
+            maxWidth={420}
+            footer={
+              <>
+                <button
+                  type="button"
+                  className="h-7.5 px-3 rounded-md border-0 bg-transparent text-xs font-medium cursor-pointer transition-colors hover:bg-foreground/5 select-none"
+                  style={{ color: theme.mutedForeground }}
+                  onClick={() => setDeleteScreenshotConfirm(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-1.5 h-7.5 px-3 rounded-md border-0 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold cursor-pointer transition-all hover:brightness-108 select-none"
+                  onClick={() => handleDeleteScreenshot(deleteScreenshotConfirm)}
+                >
+                  Delete
+                </button>
+              </>
+            }
+          >
+            <p className="text-xs leading-relaxed m-0" style={{ color: theme.mutedForeground }}>
+              Are you sure you want to permanently delete{" "}
+              <strong style={{ color: theme.foreground }}>
+                {deleteScreenshotConfirm.fileName}
+              </strong>
+              ?
+            </p>
+          </Modal>
         )}
       </div>
     </div>

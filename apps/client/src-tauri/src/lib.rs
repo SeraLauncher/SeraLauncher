@@ -335,6 +335,23 @@ async fn install_discovery_project(
 }
 
 #[tauri::command]
+fn get_instance_screenshots(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<Vec<instances::ScreenshotItem>, String> {
+    instances::get_instance_screenshots(&app, &id)
+}
+
+#[tauri::command]
+fn delete_instance_screenshot(
+    app: tauri::AppHandle,
+    id: String,
+    file_name: String,
+) -> Result<(), String> {
+    instances::delete_instance_screenshot(&app, &id, &file_name)
+}
+
+#[tauri::command]
 fn delete_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
     instances::delete_instance(&app, &id)
 }
@@ -732,6 +749,8 @@ pub fn run() {
             get_discovery_project_details,
             get_discovery_project_versions,
             delete_instance,
+            get_instance_screenshots,
+            delete_instance_screenshot,
             update_instance,
             get_instance_logs,
             open_instance_folder,
