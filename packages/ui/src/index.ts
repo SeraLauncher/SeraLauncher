@@ -6,6 +6,7 @@ export * from "./components/Icon";
 export * from "./components/Dropdown";
 export * from "./components/Appearance";
 export * from "./components/Sidebar";
+export * from "./components/AppLoadingScreen";
 export * from "./components/AppHeader";
 export * from "./components/HomePage";
 export * from "./components/SettingsPage";

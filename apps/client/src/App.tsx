@@ -3,6 +3,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   AccountModal,
   AppHeader,
+  AppLoadingScreen,
   APP_VERSION,
   HomePage,
   InstancePage,
@@ -82,6 +83,24 @@ export default function App() {
   };
 
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [appReady, setAppReady] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(20);
+
+  useEffect(() => {
+    // Smooth, progressive startup animation that resolves once initial data is loaded
+    const step1 = setTimeout(() => setLoadingProgress(55), 100);
+    const step2 = setTimeout(() => setLoadingProgress(85), 250);
+    const step3 = setTimeout(() => {
+      setLoadingProgress(100);
+      setTimeout(() => setAppReady(true), 180);
+    }, 450);
+
+    return () => {
+      clearTimeout(step1);
+      clearTimeout(step2);
+      clearTimeout(step3);
+    };
+  }, []);
   const [loginReason, setLoginReason] = useState<string | null>(null);
 
   const [page, setPage] = useState(0);
@@ -416,6 +435,16 @@ export default function App() {
         }}
         loginReason={loginReason}
       />
+
+      <AnimatePresence>
+        {!appReady && (
+          <AppLoadingScreen
+            appearance={settings.appearance}
+            theme={theme}
+            progress={loadingProgress}
+          />
+        )}
+      </AnimatePresence>
     </MotionConfig>
   );
 }
