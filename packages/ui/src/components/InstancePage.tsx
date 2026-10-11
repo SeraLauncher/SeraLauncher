@@ -22,12 +22,13 @@ export function getLoaderDisplay(inst: {
   return `${inst.versionType === "snapshot" ? "Snapshot" : "Vanilla"} ${inst.mcVersion}`;
 }
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "./Icon";
 import { Modal } from "./ui/modal";
+import { CrashReportModal } from "./CrashReportModal";
 import { toast } from "sonner";
 import type { Theme } from "../theme";
 import type {
@@ -36,6 +37,7 @@ import type {
   InstanceManagementTab,
   RunningInstanceInfo,
   ScreenshotItem,
+  CrashAnalysis,
 } from "../instance";
 import { formatPlayTime } from "../instance";
 import type { JavaRuntime, Settings } from "../settings";
@@ -1016,6 +1018,59 @@ function InstanceManagementView({
 
   const terminalScreenRef = useRef<HTMLDivElement>(null);
 
+  // Crash analyzer state
+  const [crashAnalysis, setCrashAnalysis] = useState<CrashAnalysis | null>(null);
+  const [loadingCrashAnalysis, setLoadingCrashAnalysis] = useState(false);
+  const [showCrashModal, setShowCrashModal] = useState(false);
+  const [hasCrashAlert, setHasCrashAlert] = useState(false);
+
+  const runCrashAnalysis = useCallback(() => {
+    setLoadingCrashAnalysis(true);
+    setShowCrashModal(true);
+    invoke<CrashAnalysis>("analyze_instance_crash", { id: instance.id })
+      .then((res) => {
+        setCrashAnalysis(res);
+      })
+      .catch((err) => {
+        console.warn("Failed to analyze crash:", err);
+      })
+      .finally(() => {
+        setLoadingCrashAnalysis(false);
+      });
+  }, [instance.id]);
+
+  // Listen for instance_crashed events
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    let cancelled = false;
+
+    interface CrashPayload {
+      id: string;
+      exitCode?: number | null;
+    }
+
+    listen<CrashPayload>("instance_crashed", (event) => {
+      if (event.payload.id === instance.id) {
+        setHasCrashAlert(true);
+        toast.error(`${instance.name} crashed`, {
+          description: "Click Analyze Crash to inspect the cause.",
+          action: {
+            label: "Analyze",
+            onClick: () => runCrashAnalysis(),
+          },
+        });
+      }
+    }).then((unsub) => {
+      if (cancelled) unsub();
+      else unlisten = unsub;
+    });
+
+    return () => {
+      cancelled = true;
+      if (unlisten) unlisten();
+    };
+  }, [instance.id, instance.name, runCrashAnalysis]);
+
   // Screenshots gallery state
   const [screenshots, setScreenshots] = useState<ScreenshotItem[]>([]);
   const [loadingScreenshots, setLoadingScreenshots] = useState(false);
@@ -1763,6 +1818,16 @@ function InstanceManagementView({
           </form>
         </section>
 
+        <CrashReportModal
+          isOpen={showCrashModal}
+          onClose={() => setShowCrashModal(false)}
+          theme={theme}
+          analysis={crashAnalysis}
+          loading={loadingCrashAnalysis}
+          onSelectTab={onSelectTab}
+          onOpenFolder={onOpenFolder}
+        />
+
         <EffectiveJavaArgsModal
           isOpen={showArgsModal}
           onClose={() => setShowArgsModal(false)}
@@ -1991,20 +2056,56 @@ function InstanceManagementView({
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md border border-border bg-secondary hover:bg-card transition-colors cursor-pointer shrink-0"
-                  onClick={() => setLogExpanded(!logExpanded)}
-                  title={logExpanded ? "Minimize" : "Expand"}
-                >
-                  <Icon
-                    name={logExpanded ? "minimize" : "maximize"}
-                    size={14}
-                    color="currentColor"
-                  />
-                  <span>{logExpanded ? "Minimize" : "Expand"}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={runCrashAnalysis}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-border bg-secondary hover:bg-card hover:text-foreground text-muted-foreground transition-colors cursor-pointer shrink-0 select-none"
+                    title="Analyze crash reports and session logs"
+                  >
+                    <Icon name="bug" size={13} color="currentColor" />
+                    <span>Analyze Crash</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md border border-border bg-secondary hover:bg-card transition-colors cursor-pointer shrink-0"
+                    onClick={() => setLogExpanded(!logExpanded)}
+                    title={logExpanded ? "Minimize" : "Expand"}
+                  >
+                    <Icon
+                      name={logExpanded ? "minimize" : "maximize"}
+                      size={14}
+                      color="currentColor"
+                    />
+                    <span>{logExpanded ? "Minimize" : "Expand"}</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Crash Alert Banner if a crash occurred */}
+              {(hasCrashAlert ||
+                (logs &&
+                  (logs.includes("Minecraft Crash Report") ||
+                    logs.includes("Minecraft has crashed!")))) && (
+                <div
+                  className="flex items-center justify-between px-3 py-2 rounded-xl border border-destructive/30 text-xs select-none"
+                  style={{ background: "color-mix(in srgb, var(--destructive) 10%, transparent)" }}
+                >
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <Icon name="bug" size={15} color={theme.destructive} />
+                    <span>Game crashed in previous session</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={runCrashAnalysis}
+                    className="px-2.5 py-0.5 rounded-md text-xs font-semibold cursor-pointer border-0 select-none transition-all hover:brightness-110"
+                    style={{ background: theme.destructive, color: theme.destructiveForeground }}
+                  >
+                    Analyze Root Cause
+                  </button>
+                </div>
+              )}
 
               {/* Row 3: Terminal screen */}
               <div

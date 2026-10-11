@@ -37,3 +37,5 @@ export * from "./components/DiscoveryProjectCard";
 export * from "./components/InstanceAddonsTab";
 
 export { Toaster, toast } from "sonner";
+
+export * from "./components/CrashReportModal";

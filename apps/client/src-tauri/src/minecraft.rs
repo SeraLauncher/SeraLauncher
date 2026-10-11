@@ -1152,13 +1152,17 @@ pub async fn launch_minecraft_instance(
     let app_clone = app.clone();
     let inst_id_clone = instance.id.clone();
     std::thread::spawn(move || {
+        let mut exit_status = None;
         loop {
             std::thread::sleep(std::time::Duration::from_millis(300));
             let exited = {
                 if let Ok(mut lock) = child_arc.lock() {
                     if let Some(child) = lock.as_mut() {
                         match child.try_wait() {
-                            Ok(Some(_status)) => true,
+                            Ok(Some(status)) => {
+                                exit_status = Some(status);
+                                true
+                            }
                             Ok(None) => false,
                             Err(_) => true,
                         }
@@ -1180,6 +1184,21 @@ pub async fn launch_minecraft_instance(
             }
         }
         let _ = app_clone.emit("running_instances_changed", list_running_instances());
+
+        // If the instance exited with a non-zero exit code, emit an instance_crashed event
+        if let Some(status) = exit_status {
+            if !status.success() {
+                #[derive(Clone, Serialize)]
+                struct CrashEventPayload {
+                    id: String,
+                    exit_code: Option<i32>,
+                }
+                let _ = app_clone.emit("instance_crashed", CrashEventPayload {
+                    id: inst_id_clone.clone(),
+                    exit_code: status.code(),
+                });
+            }
+        }
     });
 
     // Update last_played on instance
