@@ -584,6 +584,7 @@ export function InstanceAddonsTab({
     try {
       let downloadUrl = item.downloadUrl || "";
       let fileName = "";
+      let resolvedVersionId: string | null = null;
 
       // Resolve actual file version for this instance
       if (!downloadUrl) {
@@ -632,6 +633,7 @@ export function InstanceAddonsTab({
 
         downloadUrl = compatible.downloadUrl;
         fileName = compatible.fileName;
+        resolvedVersionId = compatible.id;
       }
 
       if (!fileName) {
@@ -650,7 +652,7 @@ export function InstanceAddonsTab({
         fileName,
         provider: item.source,
         projectId: item.id,
-        versionId: null,
+        versionId: resolvedVersionId,
       });
 
       refreshInstalledAddons();

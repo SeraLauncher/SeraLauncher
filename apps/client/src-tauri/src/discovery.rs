@@ -1485,33 +1485,168 @@ pub async fn install_project_with_dependencies(
         .build()
         .map_err(|e| e.to_string())?;
 
-    // 3. Scan installed mods
+    // 3. Scan installed mods and index configurations
     let mut installed_map = scan_installed_mods(&mc_mods);
+    let mut installed_identifiers = std::collections::HashSet::new();
+    for (k, _) in &installed_map {
+        installed_identifiers.insert(k.to_lowercase());
+    }
 
-    // 4. Resolve API-declared required dependencies
+    let index_dir = mc_mods.join(".index");
+    if let Ok(entries) = std::fs::read_dir(&index_dir) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_file() && p.extension().and_then(|e| e.to_str()) == Some("conf") {
+                if let Ok(content) = std::fs::read_to_string(&p) {
+                    for line in content.lines() {
+                        let trimmed = line.trim();
+                        if trimmed.starts_with("project_id =") || trimmed.starts_with("name =") {
+                            if let Some(val) = trimmed.split('=').nth(1) {
+                                let clean = val.trim().trim_matches(|c| c == '"' || c == '\'').to_lowercase();
+                                if !clean.is_empty() {
+                                    installed_identifiers.insert(clean);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Resolve API-declared required dependencies (recursively up to 4 levels)
     let prov = provider.unwrap_or("modrinth");
     if prov.eq_ignore_ascii_case("modrinth") {
-        if let Some(v_id) = version_id {
-            let v_url = format!("https://api.modrinth.com/v2/version/{}", v_id);
+        // Resolve initial version ID if not explicitly provided
+        let initial_version_id = version_id.map(|s| s.to_string()).or_else(|| {
+            if download_url.contains("/versions/") {
+                download_url
+                    .split("/versions/")
+                    .nth(1)
+                    .and_then(|rest| rest.split('/').next())
+                    .map(|s| s.to_string())
+            } else {
+                None
+            }
+        });
+
+        let mut version_queue = std::collections::VecDeque::new();
+        let mut visited_versions = std::collections::HashSet::new();
+        let mut visited_projects = std::collections::HashSet::new();
+
+        if let Some(ref pid) = project_id {
+            visited_projects.insert(pid.to_lowercase());
+        }
+
+        if let Some(vid) = initial_version_id {
+            version_queue.push_back(vid);
+        } else if let Some(ref pid) = project_id {
+            // Find version for project matching mc_version and loader
+            if let Ok(p_versions) = get_project_versions("modrinth", pid, Some(mc_version), Some(&loader)).await {
+                if let Some(best) = p_versions.iter().find(|v| v.file_name == file_name || v.download_url == download_url).or_else(|| p_versions.first()) {
+                    version_queue.push_back(best.id.clone());
+                }
+            }
+        }
+
+        let mut depth_limit = 20; // Bound total dependency lookups to prevent runaway loops
+        while let Some(curr_vid) = version_queue.pop_front() {
+            if !visited_versions.insert(curr_vid.clone()) {
+                continue;
+            }
+            depth_limit -= 1;
+            if depth_limit <= 0 {
+                break;
+            }
+
+            let v_url = format!("https://api.modrinth.com/v2/version/{}", curr_vid);
             if let Ok(res) = client.get(&v_url).send().await {
                 if let Ok(v_data) = res.json::<ModrinthVersionItem>().await {
                     if let Some(deps) = v_data.dependencies {
                         for dep in deps {
                             if dep.dependency_type == "required" {
                                 if let Some(dep_proj_id) = dep.project_id {
-                                    // Check if already installed
-                                    let mut need_install = true;
-                                    if let Some((_inst_ver, _)) = installed_map.get(&dep_proj_id.to_lowercase()) {
-                                        need_install = false;
-                                    }
+                                    let pid_lower = dep_proj_id.to_lowercase();
+                                    let already_have = installed_identifiers.contains(&pid_lower)
+                                        || installed_map.contains_key(&pid_lower)
+                                        || visited_projects.contains(&pid_lower);
 
-                                    if need_install {
-                                        // Resolve version
+                                    if !already_have {
+                                        visited_projects.insert(pid_lower.clone());
                                         if let Ok(dep_versions) = get_project_versions("modrinth", &dep_proj_id, Some(mc_version), Some(&loader)).await {
                                             if let Some(best_ver) = dep_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| dep_versions.first()).cloned() {
                                                 if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best_ver.download_url, &best_ver.file_name, Some("modrinth"), Some(&dep_proj_id), Some(&best_ver.id)).await {
                                                     installed_list.push(best_ver.file_name.clone());
-                                                    installed_map.insert(dep_proj_id.to_lowercase(), (best_ver.version_number, mc_mods.join(&best_ver.file_name)));
+                                                    installed_identifiers.insert(pid_lower.clone());
+                                                    let stem = Path::new(&best_ver.file_name).file_stem().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
+                                                    installed_identifiers.insert(stem);
+                                                    installed_map.insert(pid_lower, (best_ver.version_number, mc_mods.join(&best_ver.file_name)));
+                                                    version_queue.push_back(best_ver.id);
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else if let Some(dep_ver_id) = dep.version_id {
+                                    if !visited_versions.contains(&dep_ver_id) {
+                                        version_queue.push_back(dep_ver_id);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else if prov.eq_ignore_ascii_case("curseforge") {
+        let cf_file_id: Option<u64> = version_id.and_then(|s| s.parse().ok()).or_else(|| {
+            if download_url.contains("/files/") {
+                let parts: Vec<&str> = download_url.split("/files/").nth(1).unwrap_or("").split('/').collect();
+                if parts.len() >= 2 {
+                    let high: u64 = parts[0].parse().ok()?;
+                    let low: u64 = parts[1].parse().ok()?;
+                    Some(high * 1000 + low)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        });
+
+        if let (Some(pid), Some(fid)) = (project_id, cf_file_id) {
+            let cf_file_url = format!("https://api.curseforge.com/v1/mods/{}/files/{}", pid, fid);
+            if let Ok(res) = client.get(&cf_file_url).header("x-api-key", DEFAULT_CURSEFORGE_KEY).send().await {
+                #[derive(Deserialize)]
+                struct CfFileResponse {
+                    data: CurseForgeFileItem,
+                }
+                if let Ok(file_data) = res.json::<CfFileResponse>().await {
+                    if let Some(deps) = file_data.data.dependencies {
+                        for dep in deps {
+                            if dep.relation_type == 3 { // RequiredDependency
+                                let dep_mod_id = dep.mod_id;
+                                let dep_key = dep_mod_id.to_string();
+                                if !installed_identifiers.contains(&dep_key) {
+                                    installed_identifiers.insert(dep_key.clone());
+                                    // Query files for this required dependency
+                                    let dep_files_url = format!(
+                                        "https://api.curseforge.com/v1/mods/{}/files?gameVersion={}&pageSize=15",
+                                        dep_mod_id,
+                                        urlencoding::encode(mc_version)
+                                    );
+                                    if let Ok(f_res) = client.get(&dep_files_url).header("x-api-key", DEFAULT_CURSEFORGE_KEY).send().await {
+                                        if let Ok(f_data) = f_res.json::<CurseForgeModFilesResponse>().await {
+                                            if let Some(best_file) = f_data.data.iter().find(|f| {
+                                                f.game_versions.as_ref().map_or(false, |gv| {
+                                                    gv.iter().any(|v| v.eq_ignore_ascii_case(mc_version))
+                                                        && (loader.is_empty() || gv.iter().any(|v| v.eq_ignore_ascii_case(&loader)))
+                                                })
+                                            }).or_else(|| f_data.data.first()) {
+                                                let dl_url = best_file.download_url.clone().unwrap_or_else(|| {
+                                                    format!("https://edge.forgecdn.net/files/{}/{}/{}", best_file.id / 1000, best_file.id % 1000, best_file.file_name)
+                                                });
+                                                if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &dl_url, &best_file.file_name, Some("curseforge"), Some(&dep_key), Some(&best_file.id.to_string())).await {
+                                                    installed_list.push(best_file.file_name.clone());
                                                 }
                                             }
                                         }

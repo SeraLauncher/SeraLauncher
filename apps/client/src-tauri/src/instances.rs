@@ -150,6 +150,8 @@ pub async fn create_instance(
             r.major_version == 8
         } else if req_java == 16 || req_java == 17 {
             r.major_version == 16 || r.major_version == 17
+        } else if req_java >= 25 {
+            r.major_version >= 25
         } else {
             r.major_version >= 21
         }

@@ -233,6 +233,7 @@ export function DiscoveryDetailsPage({
 
   // Quick Install dialog
   const [installingVersion, setInstallingVersion] = useState<{
+    id?: string;
     downloadUrl: string;
     fileName: string;
     title: string;
@@ -346,7 +347,7 @@ export function DiscoveryDetailsPage({
         fileName: installingVersion.fileName,
         provider: project.source,
         projectId: project.id,
-        versionId: null,
+        versionId: installingVersion.id || null,
       });
 
       const targetInst = instances.find((i) => i.id === selectedInstanceId)?.name || "instance";

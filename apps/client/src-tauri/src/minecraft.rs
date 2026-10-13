@@ -858,11 +858,31 @@ pub async fn launch_minecraft_instance(
     let mut instance: crate::instances::Instance = serde_json::from_str(&inst_data)
         .map_err(|e| format!("Failed to parse instance.json: {}", e))?;
 
-    // 1. Ensure required Java runtime exists
+    // 1. Ensure required Java runtime exists and is compatible
     let req_java = crate::java::required_java_version(&instance.mc_version);
     let java_exec = if let Some(custom) = &instance.custom_java_path {
-        if Path::new(custom).exists() {
-            custom.clone()
+        let p = Path::new(custom);
+        if p.exists() {
+            let is_compatible = if let Some(inspected) = crate::java::inspect_java_binary(p) {
+                if req_java == 8 {
+                    inspected.major_version == 8
+                } else if req_java == 16 || req_java == 17 {
+                    inspected.major_version == 16 || inspected.major_version == 17
+                } else if req_java >= 25 {
+                    inspected.major_version >= 25
+                } else {
+                    inspected.major_version >= 21
+                }
+            } else {
+                true
+            };
+
+            if is_compatible {
+                custom.clone()
+            } else {
+                let installed = crate::downloader::install_adoptium_runtime(app, req_java).await?;
+                installed.path
+            }
         } else {
             let installed = crate::downloader::install_adoptium_runtime(app, req_java).await?;
             installed.path

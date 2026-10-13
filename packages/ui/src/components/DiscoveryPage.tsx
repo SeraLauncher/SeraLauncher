@@ -173,6 +173,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
       const targetInst = instances.find((i) => i.id === selectedInstanceId);
       let downloadUrl = installingProject.downloadUrl || "";
       let fileName = "";
+      let resolvedVersionId: string | null = null;
 
       if (!downloadUrl) {
         toast.info(`Resolving compatible file for ${installingProject.title}...`);
@@ -202,6 +203,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
 
         downloadUrl = compatible.downloadUrl;
         fileName = compatible.fileName;
+        resolvedVersionId = compatible.id || null;
       }
 
       if (!fileName) {
@@ -219,7 +221,7 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
         fileName,
         provider: installingProject.source,
         projectId: installingProject.id,
-        versionId: null,
+        versionId: resolvedVersionId,
       });
 
       const targetInstName = targetInst?.name || "instance";

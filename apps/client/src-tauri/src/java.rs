@@ -24,14 +24,14 @@ pub struct JavaRuntime {
 pub fn required_java_version(mc_version: &str) -> u32 {
     let clean = mc_version.trim();
 
-    // snapshot format like "26.4 Snapshot 2"
+    // snapshot format like "26.4 Snapshot 2" or version like "26.2"
     if let Some(first_num) = clean
         .split(|c: char| !c.is_ascii_digit())
         .next()
         .and_then(|s| s.parse::<u32>().ok())
     {
         if first_num >= 25 {
-            return 21;
+            return 25;
         }
     }
 
@@ -61,6 +61,10 @@ pub fn required_java_version(mc_version: &str) -> u32 {
             return 16;
         }
         return 8;
+    }
+
+    if clean.starts_with("26") || clean.starts_with("25") {
+        return 25;
     }
 
     21
@@ -441,7 +445,8 @@ OpenJDK 64-Bit Server VM (build 21.0.2+13, mixed mode, sharing)"#;
         assert_eq!(required_java_version("1.20.5"), 21);
         assert_eq!(required_java_version("1.21"), 21);
         assert_eq!(required_java_version("1.21.4"), 21);
-        assert_eq!(required_java_version("26.4 Snapshot 2"), 21);
+        assert_eq!(required_java_version("26.4 Snapshot 2"), 25);
+        assert_eq!(required_java_version("26.2"), 25);
     }
 
     #[test]
