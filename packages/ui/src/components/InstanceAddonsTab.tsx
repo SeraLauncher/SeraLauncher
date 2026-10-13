@@ -232,6 +232,15 @@ import type {
 
 import type { EnvironmentFilter } from "./DiscoveryPage";
 
+import {
+  getCachedAddons,
+  setCachedAddons,
+  getCachedActiveResourcePacks,
+  setCachedActiveResourcePacks,
+  getCachedActiveShaderPack,
+  setCachedActiveShaderPack,
+} from "../instanceCache";
+
 interface InstanceAddonsTabProps {
   theme: Theme;
   instance: Instance;
@@ -308,24 +317,39 @@ export function InstanceAddonsTab({
     category === "mods" ? "installed" : "installed",
   );
 
-  // Installed addons list state
-  const [installedAddons, setInstalledAddons] = useState<InstalledAddonItem[]>([]);
-  const [loadingInstalled, setLoadingInstalled] = useState(true);
+  // Installed addons list state (instant synchronous load if preloaded)
+  const cachedAddons = getCachedAddons(instance.id, category);
+  const [installedAddons, setInstalledAddons] = useState<InstalledAddonItem[]>(
+    () => cachedAddons ?? [],
+  );
+  const [loadingInstalled, setLoadingInstalled] = useState(() => !cachedAddons);
   const [installedSearch, setInstalledSearch] = useState("");
   const [updates, setUpdates] = useState<AddonUpdateInfo[]>([]);
 
   // In-launcher visual options activator state
-  const [activeResourcePacks, setActiveResourcePacks] = useState<string[]>([]);
-  const [activeShaderPack, setActiveShaderPack] = useState<string | null>(null);
+  const [activeResourcePacks, setActiveResourcePacks] = useState<string[]>(
+    () => getCachedActiveResourcePacks(instance.id) ?? [],
+  );
+  const [activeShaderPack, setActiveShaderPack] = useState<string | null>(
+    () => getCachedActiveShaderPack(instance.id) ?? null,
+  );
 
   const loadVisualOptions = useCallback(() => {
     if (category === "resourcepack") {
       invoke<string[]>("get_active_resource_packs", { id: instance.id })
-        .then((res) => setActiveResourcePacks(res || []))
+        .then((res) => {
+          const list = res || [];
+          setActiveResourcePacks(list);
+          setCachedActiveResourcePacks(instance.id, list);
+        })
         .catch(() => setActiveResourcePacks([]));
     } else if (category === "shader") {
       invoke<string | null>("get_active_shader_pack", { id: instance.id })
-        .then((res) => setActiveShaderPack(res ?? null))
+        .then((res) => {
+          const pack = res ?? null;
+          setActiveShaderPack(pack);
+          setCachedActiveShaderPack(instance.id, pack);
+        })
         .catch(() => setActiveShaderPack(null));
     }
   }, [instance.id, category]);
@@ -365,6 +389,7 @@ export function InstanceAddonsTab({
       .then((items) => {
         const list = items || [];
         setInstalledAddons(list);
+        setCachedAddons(instance.id, category, list);
         const nextIds = new Set<string>();
         for (const item of list) {
           nextIds.add(item.id.toLowerCase());

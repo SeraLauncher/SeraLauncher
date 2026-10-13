@@ -61,6 +61,13 @@ import {
   parseInstanceIcon,
 } from "../blocks";
 
+import {
+  preloadInstanceData,
+  clearInstanceDataCache,
+  getCachedScreenshots,
+  setCachedScreenshots,
+} from "../instanceCache";
+
 type SortOption = "lastPlayed" | "name" | "version";
 
 function formatBytes(bytes: number): string {
@@ -146,6 +153,19 @@ export function InstancePage({
   const setEffectiveManagingId = controlledSetManagingId ?? setInternalManagingId;
   const effectiveTab = controlledTab !== undefined ? controlledTab : internalTab;
   const setEffectiveTab = controlledSetTab ?? setInternalTab;
+
+  // Smart Preloader: When user opens an instance, preload all tabs in background.
+  // When user returns to the instance list, unload cache to free memory.
+  useEffect(() => {
+    if (effectiveManagingId) {
+      const cancel = preloadInstanceData(effectiveManagingId);
+      return () => {
+        cancel();
+      };
+    } else {
+      clearInstanceDataCache();
+    }
+  }, [effectiveManagingId]);
 
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
@@ -1360,9 +1380,10 @@ function InstanceManagementView({
     };
   }, [instance.id, instance.name, runCrashAnalysis]);
 
-  // Screenshots gallery state
-  const [screenshots, setScreenshots] = useState<ScreenshotItem[]>([]);
-  const [loadingScreenshots, setLoadingScreenshots] = useState(false);
+  // Screenshots gallery state (loads instantly if preloaded)
+  const cachedScreenshots = getCachedScreenshots(instance.id);
+  const [screenshots, setScreenshots] = useState<ScreenshotItem[]>(() => cachedScreenshots ?? []);
+  const [loadingScreenshots, setLoadingScreenshots] = useState(() => !cachedScreenshots);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
   const [deleteScreenshotConfirm, setDeleteScreenshotConfirm] = useState<ScreenshotItem | null>(
     null,
@@ -1412,7 +1433,9 @@ function InstanceManagementView({
     setLoadingScreenshots(true);
     invoke<ScreenshotItem[]>("get_instance_screenshots", { id: instance.id })
       .then((res) => {
-        setScreenshots(res || []);
+        const list = res || [];
+        setScreenshots(list);
+        setCachedScreenshots(instance.id, list);
       })
       .catch((err) => {
         console.warn("Failed to load screenshots:", err);
@@ -1430,7 +1453,9 @@ function InstanceManagementView({
     invoke<ScreenshotItem[]>("get_instance_screenshots", { id: instance.id })
       .then((res) => {
         if (!active) return;
-        setScreenshots(res || []);
+        const list = res || [];
+        setScreenshots(list);
+        setCachedScreenshots(instance.id, list);
       })
       .catch((err) => {
         if (!active) return;

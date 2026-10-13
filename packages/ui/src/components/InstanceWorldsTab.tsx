@@ -14,6 +14,8 @@ import {
 import type { Theme } from "../theme";
 import type { Instance, WorldItem, WorldBackupItem } from "../instance";
 
+import { getCachedWorlds, getCachedWorldBackups, setCachedWorldsData } from "../instanceCache";
+
 interface InstanceWorldsTabProps {
   theme: Theme;
   instance: Instance;
@@ -49,9 +51,11 @@ type WorldSortOption = "recent" | "oldest" | "name_asc" | "name_desc" | "size_de
 
 export function InstanceWorldsTab({ theme, instance, onOpenFolder }: InstanceWorldsTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<"worlds" | "backups">("worlds");
-  const [worlds, setWorlds] = useState<WorldItem[]>([]);
-  const [backups, setBackups] = useState<WorldBackupItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedWorlds = getCachedWorlds(instance.id);
+  const cachedBackups = getCachedWorldBackups(instance.id);
+  const [worlds, setWorlds] = useState<WorldItem[]>(() => cachedWorlds ?? []);
+  const [backups, setBackups] = useState<WorldBackupItem[]>(() => cachedBackups ?? []);
+  const [loading, setLoading] = useState(() => !cachedWorlds);
   const [search, setSearch] = useState("");
   const [sortOption, setSortOption] = useState<WorldSortOption>("recent");
 
@@ -69,8 +73,11 @@ export function InstanceWorldsTab({ theme, instance, onOpenFolder }: InstanceWor
         invoke<WorldItem[]>("get_instance_worlds", { id: instance.id }),
         invoke<WorldBackupItem[]>("get_instance_world_backups", { id: instance.id }),
       ]);
-      setWorlds(wList || []);
-      setBackups(bList || []);
+      const w = wList || [];
+      const b = bList || [];
+      setWorlds(w);
+      setBackups(b);
+      setCachedWorldsData(instance.id, w, b);
     } catch (err) {
       console.warn("Failed to load instance worlds:", err);
     } finally {
@@ -86,8 +93,11 @@ export function InstanceWorldsTab({ theme, instance, onOpenFolder }: InstanceWor
     ])
       .then(([wList, bList]) => {
         if (!active) return;
-        setWorlds(wList || []);
-        setBackups(bList || []);
+        const w = wList || [];
+        const b = bList || [];
+        setWorlds(w);
+        setBackups(b);
+        setCachedWorldsData(instance.id, w, b);
       })
       .catch((err) => {
         if (!active) return;
