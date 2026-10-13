@@ -204,58 +204,79 @@ export function ExportInstanceModal({
               </label>
 
               <div
-                className="flex flex-col gap-1.5 p-3 rounded-xl border border-border"
+                className="flex flex-col gap-1 p-2 rounded-xl border border-border"
                 style={{ background: theme.sidebarAccent }}
               >
-                <label className="flex items-center gap-2.5 cursor-pointer text-foreground select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeMods}
-                    onChange={(e) => setIncludeMods(e.target.checked)}
-                    className="accent-primary rounded size-3.5"
-                  />
-                  <span>Include Installed Mods</span>
-                </label>
+                {[
+                  {
+                    id: "mods",
+                    label: "Include Installed Mods",
+                    icon: "puzzle" as const,
+                    checked: includeMods,
+                    setter: setIncludeMods,
+                  },
+                  {
+                    id: "configs",
+                    label: "Include Mod Configs & Options",
+                    icon: "settings" as const,
+                    checked: includeConfigs,
+                    setter: setIncludeConfigs,
+                  },
+                  {
+                    id: "rp",
+                    label: "Include Resource Packs",
+                    icon: "palette" as const,
+                    checked: includeResourcepacks,
+                    setter: setIncludeResourcepacks,
+                  },
+                  {
+                    id: "shaders",
+                    label: "Include Shader Packs",
+                    icon: "wand" as const,
+                    checked: includeShaderpacks,
+                    setter: setIncludeShaderpacks,
+                  },
+                  {
+                    id: "saves",
+                    label: "Include World Saves (Singleplayer)",
+                    icon: "globe" as const,
+                    checked: includeSaves,
+                    setter: setIncludeSaves,
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => item.setter(!item.checked)}
+                    className="flex items-center gap-3 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors select-none hover:bg-card/70"
+                  >
+                    <div
+                      className="size-4 rounded-md flex items-center justify-center shrink-0 border transition-all shadow-2xs"
+                      style={{
+                        background: item.checked ? theme.primary : theme.card,
+                        borderColor: item.checked ? theme.primary : theme.border,
+                        color: theme.primaryForeground,
+                      }}
+                    >
+                      {item.checked && <Icon name="check" size={10} color="currentColor" />}
+                    </div>
 
-                <label className="flex items-center gap-2.5 cursor-pointer text-foreground select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeConfigs}
-                    onChange={(e) => setIncludeConfigs(e.target.checked)}
-                    className="accent-primary rounded size-3.5"
-                  />
-                  <span>Include Mod Configs & Options</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer text-foreground select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeResourcepacks}
-                    onChange={(e) => setIncludeResourcepacks(e.target.checked)}
-                    className="accent-primary rounded size-3.5"
-                  />
-                  <span>Include Resource Packs</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer text-foreground select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeShaderpacks}
-                    onChange={(e) => setIncludeShaderpacks(e.target.checked)}
-                    className="accent-primary rounded size-3.5"
-                  />
-                  <span>Include Shader Packs</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer text-foreground select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeSaves}
-                    onChange={(e) => setIncludeSaves(e.target.checked)}
-                    className="accent-primary rounded size-3.5"
-                  />
-                  <span>Include World Saves (Singleplayer)</span>
-                </label>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Icon
+                        name={item.icon}
+                        size={14}
+                        color={item.checked ? theme.foreground : theme.mutedForeground}
+                      />
+                      <span
+                        className="text-xs font-medium"
+                        style={{
+                          color: item.checked ? theme.foreground : theme.mutedForeground,
+                        }}
+                      >
+                        {item.label}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </>
