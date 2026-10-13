@@ -115,6 +115,16 @@ export interface DiscoveryLinks {
   donate?: string | null;
 }
 
+export type ModpackInspection = {
+  name: string;
+  summary?: string | null;
+  mcVersion: string;
+  loader?: string | null;
+  loaderVersion?: string | null;
+  fileCount: number;
+  format: "mrpack" | "curseforge" | string;
+};
+
 export interface DiscoveryAuthor {
   id: string;
   name: string;

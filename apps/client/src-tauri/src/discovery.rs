@@ -168,7 +168,7 @@ struct CurseForgeFileIndex {
 static SEARCH_CACHE: Mutex<Option<HashMap<String, (Instant, DiscoverySearchResponse)>>> = Mutex::new(None);
 const CACHE_TTL_SECS: u64 = 300; // 5 minutes cache
 
-const DEFAULT_CURSEFORGE_KEY: &str = "$2a$10$bL4bIL5pUWqfcO7KQtnMReakwtfHbNKh6v1uTpKlzhwoueEJQnPnm";
+pub const DEFAULT_CURSEFORGE_KEY: &str = "$2a$10$bL4bIL5pUWqfcO7KQtnMReakwtfHbNKh6v1uTpKlzhwoueEJQnPnm";
 
 pub async fn search_projects(
     provider: &str,
@@ -451,7 +451,7 @@ async fn search_curseforge(
 }
 
 /// Installs a downloaded mod, resourcepack, or shader directly into an instance folder.
-fn write_addon_index(
+pub fn write_addon_index(
     sub_dir: &Path,
     file_name: &str,
     project_type: &str,

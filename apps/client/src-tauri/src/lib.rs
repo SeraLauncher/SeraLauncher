@@ -15,6 +15,7 @@ mod java;
 mod minecraft;
 mod paths;
 mod crash_analyzer;
+mod modpack;
 
 const DEFAULT_APPEARANCE: &str = "dark";
 const BUNDLED_FAMILY: &str = "Sunghyun Sans";
@@ -368,6 +369,69 @@ fn delete_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
 #[tauri::command]
 fn update_instance(app: tauri::AppHandle, instance: instances::Instance) -> Result<instances::Instance, String> {
     instances::update_instance(&app, instance)
+}
+
+#[tauri::command]
+async fn inspect_modpack_file(file_path: String) -> Result<modpack::ModpackInspection, String> {
+    let resolved = modpack::resolve_archive_path(&file_path);
+    modpack::inspect_modpack_file(&resolved).await
+}
+
+#[tauri::command]
+async fn install_modpack_from_file(
+    app: tauri::AppHandle,
+    file_path: String,
+    custom_name: Option<String>,
+    custom_icon: Option<String>,
+) -> Result<instances::Instance, String> {
+    let resolved = modpack::resolve_archive_path(&file_path);
+    let bytes = std::fs::read(&resolved).map_err(|e| format!("Failed to read file {}: {}", resolved.display(), e))?;
+    modpack::install_modpack_bytes(&app, &bytes, custom_name, custom_icon).await
+}
+
+#[tauri::command]
+fn pick_modpack_file() -> Result<Option<String>, String> {
+    // 1. Try zenity (common on Linux desktop)
+    if let Ok(output) = std::process::Command::new("zenity")
+        .args([
+            "--file-selection",
+            "--title=Select Modpack Archive",
+            "--file-filter=Minecraft Archives (*.mrpack, *.zip) | *.mrpack *.zip",
+        ])
+        .output()
+    {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !path.is_empty() {
+                return Ok(Some(path));
+            }
+        }
+    }
+
+    // 2. Try kdialog (KDE desktop)
+    if let Ok(output) = std::process::Command::new("kdialog")
+        .args(["--getopenfilename", "~", "*.mrpack *.zip"])
+        .output()
+    {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !path.is_empty() {
+                return Ok(Some(path));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+#[tauri::command]
+async fn install_modpack_from_discovery(
+    app: tauri::AppHandle,
+    download_url: String,
+    custom_name: Option<String>,
+    custom_icon: Option<String>,
+) -> Result<instances::Instance, String> {
+    modpack::install_modpack_from_url(&app, &download_url, custom_name, custom_icon).await
 }
 
 
@@ -782,7 +846,11 @@ pub fn run() {
             get_active_downloads,
             pause_download,
             resume_download,
-            stop_download
+            stop_download,
+            inspect_modpack_file,
+            install_modpack_from_file,
+            install_modpack_from_discovery,
+            pick_modpack_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

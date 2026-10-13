@@ -38,6 +38,7 @@ import type {
   RunningInstanceInfo,
   ScreenshotItem,
   CrashAnalysis,
+  ModpackInspection,
 } from "../instance";
 import { formatPlayTime } from "../instance";
 import type { JavaRuntime, Settings } from "../settings";
@@ -560,6 +561,13 @@ function CreateInstanceModal({
     loaderVersion?: string,
   ) => Promise<void>;
 }) {
+  const [creationMode, setCreationMode] = useState<"vanilla" | "modpack">("vanilla");
+  const [importPath, setImportPath] = useState("");
+  const [inspection, setInspection] = useState<ModpackInspection | null>(null);
+  const [isInspecting, setIsInspecting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [inspectError, setInspectError] = useState<string | null>(null);
+
   const [tab, setTab] = useState<"release" | "snapshot">("release");
   const [loader, setLoader] = useState<"vanilla" | "fabric" | "forge" | "neoforge" | "quilt">(
     "vanilla",
@@ -581,6 +589,64 @@ function CreateInstanceModal({
   );
   const [iconPickerTab, setIconPickerTab] = useState<"blocks" | "colors">("blocks");
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBrowse = async () => {
+    try {
+      const picked = await invoke<string | null>("pick_modpack_file");
+      if (picked) {
+        setImportPath(picked);
+        handleInspectFile(picked);
+        return;
+      }
+    } catch {
+      // fallback to file input dialog
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleInspectFile = async (filePath: string) => {
+    if (!filePath.trim()) return;
+    setIsInspecting(true);
+    setInspectError(null);
+    try {
+      const res = await invoke<ModpackInspection>("inspect_modpack_file", {
+        filePath: filePath.trim(),
+      });
+      setInspection(res);
+      if (!nameManuallyEdited && res.name) {
+        setName(res.name);
+      }
+    } catch (err) {
+      setInspection(null);
+      setInspectError(String(err));
+    } finally {
+      setIsInspecting(false);
+    }
+  };
+
+  const handleImportModpack = async () => {
+    if (!importPath.trim() || !name.trim()) return;
+    const encodedIcon = encodeInstanceIcon(selectedBlock, selectedGradientName);
+    setIsImporting(true);
+    toast.info(`Importing modpack "${name.trim()}"...`, {
+      description: "Extracting archive and downloading dependencies. Check downloads drawer.",
+    });
+    onClose();
+
+    try {
+      await invoke("install_modpack_from_file", {
+        filePath: importPath.trim(),
+        customName: name.trim(),
+        customIcon: encodedIcon,
+      });
+      toast.success(`Modpack "${name.trim()}" deployed successfully!`);
+    } catch (err) {
+      toast.error(`Failed to import modpack: ${String(err)}`);
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   // Available versions in selected tab
   const filteredVersions = useMemo(() => {
@@ -629,7 +695,7 @@ function CreateInstanceModal({
       isOpen={true}
       onClose={onClose}
       theme={theme}
-      title="Create Instance"
+      title={creationMode === "modpack" ? "Import Modpack" : "Create Instance"}
       maxWidth={540}
       footer={
         <>
@@ -641,18 +707,55 @@ function CreateInstanceModal({
           >
             Cancel
           </button>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-1.5 h-7.5 px-3 rounded-md border-0 text-xs font-semibold cursor-pointer transition-[opacity,filter] duration-120 hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
-            style={{ background: theme.primary, color: theme.primaryForeground }}
-            onClick={handleCreate}
-            disabled={!selectedVersion || !name.trim()}
-          >
-            Create Instance
-          </button>
+          {creationMode === "modpack" ? (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-1.5 h-7.5 px-3 rounded-md border-0 text-xs font-semibold cursor-pointer transition-[opacity,filter] duration-120 hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
+              style={{ background: theme.primary, color: theme.primaryForeground }}
+              onClick={handleImportModpack}
+              disabled={isInspecting || isImporting || !importPath.trim() || !name.trim()}
+            >
+              {isImporting ? "Importing..." : "Import Modpack"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-1.5 h-7.5 px-3 rounded-md border-0 text-xs font-semibold cursor-pointer transition-[opacity,filter] duration-120 hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
+              style={{ background: theme.primary, color: theme.primaryForeground }}
+              onClick={handleCreate}
+              disabled={!selectedVersion || !name.trim()}
+            >
+              Create Instance
+            </button>
+          )}
         </>
       }
     >
+      {/* Top mode toggle */}
+      <div className="flex items-center gap-1 p-1 rounded-lg border border-border bg-secondary mb-3">
+        <button
+          type="button"
+          onClick={() => setCreationMode("vanilla")}
+          className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all text-center cursor-pointer ${
+            creationMode === "vanilla"
+              ? "bg-card text-foreground font-semibold shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Vanilla & Loaders
+        </button>
+        <button
+          type="button"
+          onClick={() => setCreationMode("modpack")}
+          className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all text-center cursor-pointer ${
+            creationMode === "modpack"
+              ? "bg-card text-foreground font-semibold shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Import Modpack (.mrpack, .zip)
+        </button>
+      </div>
       {/* Instance Icon & Name */}
       <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
         {/* Block Icon preview & randomizer */}
@@ -791,142 +894,237 @@ function CreateInstanceModal({
         </div>
       )}
 
-      {/* Mod Loader Selector */}
-      <div className="modal-field">
-        <label className="modal-label" style={{ color: theme.foreground }}>
-          Mod Loader
-        </label>
-        <div
-          className="flex items-center gap-1 p-1 rounded-lg border border-border"
-          style={{ background: theme.sidebarAccent }}
-        >
-          {(
-            [
-              { id: "vanilla", label: "None (Vanilla)" },
-              { id: "fabric", label: "Fabric" },
-              { id: "forge", label: "Forge" },
-              { id: "neoforge", label: "NeoForge" },
-              { id: "quilt", label: "Quilt" },
-            ] as const
-          ).map((item) => {
-            const isSelected = loader === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleSelectLoader(item.id)}
-                className="flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-all text-center"
+      {creationMode === "modpack" ? (
+        <div className="flex flex-col gap-3 py-1">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold" style={{ color: theme.foreground }}>
+              Modpack File (.mrpack or CurseForge .zip)
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                className="flex-1 px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                 style={{
-                  background: isSelected ? theme.primary : "transparent",
-                  color: isSelected ? theme.primaryForeground : theme.mutedForeground,
-                  fontWeight: isSelected ? 600 : 500,
+                  background: theme.sidebarAccent,
+                  borderColor: theme.border,
+                  color: theme.foreground,
                 }}
+                value={importPath}
+                onChange={(e) => {
+                  setImportPath(e.target.value);
+                  handleInspectFile(e.target.value);
+                }}
+                placeholder="Enter full path or choose file..."
+              />
+              <button
+                type="button"
+                onClick={handleBrowse}
+                className="h-8 px-3 rounded-lg border border-border bg-secondary flex items-center justify-center text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+                style={{ borderColor: theme.border, color: theme.foreground }}
               >
-                {item.label}
+                Browse
               </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Version Selector */}
-      <div className="modal-field">
-        <div className="flex items-center justify-between mb-2">
-          <label className="modal-label" style={{ color: theme.foreground, marginBottom: 0 }}>
-            Minecraft Version
-          </label>
-          <div
-            className="flex p-0.5 rounded-md border border-border gap-0.5"
-            style={{ background: theme.sidebarAccent, borderColor: theme.border }}
-          >
-            <button
-              type="button"
-              className={`border-0 px-2.5 py-1 text-xs font-medium rounded cursor-pointer transition-all ${tab === "release" ? "bg-card text-foreground font-semibold shadow-xs" : "bg-transparent text-muted-foreground"}`}
-              style={{
-                color: tab === "release" ? theme.foreground : theme.mutedForeground,
-                background: tab === "release" ? theme.card : "transparent",
-              }}
-              onClick={() => setTab("release")}
-            >
-              Releases
-            </button>
-            <button
-              type="button"
-              className={`border-0 px-2.5 py-1 text-xs font-medium rounded cursor-pointer transition-all ${tab === "snapshot" ? "bg-card text-foreground font-semibold shadow-xs" : "bg-transparent text-muted-foreground"}`}
-              style={{
-                color: tab === "snapshot" ? theme.foreground : theme.mutedForeground,
-                background: tab === "snapshot" ? theme.card : "transparent",
-              }}
-              onClick={() => setTab("snapshot")}
-            >
-              Snapshots
-            </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".mrpack,.zip"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const path = (file as any).path || file.name;
+                    setImportPath(path);
+                    handleInspectFile(path);
+                  }
+                }}
+              />
+            </div>
           </div>
-        </div>
 
-        <div
-          className="flex items-center gap-1.5 px-2.5 h-8 rounded-md border border-border mb-2"
-          style={{ background: theme.sidebarAccent, borderColor: theme.border }}
-        >
-          <Icon name="search" size={14} color={theme.mutedForeground} />
-          <input
-            type="text"
-            placeholder="Filter versions (e.g. 1.8, 1.20, 26.3)..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ color: theme.foreground }}
-            className="bg-transparent border-0 outline-none text-xs w-full"
-          />
-        </div>
+          {isInspecting && (
+            <div className="p-3 rounded-lg border border-border bg-secondary text-xs text-muted-foreground animate-pulse">
+              Inspecting modpack archive...
+            </div>
+          )}
 
-        <div
-          className="max-h-[180px] overflow-y-auto rounded-lg border border-border flex flex-col p-1 gap-0.5"
-          style={{ background: theme.sidebarAccent, borderColor: theme.border }}
-        >
-          {filteredVersions.slice(0, 100).map((v) => {
-            const isSelected = selectedVersion?.id === v.id;
-            return (
-              <button
-                key={v.id}
-                type="button"
-                className={`flex items-center justify-between w-full px-3 py-2 rounded-md border-0 text-xs text-left cursor-pointer transition-colors ${isSelected ? "font-semibold" : "hover:bg-secondary"}`}
-                style={{
-                  background: isSelected ? theme.primary : "transparent",
-                  color: isSelected ? theme.primaryForeground : theme.foreground,
-                }}
-                onClick={() => handleSelectVersion(v)}
-              >
-                <span className="version-item-id font-medium">{v.id}</span>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-[11px]"
-                    style={{
-                      color: isSelected ? theme.primaryForeground : theme.mutedForeground,
-                      opacity: 0.85,
-                    }}
-                  >
-                    {formatReleaseDate(v.releaseTime)}
+          {inspectError && (
+            <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-xs text-destructive">
+              {inspectError}
+            </div>
+          )}
+
+          {inspection && (
+            <div
+              className="p-3.5 rounded-xl border border-border flex flex-col gap-2 text-xs"
+              style={{ background: theme.sidebarAccent }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground text-sm">{inspection.name}</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  {inspection.format === "mrpack" ? "Modrinth Pack" : "CurseForge Pack"}
+                </span>
+              </div>
+              {inspection.summary && (
+                <p className="text-muted-foreground text-[11px] line-clamp-2">
+                  {inspection.summary}
+                </p>
+              )}
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                <span className="px-2 py-0.5 rounded-md border border-border bg-card text-[11px] font-mono">
+                  MC {inspection.mcVersion}
+                </span>
+                {inspection.loader && (
+                  <span className="px-2 py-0.5 rounded-md border border-border bg-card text-[11px] font-mono">
+                    {inspection.loader.toUpperCase()} {inspection.loaderVersion || ""}
                   </span>
-                  <span
-                    className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border border-border"
-                    style={{
-                      background: isSelected ? "rgba(255, 255, 255, 0.2)" : theme.card,
-                      color: isSelected ? theme.primaryForeground : theme.mutedForeground,
-                    }}
-                  >
-                    {v.type}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-          {filteredVersions.length === 0 && (
-            <div className="p-4 text-center text-xs" style={{ color: theme.mutedForeground }}>
-              No versions match "{search}"
+                )}
+                <span className="px-2 py-0.5 rounded-md border border-border bg-card text-[11px] font-mono">
+                  {inspection.fileCount} mods declared
+                </span>
+              </div>
             </div>
           )}
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Mod Loader Selector */}
+          <div className="modal-field">
+            <label className="modal-label" style={{ color: theme.foreground }}>
+              Mod Loader
+            </label>
+            <div
+              className="flex items-center gap-1 p-1 rounded-lg border border-border"
+              style={{ background: theme.sidebarAccent }}
+            >
+              {(
+                [
+                  { id: "vanilla", label: "None (Vanilla)" },
+                  { id: "fabric", label: "Fabric" },
+                  { id: "forge", label: "Forge" },
+                  { id: "neoforge", label: "NeoForge" },
+                  { id: "quilt", label: "Quilt" },
+                ] as const
+              ).map((item) => {
+                const isSelected = loader === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSelectLoader(item.id)}
+                    className="flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-all text-center"
+                    style={{
+                      background: isSelected ? theme.primary : "transparent",
+                      color: isSelected ? theme.primaryForeground : theme.mutedForeground,
+                      fontWeight: isSelected ? 600 : 500,
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Version Selector */}
+          <div className="modal-field">
+            <div className="flex items-center justify-between mb-2">
+              <label className="modal-label" style={{ color: theme.foreground, marginBottom: 0 }}>
+                Minecraft Version
+              </label>
+              <div
+                className="flex p-0.5 rounded-md border border-border gap-0.5"
+                style={{ background: theme.sidebarAccent, borderColor: theme.border }}
+              >
+                <button
+                  type="button"
+                  className={`border-0 px-2.5 py-1 text-xs font-medium rounded cursor-pointer transition-all ${tab === "release" ? "bg-card text-foreground font-semibold shadow-xs" : "bg-transparent text-muted-foreground"}`}
+                  style={{
+                    color: tab === "release" ? theme.foreground : theme.mutedForeground,
+                    background: tab === "release" ? theme.card : "transparent",
+                  }}
+                  onClick={() => setTab("release")}
+                >
+                  Releases
+                </button>
+                <button
+                  type="button"
+                  className={`border-0 px-2.5 py-1 text-xs font-medium rounded cursor-pointer transition-all ${tab === "snapshot" ? "bg-card text-foreground font-semibold shadow-xs" : "bg-transparent text-muted-foreground"}`}
+                  style={{
+                    color: tab === "snapshot" ? theme.foreground : theme.mutedForeground,
+                    background: tab === "snapshot" ? theme.card : "transparent",
+                  }}
+                  onClick={() => setTab("snapshot")}
+                >
+                  Snapshots
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="flex items-center gap-1.5 px-2.5 h-8 rounded-md border border-border mb-2"
+              style={{ background: theme.sidebarAccent, borderColor: theme.border }}
+            >
+              <Icon name="search" size={14} color={theme.mutedForeground} />
+              <input
+                type="text"
+                placeholder="Filter versions (e.g. 1.8, 1.20, 26.3)..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ color: theme.foreground }}
+                className="bg-transparent border-0 outline-none text-xs w-full"
+              />
+            </div>
+
+            <div
+              className="max-h-[180px] overflow-y-auto rounded-lg border border-border flex flex-col p-1 gap-0.5"
+              style={{ background: theme.sidebarAccent, borderColor: theme.border }}
+            >
+              {filteredVersions.slice(0, 100).map((v) => {
+                const isSelected = selectedVersion?.id === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    className={`flex items-center justify-between w-full px-3 py-2 rounded-md border-0 text-xs text-left cursor-pointer transition-colors ${isSelected ? "font-semibold" : "hover:bg-secondary"}`}
+                    style={{
+                      background: isSelected ? theme.primary : "transparent",
+                      color: isSelected ? theme.primaryForeground : theme.foreground,
+                    }}
+                    onClick={() => handleSelectVersion(v)}
+                  >
+                    <span className="version-item-id font-medium">{v.id}</span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-[11px]"
+                        style={{
+                          color: isSelected ? theme.primaryForeground : theme.mutedForeground,
+                          opacity: 0.85,
+                        }}
+                      >
+                        {formatReleaseDate(v.releaseTime)}
+                      </span>
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border border-border"
+                        style={{
+                          background: isSelected ? "rgba(255, 255, 255, 0.2)" : theme.card,
+                          color: isSelected ? theme.primaryForeground : theme.mutedForeground,
+                        }}
+                      >
+                        {v.type}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+              {filteredVersions.length === 0 && (
+                <div className="p-4 text-center text-xs" style={{ color: theme.mutedForeground }}>
+                  No versions match "{search}"
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </Modal>
   );
 }

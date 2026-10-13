@@ -46,8 +46,10 @@ export function DiscoveryProjectCard({
   onInstall,
   isInstalling = false,
   isInstalled = false,
-  installLabel = "Install",
+  installLabel,
 }: DiscoveryProjectCardProps) {
+  const effectiveLabel =
+    installLabel || (item.projectType === "modpack" ? "Install Pack" : "Install");
   const dlCount =
     item.downloads >= 1_000_000
       ? `${(item.downloads / 1_000_000).toFixed(1)}M`
@@ -189,7 +191,7 @@ export function DiscoveryProjectCard({
               : theme.primaryForeground,
           }}
         >
-          {isInstalling ? "Installing..." : isInstalled ? "Installed" : installLabel}
+          {isInstalling ? "Installing..." : isInstalled ? "Installed" : effectiveLabel}
         </button>
 
         <div className="flex flex-col items-end gap-1 flex-shrink-0">

@@ -31,7 +31,7 @@ pub struct DownloadController {
 }
 
 static ORDER_COUNTER: AtomicU64 = AtomicU64::new(1);
-static ACTIVE_DOWNLOADS: Mutex<Option<Vec<DownloadItem>>> = Mutex::new(None);
+pub(crate) static ACTIVE_DOWNLOADS: Mutex<Option<Vec<DownloadItem>>> = Mutex::new(None);
 static CONTROLLERS: Mutex<Option<HashMap<String, Arc<DownloadController>>>> = Mutex::new(None);
 
 pub fn get_or_create_controller(id: &str) -> Arc<DownloadController> {

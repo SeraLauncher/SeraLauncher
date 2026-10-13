@@ -45,6 +45,7 @@ export function SelectVersionModal({
   const [versions, setVersions] = useState<DiscoveryVersion[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [modpackInstanceName, setModpackInstanceName] = useState(project.title);
   // installing state handled by parent
 
   useEffect(() => {
@@ -98,14 +99,45 @@ export function SelectVersionModal({
   const handleInstall = () => {
     if (!selectedVersion || !selectedVersion.downloadUrl) return;
 
+    const isModpack = project.projectType === "modpack";
+    const instName = isModpack ? modpackInstanceName.trim() || project.title : targetInstanceName;
     const titleWithVer = `${project.title} (${selectedVersion.versionNumber})`;
     toast.info(`Downloading ${titleWithVer}...`, {
-      description: `Installing into ${targetInstanceName}. Check header for progress.`,
+      description: isModpack
+        ? `Installing as new instance "${instName}". Check downloads drawer.`
+        : `Installing into ${targetInstanceName}. Check header for progress.`,
     });
 
     // Notify parent to turn card button into "Installing..." immediately
     onInstallStart?.(project.id);
     onClose();
+
+    if (isModpack) {
+      invoke("install_modpack_from_discovery", {
+        downloadUrl: selectedVersion.downloadUrl,
+        customName: instName,
+        customIcon: null,
+      })
+        .then(() => {
+          recordDownloadHistory({
+            title: titleWithVer,
+            instanceName: instName,
+            mcVersion,
+            status: "completed",
+            type: "modpack",
+            iconUrl: project.iconUrl,
+          });
+          toast.success(`Modpack "${instName}" installed successfully!`);
+          onInstalled?.([selectedVersion.fileName]);
+        })
+        .catch((err) => {
+          toast.error(`Failed to install modpack ${project.title}`, {
+            description: String(err),
+          });
+          onInstallError?.(project.id, String(err));
+        });
+      return;
+    }
 
     invoke<string[]>("install_discovery_project", {
       instanceId: targetInstanceId,
@@ -154,7 +186,11 @@ export function SelectVersionModal({
       isOpen={isOpen}
       onClose={onClose}
       theme={theme}
-      title={`Select Version - ${project.title}`}
+      title={
+        project.projectType === "modpack"
+          ? `Install Modpack - ${project.title}`
+          : `Select Version - ${project.title}`
+      }
       maxWidth={460}
       className="overflow-visible"
       contentClassName="relative z-10 p-4.5 flex flex-col gap-3.5 overflow-visible"
@@ -176,19 +212,38 @@ export function SelectVersionModal({
             onClick={handleInstall}
             disabled={loading || versions.length === 0}
           >
-            Install Selected
+            {project.projectType === "modpack" ? "Install Modpack" : "Install Selected"}
           </button>
         </>
       }
     >
       <div className="flex flex-col gap-3 py-1">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            Target instance:{" "}
-            <strong style={{ color: theme.foreground }}>{targetInstanceName}</strong>
-          </span>
-          {mcVersion && <span>MC {mcVersion}</span>}
-        </div>
+        {project.projectType === "modpack" ? (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold" style={{ color: theme.foreground }}>
+              Instance Name
+            </label>
+            <input
+              type="text"
+              value={modpackInstanceName}
+              onChange={(e) => setModpackInstanceName(e.target.value)}
+              placeholder="e.g. Better MC"
+              className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+              style={{
+                borderColor: theme.border,
+                color: theme.foreground,
+              }}
+            />
+          </div>
+        ) : (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              Target instance:{" "}
+              <strong style={{ color: theme.foreground }}>{targetInstanceName}</strong>
+            </span>
+            {mcVersion && <span>MC {mcVersion}</span>}
+          </div>
+        )}
 
         {loading ? (
           <div className="h-9 px-3 flex items-center rounded-lg border border-border bg-secondary text-xs text-muted-foreground">

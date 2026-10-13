@@ -22,6 +22,7 @@ import {
   type DeviceCodeResponse,
   type DownloadItem,
   type DownloadHistoryItem,
+  type ModpackInspection,
 } from "@sera/ui";
 
 const DEFAULTS: Settings = {
@@ -270,6 +271,36 @@ export function useInstances() {
     [refreshInstances],
   );
 
+  const installModpackFromDiscovery = useCallback(
+    async (downloadUrl: string, customName?: string, customIcon?: string) => {
+      const inst = await invoke<Instance>("install_modpack_from_discovery", {
+        downloadUrl,
+        customName: customName || null,
+        customIcon: customIcon || null,
+      });
+      refreshInstances();
+      return inst;
+    },
+    [refreshInstances],
+  );
+
+  const installModpackFromFile = useCallback(
+    async (filePath: string, customName?: string, customIcon?: string) => {
+      const inst = await invoke<Instance>("install_modpack_from_file", {
+        filePath,
+        customName: customName || null,
+        customIcon: customIcon || null,
+      });
+      refreshInstances();
+      return inst;
+    },
+    [refreshInstances],
+  );
+
+  const inspectModpackFile = useCallback(async (filePath: string) => {
+    return await invoke<ModpackInspection>("inspect_modpack_file", { filePath });
+  }, []);
+
   return {
     instances,
     versions,
@@ -280,6 +311,9 @@ export function useInstances() {
     updateInstance,
     openFolder,
     launchInstance,
+    installModpackFromDiscovery,
+    installModpackFromFile,
+    inspectModpackFile,
     runningInstances,
     killInstance,
     refreshRunningInstances,

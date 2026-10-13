@@ -579,7 +579,9 @@ export function DiscoveryDetailsPage({
                 ? "Installing..."
                 : isInstalled || installSuccess
                   ? "Installed"
-                  : "Install"}
+                  : project.projectType === "modpack"
+                    ? "Install Modpack"
+                    : "Install"}
             </button>
 
             {/* 3-Dots Action Menu */}
