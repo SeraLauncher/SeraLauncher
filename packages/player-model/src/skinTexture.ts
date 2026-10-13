@@ -15,7 +15,10 @@ const pendingLoads = new Map<string, Promise<HTMLCanvasElement>>();
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    // Only set crossOrigin on external network URLs; setting crossOrigin on data: URIs fails in WebKit
+    if (src.startsWith("http://") || src.startsWith("https://")) {
+      img.crossOrigin = "anonymous";
+    }
     img.addEventListener("load", () => resolve(img), { once: true });
     img.addEventListener("error", (e) => reject(e), { once: true });
     img.src = src;
@@ -72,10 +75,12 @@ export function loadSkinCanvas(skinUrl?: string | null): Promise<HTMLCanvasEleme
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return canvas;
 
-    let resolvedUrl = key;
-    if (key.startsWith("http://") || key.startsWith("https://")) {
+    let resolvedUrl = key.startsWith("http://ely.by/")
+      ? key.replace("http://ely.by/", "https://ely.by/")
+      : key;
+    if (resolvedUrl.startsWith("http://") || resolvedUrl.startsWith("https://")) {
       try {
-        const dataUrl = await invoke<string>("fetch_skin_as_data_url", { url: key });
+        const dataUrl = await invoke<string>("fetch_skin_as_data_url", { url: resolvedUrl });
         if (dataUrl) {
           resolvedUrl = dataUrl;
         }

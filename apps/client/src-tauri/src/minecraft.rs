@@ -990,6 +990,12 @@ pub async fn launch_minecraft_instance(
         _ => ("0".to_string(), "legacy".to_string()),
     };
 
+    // LittleSkin and Ely.by auth servers expect the standard 32-hex undashed UUID for profile lookup
+    let auth_uuid = match account.account_type.as_str() {
+        "elyby" | "littleskin" => account.uuid.replace('-', ""),
+        _ => account.uuid.clone(),
+    };
+
     if let Some(mc_args) = &pkg.minecraft_arguments {
         for token in mc_args.split_whitespace() {
             let replaced = token
@@ -998,7 +1004,7 @@ pub async fn launch_minecraft_instance(
                 .replace("${game_directory}", &game_dir.to_string_lossy())
                 .replace("${assets_root}", &assets_root.to_string_lossy())
                 .replace("${assets_index_name}", &pkg.asset_index.id)
-                .replace("${auth_uuid}", &account.uuid)
+                .replace("${auth_uuid}", &auth_uuid)
                 .replace("${auth_access_token}", &access_token)
                 .replace("${user_type}", &user_type)
                 .replace("${version_type}", &instance.version_type)
@@ -1018,7 +1024,7 @@ pub async fn launch_minecraft_instance(
         cmd_args.push("--assetIndex".to_string());
         cmd_args.push(pkg.asset_index.id.clone());
         cmd_args.push("--uuid".to_string());
-        cmd_args.push(account.uuid.clone());
+        cmd_args.push(auth_uuid);
         cmd_args.push("--accessToken".to_string());
         cmd_args.push(access_token);
         cmd_args.push("--userType".to_string());

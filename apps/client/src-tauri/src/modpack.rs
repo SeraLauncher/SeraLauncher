@@ -465,8 +465,26 @@ pub async fn inspect_modpack_file(file_path: &Path) -> Result<ModpackInspection,
     let is_mrpack = archive.by_name("modrinth.index.json").is_ok();
     let is_curseforge = archive.by_name("manifest.json").is_ok();
     let is_prism = archive.by_name("mmc-pack.json").is_ok() || archive.by_name("instance.cfg").is_ok();
+    let is_sera = archive.by_name("instance.json").is_ok();
 
-    if is_mrpack {
+    if is_sera {
+        let mut content = String::new();
+        {
+            let mut inst_file = archive.by_name("instance.json").map_err(|e| e.to_string())?;
+            inst_file.read_to_string(&mut content).map_err(|e| e.to_string())?;
+        }
+        let parsed: Instance = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+        let mod_count = archive.len();
+        Ok(ModpackInspection {
+            name: parsed.name,
+            summary: Some(format!("Sera Launcher package (MC {})", parsed.mc_version)),
+            mc_version: parsed.mc_version,
+            loader: parsed.loader,
+            loader_version: parsed.loader_version,
+            file_count: mod_count,
+            format: "sera".to_string(),
+        })
+    } else if is_mrpack {
         let manifest = parse_mrpack(&mut archive)?;
         Ok(ModpackInspection {
             name: manifest.name,
@@ -550,8 +568,23 @@ pub async fn install_modpack_bytes(
     let is_mrpack = archive.by_name("modrinth.index.json").is_ok();
     let is_curseforge = archive.by_name("manifest.json").is_ok();
     let is_prism = archive.by_name("mmc-pack.json").is_ok() || archive.by_name("instance.cfg").is_ok();
+    let is_sera = archive.by_name("instance.json").is_ok();
 
-    let manifest = if is_mrpack {
+    let manifest = if is_sera {
+        let mut inst_file = archive.by_name("instance.json").map_err(|e| e.to_string())?;
+        let mut content = String::new();
+        inst_file.read_to_string(&mut content).map_err(|e| e.to_string())?;
+        let parsed: Instance = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+        ModpackManifest {
+            name: parsed.name,
+            summary: Some("Sera Launcher Package".to_string()),
+            mc_version: parsed.mc_version,
+            loader: parsed.loader,
+            loader_version: parsed.loader_version,
+            files: Vec::new(),
+            overrides_prefix: "minecraft".to_string(),
+        }
+    } else if is_mrpack {
         parse_mrpack(&mut archive)?
     } else if is_curseforge {
         parse_curseforge(&mut archive, &client).await?
@@ -559,7 +592,7 @@ pub async fn install_modpack_bytes(
         let fallback = custom_name.as_deref().unwrap_or("Prism Instance");
         parse_prism(&mut archive, fallback)?
     } else {
-        return Err("Archive is neither a Modrinth .mrpack, CurseForge modpack, nor Prism export".to_string());
+        return Err("Archive is neither a Sera package, Modrinth .mrpack, CurseForge modpack, nor Prism export".to_string());
     };
 
     let instance_name = custom_name.unwrap_or(manifest.name.clone());

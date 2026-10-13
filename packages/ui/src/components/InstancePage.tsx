@@ -48,6 +48,7 @@ import { Dropdown } from "./Dropdown";
 import { EffectiveJavaArgsModal } from "./EffectiveJavaArgsModal";
 import { InstanceAddonsTab } from "./InstanceAddonsTab";
 import { InstanceWorldsTab } from "./InstanceWorldsTab";
+import { ExportInstanceModal } from "./ExportInstanceModal";
 import {
   BLOCK_ICON_KEYS,
   PASTEL_GRADIENTS,
@@ -954,7 +955,7 @@ function CreateInstanceModal({
         <div className="flex flex-col gap-3 py-1">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold" style={{ color: theme.foreground }}>
-              Modpack File (.mrpack or CurseForge .zip)
+              Instance Package (.zip, .mrpack)
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -999,7 +1000,7 @@ function CreateInstanceModal({
 
           {isInspecting && (
             <div className="p-3 rounded-lg border border-border bg-secondary text-xs text-muted-foreground animate-pulse">
-              Inspecting modpack archive...
+              Inspecting instance archive...
             </div>
           )}
 
@@ -1017,7 +1018,13 @@ function CreateInstanceModal({
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-foreground text-sm">{inspection.name}</span>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                  {inspection.format === "mrpack" ? "Modrinth Pack" : "CurseForge Pack"}
+                  {inspection.format === "sera"
+                    ? "Sera Package"
+                    : inspection.format === "mrpack"
+                      ? "Modrinth Pack"
+                      : inspection.format === "curseforge"
+                        ? "CurseForge Pack"
+                        : "Prism Instance"}
                 </span>
               </div>
               {inspection.summary && (
@@ -1257,6 +1264,7 @@ function InstanceManagementView({
 
   // Top banner 3-dots action menu
   const [bannerMenuOpen, setBannerMenuOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const bannerMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -2251,6 +2259,17 @@ function InstanceManagementView({
                           className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary"
                           onClick={() => {
                             setBannerMenuOpen(false);
+                            setExportModalOpen(true);
+                          }}
+                        >
+                          <Icon name="download" size={14} color="currentColor" />
+                          <span>Export instance</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border-0 bg-transparent text-xs font-medium text-left cursor-pointer transition-colors hover:bg-secondary"
+                          onClick={() => {
+                            setBannerMenuOpen(false);
                             if (onSelectTab) onSelectTab("settings");
                           }}
                         >
@@ -2703,6 +2722,14 @@ function InstanceManagementView({
             </p>
           </Modal>
         )}
+
+        {/* Export Instance Modal */}
+        <ExportInstanceModal
+          isOpen={exportModalOpen}
+          onClose={() => setExportModalOpen(false)}
+          instance={instance}
+          theme={theme}
+        />
       </div>
     </div>
   );

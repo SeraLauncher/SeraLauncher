@@ -95,6 +95,23 @@ export type WorldBackupItem = {
   sizeBytes: number;
 };
 
+export type ExportOptions = {
+  instanceId: string;
+  name: string;
+  format: "sera_zip" | "mrpack" | string;
+  includeMods: boolean;
+  includeConfigs: boolean;
+  includeResourcepacks: boolean;
+  includeShaderpacks: boolean;
+  includeSaves: boolean;
+};
+
+export type ExportResult = {
+  outputPath: string;
+  fileName: string;
+  sizeBytes: number;
+};
+
 export function formatPlayTime(seconds?: number | null): string {
   if (!seconds || seconds <= 0) {
     return "Never played";

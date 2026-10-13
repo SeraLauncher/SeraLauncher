@@ -18,6 +18,7 @@ mod crash_analyzer;
 mod modpack;
 mod worlds;
 mod visual_options;
+mod export;
 
 const DEFAULT_APPEARANCE: &str = "dark";
 const BUNDLED_FAMILY: &str = "Sunghyun Sans";
@@ -532,6 +533,14 @@ fn set_active_shader_pack(
     visual_options::set_active_shader_pack(&app, &id, shader_pack)
 }
 
+#[tauri::command]
+fn export_instance(
+    app: tauri::AppHandle,
+    options: export::ExportOptions,
+) -> Result<export::ExportResult, String> {
+    export::export_instance(&app, options)
+}
+
 
 #[tauri::command]
 fn get_active_account(app: tauri::AppHandle) -> Result<Option<auth::PublicAccountInfo>, String> {
@@ -959,7 +968,8 @@ pub fn run() {
             get_active_resource_packs,
             set_active_resource_packs,
             get_active_shader_pack,
-            set_active_shader_pack
+            set_active_shader_pack,
+            export_instance
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

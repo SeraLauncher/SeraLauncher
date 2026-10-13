@@ -826,7 +826,12 @@ async fn fetch_yggdrasil_skin_texture(client: &reqwest::Client, profile_url: &st
             if let Some(tex) = envelope.textures {
                 if let Some(skin) = tex.skin {
                     if !skin.url.is_empty() {
-                        return Some(skin.url);
+                        let normalized = if skin.url.starts_with("http://ely.by/") {
+                            skin.url.replace("http://ely.by/", "https://ely.by/")
+                        } else {
+                            skin.url
+                        };
+                        return Some(normalized);
                     }
                 }
             }
