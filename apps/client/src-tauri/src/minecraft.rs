@@ -955,14 +955,18 @@ pub async fn launch_minecraft_instance(
     // Injects authlib-injector Java agent for Ely.by and LittleSkin accounts
     if account.account_type == "elyby" || account.account_type == "littleskin" {
         let authlib_jar = crate::downloader::ensure_authlib_injector(app).await?;
-        let auth_server = account.auth_server_url.as_deref().unwrap_or_else(|| {
-            if account.account_type == "elyby" {
-                crate::auth::ELYBY_SERVER_URL
-            } else {
-                crate::auth::LITTLESKIN_SERVER_URL
-            }
-        });
+        let auth_server = match account.account_type.as_str() {
+            "elyby" => crate::auth::ELYBY_SERVER_URL,
+            "littleskin" => crate::auth::LITTLESKIN_SERVER_URL,
+            _ => account.auth_server_url.as_deref().unwrap_or(crate::auth::ELYBY_SERVER_URL),
+        };
         cmd_args.push(format!("-javaagent:{}={}", authlib_jar.to_string_lossy(), auth_server));
+        cmd_args.push("-Dauthlibinjector.side=client".to_string());
+        // Java 16+ module opens required so authlib-injector can transform Yggdrasil session service classes
+        cmd_args.push("--add-opens".to_string());
+        cmd_args.push("java.base/java.lang=ALL-UNNAMED".to_string());
+        cmd_args.push("--add-opens".to_string());
+        cmd_args.push("java.base/java.net=ALL-UNNAMED".to_string());
     }
 
     cmd_args.push("-cp".to_string());
@@ -981,7 +985,7 @@ pub async fn launch_minecraft_instance(
         ),
         "elyby" | "littleskin" => (
             account.minecraft_access_token.clone().unwrap_or_else(|| "0".to_string()),
-            "mojang".to_string(),
+            "msa".to_string(),
         ),
         _ => ("0".to_string(), "legacy".to_string()),
     };
@@ -1021,6 +1025,8 @@ pub async fn launch_minecraft_instance(
         cmd_args.push(user_type);
         cmd_args.push("--versionType".to_string());
         cmd_args.push(instance.version_type.clone());
+        cmd_args.push("--userProperties".to_string());
+        cmd_args.push("{}".to_string());
     }
 
     // Ensure any install task is marked finished

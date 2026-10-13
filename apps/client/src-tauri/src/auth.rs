@@ -697,7 +697,7 @@ pub async fn get_valid_active_account(app: &tauri::AppHandle) -> Result<StoredAc
 pub const ELYBY_AUTH_URL: &str = "https://authserver.ely.by/auth/authenticate";
 pub const ELYBY_REFRESH_URL: &str = "https://authserver.ely.by/auth/refresh";
 pub const ELYBY_VALIDATE_URL: &str = "https://authserver.ely.by/auth/validate";
-pub const ELYBY_SERVER_URL: &str = "https://authserver.ely.by";
+pub const ELYBY_SERVER_URL: &str = "https://authserver.ely.by/api/authlib-injector";
 
 pub const LITTLESKIN_AUTH_URL: &str = "https://littleskin.cn/api/yggdrasil/authserver/authenticate";
 pub const LITTLESKIN_REFRESH_URL: &str = "https://littleskin.cn/api/yggdrasil/authserver/refresh";
