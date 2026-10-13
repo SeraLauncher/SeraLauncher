@@ -1833,8 +1833,11 @@ pub struct InstalledAddonItem {
     pub project_id: Option<String>,
 }
 
+static INSTALLED_ADDONS_CACHE: Mutex<Option<HashMap<PathBuf, (u64, u64, bool, InstalledAddonItem)>>> = Mutex::new(None);
+
 /// Lists all installed addon files in the instance directory (including .disabled files)
-/// with metadata parsed from .index configs and JAR archives.
+/// with metadata parsed from .index configs and JAR archives, using an in-memory mtime cache
+/// to keep loading instantaneous even with 50+ installed mods.
 pub fn get_installed_addons_list(
     app: &tauri::AppHandle,
     instance_id: &str,
@@ -1877,13 +1880,28 @@ pub fn get_installed_addons_list(
                 continue;
             }
 
-            let size_bytes = entry.metadata().map(|m| m.len()).unwrap_or(0);
-            let date_modified = entry.metadata().and_then(|m| m.modified()).ok().and_then(|st| {
-                st.duration_since(std::time::UNIX_EPOCH).ok().map(|d| {
-                    format!("{}", d.as_secs())
-                })
-            });
+            let meta = entry.metadata().ok();
+            let size_bytes = meta.as_ref().map(|m| m.len()).unwrap_or(0);
+            let mtime_secs = meta
+                .as_ref()
+                .and_then(|m| m.modified().ok())
+                .and_then(|st| st.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
 
+            // Fast-path: check memory cache by (path, mtime, size, is_disabled)
+            if let Ok(guard) = INSTALLED_ADDONS_CACHE.lock() {
+                if let Some(cache) = guard.as_ref() {
+                    if let Some((c_mtime, c_size, c_disabled, item)) = cache.get(&path) {
+                        if *c_mtime == mtime_secs && *c_size == size_bytes && *c_disabled == is_disabled {
+                            items.push(item.clone());
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            let date_modified = if mtime_secs > 0 { Some(format!("{}", mtime_secs)) } else { None };
             let stem = clean_name.strip_suffix(&format!(".{}", ext)).unwrap_or(&clean_name).to_string();
 
             // Default values
@@ -2008,7 +2026,7 @@ pub fn get_installed_addons_list(
                 }
             }
 
-            items.push(InstalledAddonItem {
+            let parsed_item = InstalledAddonItem {
                 id: stem,
                 name,
                 file_name,
@@ -2021,7 +2039,15 @@ pub fn get_installed_addons_list(
                 source,
                 icon_url,
                 project_id,
-            });
+            };
+
+            // Store in in-memory cache
+            if let Ok(mut guard) = INSTALLED_ADDONS_CACHE.lock() {
+                let cache = guard.get_or_insert_with(HashMap::new);
+                cache.insert(path, (mtime_secs, size_bytes, is_disabled, parsed_item.clone()));
+            }
+
+            items.push(parsed_item);
         }
     }
 

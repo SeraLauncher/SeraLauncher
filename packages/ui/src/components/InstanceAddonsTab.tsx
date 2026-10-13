@@ -310,7 +310,7 @@ export function InstanceAddonsTab({
 
   // Installed addons list state
   const [installedAddons, setInstalledAddons] = useState<InstalledAddonItem[]>([]);
-  const [loadingInstalled, setLoadingInstalled] = useState(false);
+  const [loadingInstalled, setLoadingInstalled] = useState(true);
   const [installedSearch, setInstalledSearch] = useState("");
   const [updates, setUpdates] = useState<AddonUpdateInfo[]>([]);
 
@@ -328,13 +328,16 @@ export function InstanceAddonsTab({
   }, [instance.id, category]);
 
   useEffect(() => {
-    checkForUpdates();
+    // Defer update checks slightly so initial installed list renders immediately
+    const timer = setTimeout(() => {
+      checkForUpdates();
+    }, 200);
+    return () => clearTimeout(timer);
   }, [checkForUpdates]);
   const [deleteConfirmAddon, setDeleteConfirmAddon] = useState<InstalledAddonItem | null>(null);
   const [versionSelectProject, setVersionSelectProject] = useState<DiscoveryProject | null>(null);
 
   const refreshInstalledAddons = useCallback(() => {
-    setLoadingInstalled(true);
     invoke<InstalledAddonItem[]>("get_installed_addons_list", {
       instanceId: instance.id,
       projectType: category,
@@ -363,34 +366,8 @@ export function InstanceAddonsTab({
   }, [instance.id, category]);
 
   useEffect(() => {
-    let active = true;
-    invoke<InstalledAddonItem[]>("get_installed_addons_list", {
-      instanceId: instance.id,
-      projectType: category,
-    })
-      .then((items) => {
-        if (!active) return;
-        const list = items || [];
-        setInstalledAddons(list);
-        const nextIds = new Set<string>();
-        for (const item of list) {
-          nextIds.add(item.id.toLowerCase());
-          nextIds.add(item.fileName.toLowerCase());
-          nextIds.add(item.name.toLowerCase());
-          if (item.projectId) nextIds.add(item.projectId.toLowerCase());
-          if (item.modId) nextIds.add(item.modId.toLowerCase());
-          const slug = item.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-          if (slug) nextIds.add(slug);
-          const clean = item.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-          if (clean) nextIds.add(clean);
-        }
-        setInstalledIds(nextIds);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [instance.id, category]);
+    refreshInstalledAddons();
+  }, [refreshInstalledAddons]);
 
   const handleToggleAddon = async (item: InstalledAddonItem) => {
     try {

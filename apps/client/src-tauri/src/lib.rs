@@ -267,12 +267,16 @@ async fn get_discovery_project_versions(
 }
 
 #[tauri::command]
-fn get_installed_addons_list(
+async fn get_installed_addons_list(
     app: tauri::AppHandle,
     instance_id: String,
     project_type: String,
 ) -> Result<Vec<discovery::InstalledAddonItem>, String> {
-    discovery::get_installed_addons_list(&app, &instance_id, &project_type)
+    tokio::task::spawn_blocking(move || {
+        discovery::get_installed_addons_list(&app, &instance_id, &project_type)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
