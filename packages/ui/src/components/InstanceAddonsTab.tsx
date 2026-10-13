@@ -314,6 +314,26 @@ export function InstanceAddonsTab({
   const [installedSearch, setInstalledSearch] = useState("");
   const [updates, setUpdates] = useState<AddonUpdateInfo[]>([]);
 
+  // In-launcher visual options activator state
+  const [activeResourcePacks, setActiveResourcePacks] = useState<string[]>([]);
+  const [activeShaderPack, setActiveShaderPack] = useState<string | null>(null);
+
+  const loadVisualOptions = useCallback(() => {
+    if (category === "resourcepack") {
+      invoke<string[]>("get_active_resource_packs", { id: instance.id })
+        .then((res) => setActiveResourcePacks(res || []))
+        .catch(() => setActiveResourcePacks([]));
+    } else if (category === "shader") {
+      invoke<string | null>("get_active_shader_pack", { id: instance.id })
+        .then((res) => setActiveShaderPack(res ?? null))
+        .catch(() => setActiveShaderPack(null));
+    }
+  }, [instance.id, category]);
+
+  useEffect(() => {
+    loadVisualOptions();
+  }, [loadVisualOptions]);
+
   const checkForUpdates = useCallback(() => {
     invoke<AddonUpdateInfo[]>("check_addon_updates", {
       instanceId: instance.id,
@@ -370,6 +390,72 @@ export function InstanceAddonsTab({
   }, [refreshInstalledAddons]);
 
   const handleToggleAddon = async (item: InstalledAddonItem) => {
+    if (category === "resourcepack") {
+      const cleanFileName = item.fileName.replace(/\.disabled$/, "");
+      const isActive = activeResourcePacks.includes(cleanFileName);
+      const nextPacks = isActive
+        ? activeResourcePacks.filter((p) => p !== cleanFileName)
+        : [...activeResourcePacks, cleanFileName];
+
+      try {
+        // If file is currently .disabled, re-enable it on disk
+        if (!item.enabled) {
+          await invoke("toggle_addon_enabled", {
+            instanceId: instance.id,
+            projectType: category,
+            fileName: item.fileName,
+            enabled: true,
+          });
+        }
+        await invoke("set_active_resource_packs", {
+          id: instance.id,
+          activePacks: nextPacks,
+        });
+        setActiveResourcePacks(nextPacks);
+        toast.success(isActive ? `Deactivated ${item.name}` : `Activated ${item.name}`);
+        refreshInstalledAddons();
+      } catch (err) {
+        toast.error(`Failed to update resource pack: ${err}`);
+      }
+      return;
+    }
+
+    if (category === "shader") {
+      const cleanFileName = item.fileName.replace(/\.disabled$/, "");
+      const isCurrentActive = activeShaderPack === cleanFileName || activeShaderPack === item.name;
+
+      try {
+        if (isCurrentActive) {
+          await invoke("set_active_shader_pack", {
+            id: instance.id,
+            shaderPack: null,
+          });
+          setActiveShaderPack(null);
+          toast.success("Shaders disabled");
+        } else {
+          // If disabled file on disk, re-enable
+          if (!item.enabled) {
+            await invoke("toggle_addon_enabled", {
+              instanceId: instance.id,
+              projectType: category,
+              fileName: item.fileName,
+              enabled: true,
+            });
+          }
+          await invoke("set_active_shader_pack", {
+            id: instance.id,
+            shaderPack: cleanFileName,
+          });
+          setActiveShaderPack(cleanFileName);
+          toast.success(`Activated shader ${item.name}`);
+        }
+        refreshInstalledAddons();
+      } catch (err) {
+        toast.error(`Failed to update shader: ${err}`);
+      }
+      return;
+    }
+
     try {
       await invoke("toggle_addon_enabled", {
         instanceId: instance.id,
@@ -381,6 +467,42 @@ export function InstanceAddonsTab({
       refreshInstalledAddons();
     } catch (err) {
       toast.error(`Failed to update ${item.name}: ${err}`);
+    }
+  };
+
+  const handleReorderResourcePack = async (fileName: string, direction: "up" | "down") => {
+    const clean = fileName.replace(/\.disabled$/, "");
+    const idx = activeResourcePacks.indexOf(clean);
+    if (idx === -1) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= activeResourcePacks.length) return;
+
+    const next = [...activeResourcePacks];
+    const [moved] = next.splice(idx, 1);
+    next.splice(targetIdx, 0, moved);
+
+    try {
+      await invoke("set_active_resource_packs", {
+        id: instance.id,
+        activePacks: next,
+      });
+      setActiveResourcePacks(next);
+      toast.success(`Priority updated for ${clean}`);
+    } catch (err) {
+      toast.error(`Failed to reorder: ${err}`);
+    }
+  };
+
+  const handleDisableShaders = async () => {
+    try {
+      await invoke("set_active_shader_pack", {
+        id: instance.id,
+        shaderPack: null,
+      });
+      setActiveShaderPack(null);
+      toast.success("Shaders disabled");
+    } catch (err) {
+      toast.error(`Failed to disable shaders: ${err}`);
     }
   };
 
@@ -766,12 +888,32 @@ export function InstanceAddonsTab({
                   <span className="font-semibold" style={{ color: theme.foreground }}>
                     {filteredInstalled.length} {categoryLabel} installed
                   </span>
-                  {filteredInstalled.some((i) => !i.enabled) && (
-                    <span>({filteredInstalled.filter((i) => i.enabled).length} active)</span>
+                  {category === "resourcepack" ? (
+                    <span>({activeResourcePacks.length} active in options.txt)</span>
+                  ) : category === "shader" ? (
+                    <span>
+                      ({activeShaderPack ? `Active: ${activeShaderPack}` : "No shader active"})
+                    </span>
+                  ) : (
+                    filteredInstalled.some((i) => !i.enabled) && (
+                      <span>({filteredInstalled.filter((i) => i.enabled).length} active)</span>
+                    )
                   )}
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {category === "shader" && activeShaderPack && (
+                    <button
+                      type="button"
+                      onClick={handleDisableShaders}
+                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none text-muted-foreground hover:text-foreground"
+                      title="Turn off shader in optionsshaders.txt"
+                    >
+                      <Icon name="x" size={13} color="currentColor" />
+                      <span>Disable Shaders</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
@@ -949,12 +1091,38 @@ export function InstanceAddonsTab({
 
                             {/* Badges flush with bottom of 72px thumbnail */}
                             <div className="flex items-center gap-1.5 flex-wrap flex-shrink-0">
+                              {category === "resourcepack" &&
+                                activeResourcePacks.includes(
+                                  item.fileName.replace(/\.disabled$/, ""),
+                                ) && (
+                                  <Badge
+                                    variant="environment"
+                                    className="bg-primary/15 text-primary border-primary/30 font-semibold"
+                                  >
+                                    Active #
+                                    {activeResourcePacks.indexOf(
+                                      item.fileName.replace(/\.disabled$/, ""),
+                                    ) + 1}
+                                  </Badge>
+                                )}
+                              {category === "shader" &&
+                                (activeShaderPack === item.fileName.replace(/\.disabled$/, "") ||
+                                  activeShaderPack === item.name) && (
+                                  <Badge
+                                    variant="environment"
+                                    className="bg-primary/15 text-primary border-primary/30 font-semibold"
+                                  >
+                                    Active Shader
+                                  </Badge>
+                                )}
                               {item.version && <Badge variant="environment">v{item.version}</Badge>}
                               <Badge variant="environment">{formatBytes(item.sizeBytes)}</Badge>
                               {item.source && (
                                 <Badge variant="environment">{capitalizeFirst(item.source)}</Badge>
                               )}
-                              {!item.enabled && <Badge variant="environment">Disabled</Badge>}
+                              {!item.enabled && category === "mods" && (
+                                <Badge variant="environment">Disabled</Badge>
+                              )}
                               {updates.find((u) => u.fileName === item.fileName) && (
                                 <Badge
                                   variant="environment"
@@ -969,22 +1137,92 @@ export function InstanceAddonsTab({
                           </div>
                         </div>
 
-                        {/* Right: Toggle Switch & Delete Action vertically centered */}
-                        <div className="h-[72px] flex items-center gap-2.5 shrink-0 pl-2">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleAddon(item)}
-                            className={`h-5 w-9 rounded-full transition-colors relative cursor-pointer border-0 ${
-                              item.enabled ? "bg-primary" : "bg-muted"
-                            }`}
-                            title={item.enabled ? "Disable this addon" : "Enable this addon"}
-                          >
-                            <span
-                              className={`block size-3.5 rounded-full bg-white shadow-xs transition-transform absolute top-[3px] ${
-                                item.enabled ? "left-[19px]" : "left-[3px]"
-                              }`}
-                            />
-                          </button>
+                        {/* Right: Activator Controls, Toggle Switch & Delete Action vertically centered */}
+                        <div className="h-[72px] flex items-center gap-2 shrink-0 pl-2">
+                          {/* Priority reordering controls for active resource packs */}
+                          {category === "resourcepack" &&
+                            activeResourcePacks.includes(
+                              item.fileName.replace(/\.disabled$/, ""),
+                            ) && (
+                              <div className="flex flex-col gap-1 mr-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleReorderResourcePack(item.fileName, "up")}
+                                  disabled={
+                                    activeResourcePacks.indexOf(
+                                      item.fileName.replace(/\.disabled$/, ""),
+                                    ) === 0
+                                  }
+                                  className="size-6 rounded flex items-center justify-center border border-border bg-secondary cursor-pointer hover:bg-card disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                  title="Increase pack priority (load higher)"
+                                >
+                                  <Icon name="chevronUp" size={12} color="currentColor" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReorderResourcePack(item.fileName, "down")}
+                                  disabled={
+                                    activeResourcePacks.indexOf(
+                                      item.fileName.replace(/\.disabled$/, ""),
+                                    ) ===
+                                    activeResourcePacks.length - 1
+                                  }
+                                  className="size-6 rounded flex items-center justify-center border border-border bg-secondary cursor-pointer hover:bg-card disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                  title="Decrease pack priority (load lower)"
+                                >
+                                  <Icon name="chevronDown" size={12} color="currentColor" />
+                                </button>
+                              </div>
+                            )}
+
+                          {/* Toggle Activation Switch */}
+                          {(() => {
+                            const isRPActive =
+                              category === "resourcepack" &&
+                              activeResourcePacks.includes(
+                                item.fileName.replace(/\.disabled$/, ""),
+                              );
+                            const isShaderActive =
+                              category === "shader" &&
+                              (activeShaderPack === item.fileName.replace(/\.disabled$/, "") ||
+                                activeShaderPack === item.name);
+                            const isChecked =
+                              category === "resourcepack"
+                                ? isRPActive
+                                : category === "shader"
+                                  ? isShaderActive
+                                  : item.enabled;
+
+                            const toggleTitle =
+                              category === "resourcepack"
+                                ? isRPActive
+                                  ? "Deactivate in options.txt"
+                                  : "Activate in options.txt"
+                                : category === "shader"
+                                  ? isShaderActive
+                                    ? "Deactivate shader"
+                                    : "Activate shader"
+                                  : item.enabled
+                                    ? "Disable this mod"
+                                    : "Enable this mod";
+
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleAddon(item)}
+                                className={`h-5 w-9 rounded-full transition-colors relative cursor-pointer border-0 ${
+                                  isChecked ? "bg-primary" : "bg-muted"
+                                }`}
+                                title={toggleTitle}
+                              >
+                                <span
+                                  className={`block size-3.5 rounded-full bg-white shadow-xs transition-transform absolute top-[3px] ${
+                                    isChecked ? "left-[19px]" : "left-[3px]"
+                                  }`}
+                                />
+                              </button>
+                            );
+                          })()}
 
                           <button
                             type="button"

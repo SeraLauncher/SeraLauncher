@@ -41,6 +41,7 @@ fn base64_encode(bytes: &[u8]) -> String {
 
 use sha1::{Digest, Sha1};
 use std::collections::HashMap;
+use std::io::{Read, Seek};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -1407,7 +1408,7 @@ pub fn scan_installed_mods(mods_dir: &Path) -> HashMap<String, (String, PathBuf)
                             use std::io::Read;
                             let mut buf = String::new();
                             if mod_json.read_to_string(&mut buf).is_ok() {
-                                if let Ok(parsed) = serde_json::from_str::<FabricModMetadata>(&buf) {
+                                if let Some(parsed) = parse_lenient_json::<FabricModMetadata>(&buf) {
                                     let ver = parsed.version.unwrap_or_else(|| "1.0.0".to_string());
                                     if let Some(id) = parsed.id {
                                         map.insert(id.to_lowercase(), (ver.clone(), path.clone()));
@@ -1835,6 +1836,293 @@ pub struct InstalledAddonItem {
 
 static INSTALLED_ADDONS_CACHE: Mutex<Option<HashMap<PathBuf, (u64, u64, bool, InstalledAddonItem)>>> = Mutex::new(None);
 
+/// Parses JSON leniently by escaping raw unescaped control characters in string literals
+fn parse_lenient_json<T: for<'de> Deserialize<'de>>(raw: &str) -> Option<T> {
+    if let Ok(parsed) = serde_json::from_str::<T>(raw) {
+        return Some(parsed);
+    }
+
+    let mut in_string = false;
+    let mut escape = false;
+    let mut sanitized = String::with_capacity(raw.len() + 32);
+
+    for c in raw.chars() {
+        if in_string {
+            if escape {
+                sanitized.push(c);
+                escape = false;
+            } else if c == '\\' {
+                sanitized.push(c);
+                escape = true;
+            } else if c == '"' {
+                sanitized.push(c);
+                in_string = false;
+            } else if c == '\n' {
+                sanitized.push_str("\\n");
+            } else if c == '\r' {
+                sanitized.push_str("\\r");
+            } else if c == '\t' {
+                sanitized.push_str("\\t");
+            } else {
+                sanitized.push(c);
+            }
+        } else {
+            if c == '"' {
+                in_string = true;
+            }
+            sanitized.push(c);
+        }
+    }
+
+    serde_json::from_str::<T>(&sanitized).ok()
+}
+
+/// Inspects a mod JAR archive and extracts the display name, version, description, and embedded icon
+fn inspect_mod_archive<R: Read + Seek>(
+    archive: &mut zip::ZipArchive<R>,
+    stem: &str,
+) -> (String, Option<String>, Option<String>, Option<String>, Option<String>) {
+    let mut name = stem.to_string();
+    let mut mod_id = None;
+    let mut version = None;
+    let mut description = None;
+    let mut declared_icon_path: Option<String> = None;
+
+    // 1. Fabric: fabric.mod.json
+    if let Ok(mut mod_json) = archive.by_name("fabric.mod.json") {
+        let mut buf = String::new();
+        if mod_json.read_to_string(&mut buf).is_ok() {
+            #[derive(Deserialize)]
+            struct ModMeta {
+                id: Option<String>,
+                name: Option<String>,
+                version: Option<String>,
+                description: Option<String>,
+                icon: Option<serde_json::Value>,
+            }
+            if let Some(parsed) = parse_lenient_json::<ModMeta>(&buf) {
+                if let Some(n) = parsed.name {
+                    if !n.trim().is_empty() {
+                        name = n.trim().to_string();
+                    }
+                }
+                mod_id = parsed.id;
+                version = parsed.version;
+                description = parsed.description;
+
+                if let Some(icon_val) = parsed.icon {
+                    if let Some(s) = icon_val.as_str() {
+                        declared_icon_path = Some(s.to_string());
+                    } else if let Some(obj) = icon_val.as_object() {
+                        if let Some(best) = obj.get("128").or_else(|| obj.get("64")).or_else(|| obj.values().next()) {
+                            if let Some(s) = best.as_str() {
+                                declared_icon_path = Some(s.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Quilt: quilt.mod.json
+    if mod_id.is_none() {
+        if let Ok(mut quilt_json) = archive.by_name("quilt.mod.json") {
+            let mut buf = String::new();
+            if quilt_json.read_to_string(&mut buf).is_ok() {
+                #[derive(Deserialize)]
+                struct QuiltMeta {
+                    quilt_loader: Option<QuiltLoaderPart>,
+                }
+                #[derive(Deserialize)]
+                struct QuiltLoaderPart {
+                    id: Option<String>,
+                    version: Option<String>,
+                    metadata: Option<QuiltInnerMeta>,
+                }
+                #[derive(Deserialize)]
+                struct QuiltInnerMeta {
+                    name: Option<String>,
+                    description: Option<String>,
+                    icon: Option<String>,
+                }
+                if let Some(parsed) = parse_lenient_json::<QuiltMeta>(&buf) {
+                    if let Some(loader_part) = parsed.quilt_loader {
+                        mod_id = loader_part.id;
+                        version = loader_part.version;
+                        if let Some(meta) = loader_part.metadata {
+                            if let Some(n) = meta.name {
+                                if !n.trim().is_empty() {
+                                    name = n.trim().to_string();
+                                }
+                            }
+                            description = meta.description;
+                            declared_icon_path = meta.icon;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Forge / NeoForge: META-INF/mods.toml
+    if mod_id.is_none() {
+        if let Ok(mut toml_file) = archive.by_name("META-INF/mods.toml") {
+            let mut buf = String::new();
+            if toml_file.read_to_string(&mut buf).is_ok() {
+                for line in buf.lines() {
+                    let trimmed = line.trim();
+                    if trimmed.starts_with("displayName =") || trimmed.starts_with("displayName=") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            let n = val.trim().trim_matches(|c| c == '"' || c == '\'');
+                            if !n.is_empty() {
+                                name = n.to_string();
+                            }
+                        }
+                    } else if trimmed.starts_with("modId =") || trimmed.starts_with("modId=") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            let id = val.trim().trim_matches(|c| c == '"' || c == '\'');
+                            if !id.is_empty() {
+                                mod_id = Some(id.to_string());
+                            }
+                        }
+                    } else if trimmed.starts_with("version =") || trimmed.starts_with("version=") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            let ver = val.trim().trim_matches(|c| c == '"' || c == '\'');
+                            if !ver.is_empty() && ver != "${file.jarVersion}" {
+                                version = Some(ver.to_string());
+                            }
+                        }
+                    } else if trimmed.starts_with("logoFile =") || trimmed.starts_with("logoFile=") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            let logo = val.trim().trim_matches(|c| c == '"' || c == '\'');
+                            if !logo.is_empty() {
+                                declared_icon_path = Some(logo.to_string());
+                            }
+                        }
+                    } else if trimmed.starts_with("description =") || trimmed.starts_with("description=") {
+                        if let Some(val) = trimmed.split('=').nth(1) {
+                            let desc = val.trim().trim_matches(|c| c == '"' || c == '\'');
+                            if !desc.is_empty() && description.is_none() {
+                                description = Some(desc.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Legacy Forge: mcmod.info
+    if mod_id.is_none() {
+        if let Ok(mut mcmod_file) = archive.by_name("mcmod.info") {
+            let mut buf = String::new();
+            if mcmod_file.read_to_string(&mut buf).is_ok() {
+                #[derive(Deserialize)]
+                struct McModInfoItem {
+                    modid: Option<String>,
+                    name: Option<String>,
+                    version: Option<String>,
+                    description: Option<String>,
+                    #[serde(rename = "logoFile")]
+                    logo_file: Option<String>,
+                }
+                if let Some(parsed) = parse_lenient_json::<Vec<McModInfoItem>>(&buf) {
+                    if let Some(first) = parsed.into_iter().next() {
+                        if let Some(n) = first.name {
+                            if !n.trim().is_empty() {
+                                name = n.trim().to_string();
+                            }
+                        }
+                        mod_id = first.modid;
+                        version = first.version;
+                        description = first.description;
+                        declared_icon_path = first.logo_file;
+                    }
+                }
+            }
+        }
+    }
+
+    // 5. Clean up name if it still matches the raw filename stem
+    if name == stem {
+        if let Some(ref mid) = mod_id {
+            // Capitalize mod id e.g. "picturemode" -> "Picturemode"
+            let mut chars = mid.chars();
+            if let Some(first) = chars.next() {
+                name = format!("{}{}", first.to_uppercase(), chars.as_str());
+            }
+        }
+    }
+
+    // 6. Deep image search for embedded mod icons
+    let mut icon_data_url = None;
+    let mut candidate_paths = Vec::new();
+
+    if let Some(ref p) = declared_icon_path {
+        let cleaned = p.trim().trim_start_matches('/').trim_start_matches("./");
+        candidate_paths.push(cleaned.to_string());
+        if let Some(ref mid) = mod_id {
+            candidate_paths.push(format!("assets/{}/{}", mid, cleaned));
+            candidate_paths.push(format!("assets/{}/icon.png", mid));
+            candidate_paths.push(format!("assets/{}/logo.png", mid));
+        }
+    }
+
+    if let Some(ref mid) = mod_id {
+        candidate_paths.push(format!("assets/{}/icon.png", mid));
+        candidate_paths.push(format!("assets/{}/logo.png", mid));
+        candidate_paths.push(format!("assets/{}/textures/gui/icon.png", mid));
+    }
+
+    candidate_paths.push("icon.png".to_string());
+    candidate_paths.push("logo.png".to_string());
+    candidate_paths.push("pack.png".to_string());
+
+    for cand in candidate_paths {
+        if let Ok(mut icon_file) = archive.by_name(&cand) {
+            if icon_file.size() > 0 && icon_file.size() < 1_500_000 {
+                let mut bytes = Vec::with_capacity(icon_file.size() as usize);
+                if icon_file.read_to_end(&mut bytes).is_ok() {
+                    let mime = if cand.ends_with(".jpg") || cand.ends_with(".jpeg") {
+                        "image/jpeg"
+                    } else {
+                        "image/png"
+                    };
+                    icon_data_url = Some(format!("data:{};base64,{}", mime, base64_encode(&bytes)));
+                    break;
+                }
+            }
+        }
+    }
+
+    // If still no icon found, scan all entries in the archive for any icon.png or logo.png under assets/
+    if icon_data_url.is_none() {
+        for i in 0..archive.len() {
+            if let Ok(mut icon_file) = archive.by_index(i) {
+                let fname = icon_file.name().to_string();
+                let lower = fname.to_lowercase();
+                if (lower.ends_with("/icon.png") || lower.ends_with("/logo.png") || lower.ends_with("/pack.png"))
+                    && icon_file.size() > 0 && icon_file.size() < 1_500_000
+                {
+                    let mut bytes = Vec::with_capacity(icon_file.size() as usize);
+                    if icon_file.read_to_end(&mut bytes).is_ok() {
+                        let mime = if lower.ends_with(".jpg") || lower.ends_with(".jpeg") {
+                            "image/jpeg"
+                        } else {
+                            "image/png"
+                        };
+                        icon_data_url = Some(format!("data:{};base64,{}", mime, base64_encode(&bytes)));
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    (name, mod_id, version, description, icon_data_url)
+}
+
 /// Lists all installed addon files in the instance directory (including .disabled files)
 /// with metadata parsed from .index configs and JAR archives, using an in-memory mtime cache
 /// to keep loading instantaneous even with 50+ installed mods.
@@ -1949,75 +2237,39 @@ pub fn get_installed_addons_list(
                 }
             }
 
-            // 2. Inspect archive for metadata and embedded icons (fabric.mod.json, pack.png)
-            if ext == "jar" || ext == "zip" {
+            // 2. Inspect archive for metadata and embedded icons
+            if ext == "jar" {
+                if let Ok(f) = std::fs::File::open(&path) {
+                    if let Ok(mut archive) = zip::ZipArchive::new(f) {
+                        let (m_name, m_id, m_ver, m_desc, m_icon) = inspect_mod_archive(&mut archive, &stem);
+                        if m_name != stem {
+                            name = m_name;
+                        }
+                        if m_id.is_some() {
+                            mod_id = m_id;
+                        }
+                        if m_ver.is_some() {
+                            version = m_ver;
+                        }
+                        if m_desc.is_some() {
+                            description = m_desc;
+                        }
+                        if icon_url.is_none() && m_icon.is_some() {
+                            icon_url = m_icon;
+                        }
+                    }
+                }
+            } else if ext == "zip" {
                 if let Ok(f) = std::fs::File::open(&path) {
                     if let Ok(mut archive) = zip::ZipArchive::new(f) {
                         use std::io::Read;
-                        let mut declared_icon_path: Option<String> = None;
-
-                        if ext == "jar" {
-                            if let Ok(mut mod_json) = archive.by_name("fabric.mod.json") {
-                                let mut buf = String::new();
-                                if mod_json.read_to_string(&mut buf).is_ok() {
-                                    #[derive(Deserialize)]
-                                    struct ModMeta {
-                                        id: Option<String>,
-                                        name: Option<String>,
-                                        version: Option<String>,
-                                        description: Option<String>,
-                                        icon: Option<serde_json::Value>,
-                                    }
-                                    if let Ok(parsed) = serde_json::from_str::<ModMeta>(&buf) {
-                                        if let Some(n) = parsed.name {
-                                            if !n.is_empty() {
-                                                name = n;
-                                            }
-                                        }
-                                        mod_id = parsed.id;
-                                        version = parsed.version;
-                                        description = parsed.description;
-
-                                        // Resolve icon string or map from fabric.mod.json
-                                        if let Some(icon_val) = parsed.icon {
-                                            if let Some(s) = icon_val.as_str() {
-                                                declared_icon_path = Some(s.to_string());
-                                            } else if let Some(obj) = icon_val.as_object() {
-                                                if let Some(best) = obj.get("128").or_else(|| obj.get("64")).or_else(|| obj.values().next()) {
-                                                    if let Some(s) = best.as_str() {
-                                                        declared_icon_path = Some(s.to_string());
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Extract embedded icon if icon_url not already set
-                        if icon_url.is_none() {
-                            let icon_candidates = [
-                                declared_icon_path.as_deref(),
-                                Some("icon.png"),
-                                Some("pack.png"),
-                                Some("logo.png"),
-                            ];
-
-                            for cand in icon_candidates.into_iter().flatten() {
-                                let cand_clean = cand.trim_start_matches('/');
-                                if let Ok(mut icon_file) = archive.by_name(cand_clean) {
-                                    if icon_file.size() > 0 && icon_file.size() < 1_500_000 {
-                                        let mut bytes = Vec::with_capacity(icon_file.size() as usize);
-                                        if icon_file.read_to_end(&mut bytes).is_ok() {
-                                            let mime = if cand_clean.ends_with(".jpg") || cand_clean.ends_with(".jpeg") {
-                                                "image/jpeg"
-                                            } else {
-                                                "image/png"
-                                            };
-                                            icon_url = Some(format!("data:{};base64,{}", mime, base64_encode(&bytes)));
-                                            break;
-                                        }
+                        for cand in ["pack.png", "icon.png", "logo.png"] {
+                            if let Ok(mut icon_file) = archive.by_name(cand) {
+                                if icon_file.size() > 0 && icon_file.size() < 1_500_000 {
+                                    let mut bytes = Vec::with_capacity(icon_file.size() as usize);
+                                    if icon_file.read_to_end(&mut bytes).is_ok() {
+                                        icon_url = Some(format!("data:image/png;base64,{}", base64_encode(&bytes)));
+                                        break;
                                     }
                                 }
                             }
@@ -2259,4 +2511,36 @@ pub async fn check_addon_updates(
     }
 
     Ok(update_results)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_multiline_json_description_leniently() {
+        let raw = r#"{
+            "id": "picturemode",
+            "name": "Picture Mode",
+            "description": "This mod adds an isometric view.
+Inspired by Photo Mode!",
+            "icon": "assets/picturemode/icon.png"
+        }"#;
+
+        #[allow(dead_code)]
+        #[derive(Deserialize)]
+        struct TestMeta {
+            id: String,
+            name: String,
+            description: String,
+            icon: String,
+        }
+
+        let parsed = parse_lenient_json::<TestMeta>(raw);
+        assert!(parsed.is_some(), "Expected lenient JSON parser to succeed on multiline string");
+        let unwrapped = parsed.unwrap();
+        assert_eq!(unwrapped.name, "Picture Mode");
+        assert_eq!(unwrapped.icon, "assets/picturemode/icon.png");
+        assert!(unwrapped.description.contains("Inspired by"));
+    }
 }

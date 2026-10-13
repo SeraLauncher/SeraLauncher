@@ -126,6 +126,7 @@ const paths = {
   ],
   playerStop: ["M5 5m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"],
   chevronDown: ["M6 9l6 6l6 -6"],
+  chevronUp: ["M6 15l6 -6l6 6"],
   search: ["M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0", "M21 21l-6 -6"],
   externalLink: [
     "M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6",

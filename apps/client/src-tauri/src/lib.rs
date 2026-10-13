@@ -17,6 +17,7 @@ mod paths;
 mod crash_analyzer;
 mod modpack;
 mod worlds;
+mod visual_options;
 
 const DEFAULT_APPEARANCE: &str = "dark";
 const BUNDLED_FAMILY: &str = "Sunghyun Sans";
@@ -497,6 +498,40 @@ fn import_world_zip(
     worlds::import_world_zip(&app, &id, &zip_path)
 }
 
+#[tauri::command]
+fn get_active_resource_packs(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<Vec<String>, String> {
+    visual_options::get_active_resource_packs(&app, &id)
+}
+
+#[tauri::command]
+fn set_active_resource_packs(
+    app: tauri::AppHandle,
+    id: String,
+    active_packs: Vec<String>,
+) -> Result<(), String> {
+    visual_options::set_active_resource_packs(&app, &id, active_packs)
+}
+
+#[tauri::command]
+fn get_active_shader_pack(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<Option<String>, String> {
+    visual_options::get_active_shader_pack(&app, &id)
+}
+
+#[tauri::command]
+fn set_active_shader_pack(
+    app: tauri::AppHandle,
+    id: String,
+    shader_pack: Option<String>,
+) -> Result<(), String> {
+    visual_options::set_active_shader_pack(&app, &id, shader_pack)
+}
+
 
 #[tauri::command]
 fn get_active_account(app: tauri::AppHandle) -> Result<Option<auth::PublicAccountInfo>, String> {
@@ -920,7 +955,11 @@ pub fn run() {
             restore_world_backup,
             delete_world_backup,
             delete_world_save,
-            import_world_zip
+            import_world_zip,
+            get_active_resource_packs,
+            set_active_resource_packs,
+            get_active_shader_pack,
+            set_active_shader_pack
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
