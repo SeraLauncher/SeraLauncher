@@ -29,6 +29,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "./Icon";
 import { Modal } from "./ui/modal";
 import { CrashReportModal } from "./CrashReportModal";
+import { CompatibilityModal } from "./CompatibilityModal";
 import { toast } from "sonner";
 import type { Theme } from "../theme";
 import type {
@@ -40,6 +41,7 @@ import type {
   CrashAnalysis,
   ModpackInspection,
   LoaderVersionInfo,
+  SafetyReport,
 } from "../instance";
 import { formatPlayTime } from "../instance";
 import type { JavaRuntime, Settings } from "../settings";
@@ -1381,6 +1383,24 @@ function InstanceManagementView({
   }, [instance.id, instance.name, runCrashAnalysis]);
 
   // Screenshots gallery state (loads instantly if preloaded)
+  // Pre-flight safety validation state
+  const [safetyReport, setSafetyReport] = useState<SafetyReport | null>(null);
+  const [showCompatibilityModal, setShowCompatibilityModal] = useState(false);
+
+  const handleLaunchWithSafetyCheck = async () => {
+    try {
+      const rep = await invoke<SafetyReport>("validate_instance_safety", { id: instance.id });
+      if (rep && !rep.isSafe) {
+        setSafetyReport(rep);
+        setShowCompatibilityModal(true);
+        return;
+      }
+    } catch {
+      // If safety check fails, fallback to standard launch
+    }
+    setLogs("");
+    onLaunch();
+  };
   const cachedScreenshots = getCachedScreenshots(instance.id);
   const [screenshots, setScreenshots] = useState<ScreenshotItem[]>(() => cachedScreenshots ?? []);
   const [loadingScreenshots, setLoadingScreenshots] = useState(() => !cachedScreenshots);
@@ -2238,10 +2258,7 @@ function InstanceManagementView({
                     type="button"
                     className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl font-semibold text-sm text-white shadow-sm transition-all hover:brightness-110 active:scale-95 cursor-pointer"
                     style={{ background: theme.success }}
-                    onClick={() => {
-                      setLogs("");
-                      onLaunch();
-                    }}
+                    onClick={handleLaunchWithSafetyCheck}
                     title="Play instance"
                   >
                     <Icon name="play" size={15} color="#ffffff" />
@@ -2754,6 +2771,32 @@ function InstanceManagementView({
           onClose={() => setExportModalOpen(false)}
           instance={instance}
           theme={theme}
+        />
+
+        {/* Pre-Launch Compatibility Modal */}
+        <CompatibilityModal
+          isOpen={showCompatibilityModal}
+          onClose={() => setShowCompatibilityModal(false)}
+          report={safetyReport}
+          instanceName={instance.name}
+          theme={theme}
+          onLaunchAnyway={() => {
+            setLogs("");
+            onLaunch();
+          }}
+          onResolveAndLaunch={async () => {
+            toast.info("Resolving missing dependencies...");
+            const resolved = await invoke<string[]>("resolve_instance_dependencies", {
+              id: instance.id,
+            });
+            if (resolved && resolved.length > 0) {
+              toast.success(`Installed ${resolved.length} dependencies!`, {
+                description: resolved.join(", "),
+              });
+            }
+            setLogs("");
+            onLaunch();
+          }}
         />
       </div>
     </div>

@@ -41,4 +41,5 @@ export * from "./components/ExportInstanceModal";
 export { Toaster, toast } from "sonner";
 
 export * from "./components/CrashReportModal";
+export * from "./components/CompatibilityModal";
 export * from "./instanceCache";

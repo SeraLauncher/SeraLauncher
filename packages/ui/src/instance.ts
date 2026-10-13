@@ -112,6 +112,30 @@ export type ExportResult = {
   sizeBytes: number;
 };
 
+export type SafetyIssue = {
+  issueType:
+    | "missing_dependency"
+    | "incompatible_java"
+    | "mod_conflict"
+    | "version_mismatch"
+    | string;
+  severity: "blocking" | "warning" | string;
+  sourceMod: string;
+  targetId: string;
+  requiredVersion?: string | null;
+  description: string;
+  autoResolvable: boolean;
+};
+
+export type SafetyReport = {
+  isSafe: boolean;
+  issues: SafetyIssue[];
+  installedModsCount: number;
+  requiredJavaVersion: number;
+  configuredJavaVersion: number;
+  isJavaCompatible: boolean;
+};
+
 export function formatPlayTime(seconds?: number | null): string {
   if (!seconds || seconds <= 0) {
     return "Never played";

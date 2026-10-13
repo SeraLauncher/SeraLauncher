@@ -19,6 +19,7 @@ mod modpack;
 mod worlds;
 mod visual_options;
 mod export;
+mod safety;
 
 const DEFAULT_APPEARANCE: &str = "dark";
 const BUNDLED_FAMILY: &str = "Sunghyun Sans";
@@ -541,6 +542,22 @@ fn export_instance(
     export::export_instance(&app, options)
 }
 
+#[tauri::command]
+fn validate_instance_safety(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<safety::SafetyReport, String> {
+    safety::validate_instance_safety(&app, &id)
+}
+
+#[tauri::command]
+async fn resolve_instance_dependencies(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<Vec<String>, String> {
+    safety::resolve_missing_dependencies(&app, &id).await
+}
+
 
 #[tauri::command]
 fn get_active_account(app: tauri::AppHandle) -> Result<Option<auth::PublicAccountInfo>, String> {
@@ -969,7 +986,9 @@ pub fn run() {
             set_active_resource_packs,
             get_active_shader_pack,
             set_active_shader_pack,
-            export_instance
+            export_instance,
+            validate_instance_safety,
+            resolve_instance_dependencies
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

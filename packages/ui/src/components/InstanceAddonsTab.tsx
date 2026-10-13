@@ -228,6 +228,7 @@ import type {
   MinecraftVersion,
   InstalledAddonItem,
   AddonUpdateInfo,
+  SafetyReport,
 } from "../instance";
 
 import type { EnvironmentFilter } from "./DiscoveryPage";
@@ -333,6 +334,42 @@ export function InstanceAddonsTab({
   const [activeShaderPack, setActiveShaderPack] = useState<string | null>(
     () => getCachedActiveShaderPack(instance.id) ?? null,
   );
+
+  // Proactive safety report state
+  const [safetyReport, setSafetyReport] = useState<SafetyReport | null>(null);
+  const [resolvingDependencies, setResolvingDependencies] = useState(false);
+
+  const checkSafety = useCallback(() => {
+    if (category !== "mods") return;
+    invoke<SafetyReport>("validate_instance_safety", { id: instance.id })
+      .then((rep) => setSafetyReport(rep || null))
+      .catch(() => setSafetyReport(null));
+  }, [instance.id, category]);
+
+  useEffect(() => {
+    checkSafety();
+  }, [checkSafety]);
+
+  const handleResolveDependencies = async () => {
+    setResolvingDependencies(true);
+    toast.info("Resolving missing mod dependencies...");
+    try {
+      const resolved = await invoke<string[]>("resolve_instance_dependencies", { id: instance.id });
+      if (resolved && resolved.length > 0) {
+        toast.success(`Installed ${resolved.length} required dependencies!`, {
+          description: resolved.join(", "),
+        });
+      } else {
+        toast.info("No auto-resolvable dependencies found on Modrinth.");
+      }
+      refreshInstalledAddons();
+      checkSafety();
+    } catch (err) {
+      toast.error(`Failed to resolve dependencies: ${err}`);
+    } finally {
+      setResolvingDependencies(false);
+    }
+  };
 
   const loadVisualOptions = useCallback(() => {
     if (category === "resourcepack") {
@@ -989,6 +1026,32 @@ export function InstanceAddonsTab({
                   </button>
                 )}
               </div>
+
+              {/* Proactive Missing Dependencies Warning Banner */}
+              {safetyReport && !safetyReport.isSafe && category === "mods" && (
+                <div className="w-full p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2.5 text-xs text-rose-300 min-w-0">
+                    <Icon name="alertCircle" size={16} color="currentColor" />
+                    <span className="truncate">
+                      <strong>
+                        {safetyReport.issues.length} compatibility{" "}
+                        {safetyReport.issues.length > 1 ? "issues" : "issue"} detected:
+                      </strong>{" "}
+                      {safetyReport.issues.map((i) => i.targetId).join(", ")}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResolveDependencies}
+                    disabled={resolvingDependencies}
+                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg text-xs font-semibold cursor-pointer border-0 shadow-xs hover:brightness-110 disabled:opacity-50 select-none"
+                    style={{ background: theme.primary, color: theme.primaryForeground }}
+                  >
+                    <Icon name="download" size={12} color="currentColor" />
+                    <span>{resolvingDependencies ? "Resolving..." : "Resolve All"}</span>
+                  </button>
+                </div>
+              )}
 
               {/* Installed List */}
               <div className="flex-1 overflow-y-auto pr-1">
