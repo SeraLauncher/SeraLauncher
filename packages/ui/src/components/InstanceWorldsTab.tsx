@@ -20,6 +20,7 @@ interface InstanceWorldsTabProps {
   theme: Theme;
   instance: Instance;
   onOpenFolder: (subfolder?: string) => Promise<void>;
+  onLaunchWorld?: (folderName: string) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -49,7 +50,12 @@ function formatLastPlayed(millis: number): string {
 
 type WorldSortOption = "recent" | "oldest" | "name_asc" | "name_desc" | "size_desc";
 
-export function InstanceWorldsTab({ theme, instance, onOpenFolder }: InstanceWorldsTabProps) {
+export function InstanceWorldsTab({
+  theme,
+  instance,
+  onOpenFolder,
+  onLaunchWorld,
+}: InstanceWorldsTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<"worlds" | "backups">("worlds");
   const cachedWorlds = getCachedWorlds(instance.id);
   const cachedBackups = getCachedWorldBackups(instance.id);
@@ -184,6 +190,20 @@ export function InstanceWorldsTab({ theme, instance, onOpenFolder }: InstanceWor
       refreshData();
     } catch (err) {
       toast.error(`Failed to delete backup: ${String(err)}`);
+    }
+  };
+
+  const handleCloneWorld = async (world: WorldItem) => {
+    toast.info(`Cloning world "${world.name}"...`);
+    try {
+      const cloned = await invoke<WorldItem>("clone_world_save", {
+        id: instance.id,
+        folderName: world.folderName,
+      });
+      toast.success(`World duplicated: "${cloned.name}"`);
+      refreshData();
+    } catch (err) {
+      toast.error(`Failed to clone world: ${err}`);
     }
   };
 
@@ -488,6 +508,19 @@ export function InstanceWorldsTab({ theme, instance, onOpenFolder }: InstanceWor
 
                   {/* Actions */}
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {onLaunchWorld && (
+                      <button
+                        type="button"
+                        onClick={() => onLaunchWorld(world.folderName)}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-bold text-white cursor-pointer shadow-sm transition-all hover:brightness-110 active:scale-95 select-none"
+                        style={{ background: theme.success }}
+                        title="Launch Minecraft and load directly into this world"
+                      >
+                        <Icon name="play" size={13} color="#ffffff" />
+                        <span>Play</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       disabled={isBackingUp}
@@ -498,6 +531,15 @@ export function InstanceWorldsTab({ theme, instance, onOpenFolder }: InstanceWor
                     >
                       <Icon name="archive" size={13} color="currentColor" />
                       <span>{isBackingUp ? "Backing up..." : "Backup"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCloneWorld(world)}
+                      className="size-8 rounded-lg border border-border flex items-center justify-center cursor-pointer hover:bg-card transition-colors text-muted-foreground hover:text-foreground"
+                      title="Duplicate / clone this world save"
+                    >
+                      <Icon name="copy" size={13} color="currentColor" />
                     </button>
 
                     <button

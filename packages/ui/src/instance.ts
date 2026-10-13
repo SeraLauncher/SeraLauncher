@@ -73,6 +73,7 @@ export type InstanceManagementTab =
   | "resourcepacks"
   | "shaders"
   | "worlds"
+  | "servers"
   | "screenshots"
   | "settings";
 
@@ -134,6 +135,33 @@ export type SafetyReport = {
   requiredJavaVersion: number;
   configuredJavaVersion: number;
   isJavaCompatible: boolean;
+};
+
+export type ServerEntry = {
+  id: string;
+  name: string;
+  ip: string;
+  icon?: string | null;
+  acceptTextures?: number | null;
+};
+
+export type ServerPingResult = {
+  motd: string;
+  versionName: string;
+  protocol: number;
+  playersOnline: number;
+  playersMax: number;
+  pingMs: number;
+  favicon?: string | null;
+};
+
+export type IngestedItem = {
+  fileName: string;
+  displayName: string;
+  category: "mods" | "resourcepack" | "shader" | "world" | string;
+  targetPath: string;
+  success: boolean;
+  error?: string | null;
 };
 
 export function formatPlayTime(seconds?: number | null): string {

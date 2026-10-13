@@ -616,6 +616,50 @@ pub fn delete_world_save(
     Ok(())
 }
 
+/// Recursively copies a directory to a new target path
+fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &dst.join(entry.file_name()))?;
+        } else {
+            std::fs::copy(entry.path(), dst.join(entry.file_name()))?;
+        }
+    }
+    Ok(())
+}
+
+/// Duplicates a singleplayer world save folder to allow risk-free modding and experimentation
+pub fn clone_world_save(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+    folder_name: &str,
+) -> Result<WorldItem, String> {
+    let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
+    let saves_dir = crate::instances::get_instance_game_dir(&inst_dir).join("saves");
+    let src_dir = saves_dir.join(folder_name);
+
+    if !src_dir.is_dir() {
+        return Err(format!("World {} does not exist", folder_name));
+    }
+
+    // Determine unique clone folder name
+    let mut counter = 1;
+    let mut candidate_name = format!("{}_Copy", folder_name);
+    while saves_dir.join(&candidate_name).exists() {
+        counter += 1;
+        candidate_name = format!("{}_Copy_{}", folder_name, counter);
+    }
+
+    let target_dir = saves_dir.join(&candidate_name);
+    copy_dir_all(&src_dir, &target_dir)
+        .map_err(|e| format!("Failed to clone world: {}", e))?;
+
+    inspect_world_save(&target_dir)
+}
+
 /// Imports an external world ZIP archive into <instance>/minecraft/saves/
 pub fn import_world_zip(
     app: &tauri::AppHandle,

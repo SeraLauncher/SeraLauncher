@@ -845,10 +845,20 @@ pub fn collect_classpath(
     Ok(classpath)
 }
 
-/// Spawns the Minecraft process for an instance
+/// Spawns the Minecraft process for an instance, optionally launching directly
+/// into a specific singleplayer world or multiplayer server via Quick Play.
 pub async fn launch_minecraft_instance(
     app: &tauri::AppHandle,
     instance_id: &str,
+) -> Result<(), String> {
+    launch_minecraft_instance_with_quick_play(app, instance_id, None, None).await
+}
+
+pub async fn launch_minecraft_instance_with_quick_play(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+    quick_play_singleplayer: Option<String>,
+    quick_play_multiplayer: Option<String>,
 ) -> Result<(), String> {
     let account = crate::auth::get_valid_active_account(app).await?;
     let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
@@ -1033,6 +1043,24 @@ pub async fn launch_minecraft_instance(
         cmd_args.push(instance.version_type.clone());
         cmd_args.push("--userProperties".to_string());
         cmd_args.push("{}".to_string());
+    }
+
+    // Quick Play: Direct entry into singleplayer world or multiplayer server
+    if let Some(ref world_folder) = quick_play_singleplayer {
+        cmd_args.push("--quickPlaySingleplayer".to_string());
+        cmd_args.push(world_folder.clone());
+    } else if let Some(ref server_addr) = quick_play_multiplayer {
+        cmd_args.push("--quickPlayMultiplayer".to_string());
+        cmd_args.push(server_addr.clone());
+
+        // Older Minecraft compatibility fallback (< 1.20)
+        let parts: Vec<&str> = server_addr.split(':').collect();
+        cmd_args.push("--server".to_string());
+        cmd_args.push(parts[0].to_string());
+        if parts.len() > 1 {
+            cmd_args.push("--port".to_string());
+            cmd_args.push(parts[1].to_string());
+        }
     }
 
     // Ensure any install task is marked finished

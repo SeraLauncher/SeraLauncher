@@ -36,6 +36,7 @@ export * from "./components/DiscoveryPagination";
 export * from "./components/DiscoveryProjectCard";
 export * from "./components/InstanceAddonsTab";
 export * from "./components/InstanceWorldsTab";
+export * from "./components/InstanceServersTab";
 export * from "./components/ExportInstanceModal";
 
 export { Toaster, toast } from "sonner";

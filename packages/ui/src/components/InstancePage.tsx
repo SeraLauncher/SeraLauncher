@@ -50,6 +50,7 @@ import { Dropdown } from "./Dropdown";
 import { EffectiveJavaArgsModal } from "./EffectiveJavaArgsModal";
 import { InstanceAddonsTab } from "./InstanceAddonsTab";
 import { InstanceWorldsTab } from "./InstanceWorldsTab";
+import { InstanceServersTab } from "./InstanceServersTab";
 import { ExportInstanceModal } from "./ExportInstanceModal";
 import {
   BLOCK_ICON_KEYS,
@@ -1285,6 +1286,114 @@ function InstanceManagementView({
   const isRunning = Boolean(runningInstances?.some((r) => r.id === instance.id));
 
   // Top banner 3-dots action menu
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    if (e.dataTransfer.types && e.dataTransfer.types.includes("Files")) {
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    dragCounterRef.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    const paths: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const p = (file as any).path || file.name;
+      if (p) paths.push(p);
+    }
+
+    if (paths.length === 0) return;
+
+    toast.info(`Importing ${paths.length} dropped ${paths.length === 1 ? "file" : "files"}...`);
+    try {
+      const ingested = await invoke<
+        {
+          fileName: string;
+          displayName: string;
+          category: string;
+          success: boolean;
+          error?: string;
+        }[]
+      >("ingest_dropped_files", {
+        id: instance.id,
+        paths,
+      });
+
+      const successful = ingested.filter((i) => i.success);
+      const failed = ingested.filter((i) => !i.success);
+
+      if (successful.length > 0) {
+        toast.success(
+          `Imported ${successful.length} ${successful.length === 1 ? "item" : "items"}!`,
+          {
+            description: successful.map((i) => `${i.displayName} (${i.category})`).join(", "),
+          },
+        );
+        clearInstanceDataCache(instance.id);
+      }
+
+      if (failed.length > 0) {
+        toast.error(`Failed to import ${failed.length} items`, {
+          description: failed.map((f) => f.error || f.fileName).join(", "),
+        });
+      }
+    } catch (err) {
+      toast.error(`Drag-and-drop import failed: ${err}`);
+    }
+  };
+
+  const handleLaunchQuickPlay = async (type: "singleplayer" | "multiplayer", target: string) => {
+    try {
+      const rep = await invoke<SafetyReport>("validate_instance_safety", { id: instance.id });
+      if (rep && !rep.isSafe) {
+        setSafetyReport(rep);
+        setShowCompatibilityModal(true);
+        return;
+      }
+    } catch {
+      // Proceed on fallback
+    }
+    setLogs("");
+    toast.info(
+      type === "singleplayer" ? `Starting world "${target}"...` : `Joining server "${target}"...`,
+    );
+    try {
+      await invoke("launch_instance_quick_play", {
+        id: instance.id,
+        quickPlayType: type,
+        target,
+      });
+    } catch (err) {
+      toast.error(`Failed to launch: ${err}`);
+    }
+  };
+  // Top banner 3-dots action menu
   const [bannerMenuOpen, setBannerMenuOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const bannerMenuRef = useRef<HTMLDivElement>(null);
@@ -1348,7 +1457,7 @@ function InstanceManagementView({
       .finally(() => {
         setLoadingCrashAnalysis(false);
       });
-  }, [instance.id]);
+  }, [instance.id, setShowCrashModal, setCrashAnalysis, setLoadingCrashAnalysis]);
 
   // Listen for instance_crashed events
   useEffect(() => {
@@ -2174,7 +2283,13 @@ function InstanceManagementView({
 
   if (activeTab === "mods" || activeTab === "resourcepacks" || activeTab === "shaders") {
     return (
-      <div className="relative flex-1 flex flex-col h-full min-h-full overflow-hidden">
+      <div
+        className="relative flex-1 flex flex-col h-full min-h-full overflow-hidden"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <InstanceAddonsTab
           theme={theme}
           instance={instance}
@@ -2190,14 +2305,66 @@ function InstanceManagementView({
           onOpenFolder={() => onOpenFolder(activeTab)}
           onUpdate={onUpdate}
         />
+        {isDragOver && (
+          <div className="absolute inset-0 z-50 bg-primary/20 backdrop-blur-xs border-2 border-dashed border-primary flex items-center justify-center p-6 select-none pointer-events-none">
+            <div
+              className="p-6 rounded-2xl border border-primary/40 bg-card shadow-2xl flex flex-col items-center gap-2 text-center"
+              style={{ background: theme.card }}
+            >
+              <Icon name="download" size={32} color={theme.primary} />
+              <span className="text-sm font-bold text-foreground">Drop files to install</span>
+              <span className="text-xs text-muted-foreground">
+                Drop .jar mods, .zip resource packs, shaders, or world saves
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   if (activeTab === "worlds") {
     return (
+      <div
+        className="relative flex-1 flex flex-col h-full min-h-full overflow-hidden"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <InstanceWorldsTab
+          theme={theme}
+          instance={instance}
+          onOpenFolder={onOpenFolder}
+          onLaunchWorld={(folder) => handleLaunchQuickPlay("singleplayer", folder)}
+        />
+        {isDragOver && (
+          <div className="absolute inset-0 z-50 bg-primary/20 backdrop-blur-xs border-2 border-dashed border-primary flex items-center justify-center p-6 select-none pointer-events-none">
+            <div
+              className="p-6 rounded-2xl border border-primary/40 bg-card shadow-2xl flex flex-col items-center gap-2 text-center"
+              style={{ background: theme.card }}
+            >
+              <Icon name="download" size={32} color={theme.primary} />
+              <span className="text-sm font-bold text-foreground">Drop files to install</span>
+              <span className="text-xs text-muted-foreground">
+                Drop .jar mods, .zip resource packs, shaders, or world saves
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (activeTab === "servers") {
+    return (
       <div className="relative flex-1 flex flex-col h-full min-h-full overflow-hidden">
-        <InstanceWorldsTab theme={theme} instance={instance} onOpenFolder={onOpenFolder} />
+        <InstanceServersTab
+          theme={theme}
+          instance={instance}
+          onOpenFolder={onOpenFolder}
+          onLaunchServer={(addr) => handleLaunchQuickPlay("multiplayer", addr)}
+        />
       </div>
     );
   }

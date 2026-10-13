@@ -20,6 +20,8 @@ mod worlds;
 mod visual_options;
 mod export;
 mod safety;
+mod servers;
+mod ingest;
 
 const DEFAULT_APPEARANCE: &str = "dark";
 const BUNDLED_FAMILY: &str = "Sunghyun Sans";
@@ -703,6 +705,65 @@ async fn launch_instance(app: tauri::AppHandle, id: String) -> Result<(), String
 }
 
 #[tauri::command]
+async fn launch_instance_quick_play(
+    app: tauri::AppHandle,
+    id: String,
+    quick_play_type: String, // "singleplayer" | "multiplayer"
+    target: String,
+) -> Result<(), String> {
+    let (sp, mp) = match quick_play_type.to_lowercase().as_str() {
+        "singleplayer" => (Some(target), None),
+        "multiplayer" => (None, Some(target)),
+        _ => (None, None),
+    };
+    minecraft::launch_minecraft_instance_with_quick_play(&app, &id, sp, mp).await
+}
+
+#[tauri::command]
+fn clone_world_save(
+    app: tauri::AppHandle,
+    id: String,
+    folder_name: String,
+) -> Result<worlds::WorldItem, String> {
+    worlds::clone_world_save(&app, &id, &folder_name)
+}
+
+#[tauri::command]
+fn get_instance_servers(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<Vec<servers::ServerEntry>, String> {
+    let inst_dir = instances::get_instance_dir(&app, &id)?;
+    let game_dir = instances::get_instance_game_dir(&inst_dir);
+    servers::read_servers_dat(&game_dir)
+}
+
+#[tauri::command]
+fn save_instance_servers(
+    app: tauri::AppHandle,
+    id: String,
+    servers: Vec<servers::ServerEntry>,
+) -> Result<(), String> {
+    let inst_dir = instances::get_instance_dir(&app, &id)?;
+    let game_dir = instances::get_instance_game_dir(&inst_dir);
+    servers::write_servers_dat(&game_dir, &servers)
+}
+
+#[tauri::command]
+async fn ping_minecraft_server(address: String) -> Result<servers::ServerPingResult, String> {
+    servers::ping_server(&address).await
+}
+
+#[tauri::command]
+fn ingest_dropped_files(
+    app: tauri::AppHandle,
+    id: String,
+    paths: Vec<String>,
+) -> Result<Vec<ingest::IngestedItem>, String> {
+    ingest::ingest_dropped_files(&app, &id, paths)
+}
+
+#[tauri::command]
 fn get_instance_logs(app: tauri::AppHandle, id: String) -> Result<String, String> {
     Ok(minecraft::get_instance_session_logs(&app, &id).unwrap_or_default())
 }
@@ -988,7 +1049,13 @@ pub fn run() {
             set_active_shader_pack,
             export_instance,
             validate_instance_safety,
-            resolve_instance_dependencies
+            resolve_instance_dependencies,
+            launch_instance_quick_play,
+            clone_world_save,
+            get_instance_servers,
+            save_instance_servers,
+            ping_minecraft_server,
+            ingest_dropped_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
