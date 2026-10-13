@@ -46,6 +46,7 @@ import { DEFAULT_MIN_MEMORY, DEFAULT_MAX_MEMORY, MEMORY_PRESETS } from "../setti
 import { Dropdown } from "./Dropdown";
 import { EffectiveJavaArgsModal } from "./EffectiveJavaArgsModal";
 import { InstanceAddonsTab } from "./InstanceAddonsTab";
+import { InstanceWorldsTab } from "./InstanceWorldsTab";
 import {
   BLOCK_ICON_KEYS,
   PASTEL_GRADIENTS,
@@ -2054,6 +2055,14 @@ function InstanceManagementView({
           onOpenFolder={() => onOpenFolder(activeTab)}
           onUpdate={onUpdate}
         />
+      </div>
+    );
+  }
+
+  if (activeTab === "worlds") {
+    return (
+      <div className="relative flex-1 flex flex-col h-full min-h-full overflow-hidden">
+        <InstanceWorldsTab theme={theme} instance={instance} onOpenFolder={onOpenFolder} />
       </div>
     );
   }

@@ -133,6 +133,7 @@ export type InstanceRailTab =
   | "mods"
   | "resourcepacks"
   | "shaders"
+  | "worlds"
   | "screenshots"
   | "settings";
 
@@ -147,6 +148,7 @@ export const INSTANCE_RAIL_TABS: readonly InstanceRailNavItem[] = [
   { id: "mods", label: "Mods", icon: "puzzle" },
   { id: "resourcepacks", label: "Resource Pack", icon: "palette" },
   { id: "shaders", label: "Shaders", icon: "wand" },
+  { id: "worlds", label: "Worlds", icon: "globe" },
   { id: "screenshots", label: "Screenshots", icon: "photo" },
   { id: "settings", label: "Settings", icon: "settings" },
 ];

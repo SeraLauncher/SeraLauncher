@@ -16,6 +16,7 @@ mod minecraft;
 mod paths;
 mod crash_analyzer;
 mod modpack;
+mod worlds;
 
 const DEFAULT_APPEARANCE: &str = "dark";
 const BUNDLED_FAMILY: &str = "Sunghyun Sans";
@@ -434,6 +435,64 @@ async fn install_modpack_from_discovery(
     modpack::install_modpack_from_url(&app, &download_url, custom_name, custom_icon).await
 }
 
+#[tauri::command]
+fn get_instance_worlds(app: tauri::AppHandle, id: String) -> Result<Vec<worlds::WorldItem>, String> {
+    worlds::list_instance_worlds(&app, &id)
+}
+
+#[tauri::command]
+fn create_world_backup(
+    app: tauri::AppHandle,
+    id: String,
+    folder_name: String,
+) -> Result<worlds::WorldBackupItem, String> {
+    worlds::create_world_backup(&app, &id, &folder_name)
+}
+
+#[tauri::command]
+fn get_instance_world_backups(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<Vec<worlds::WorldBackupItem>, String> {
+    worlds::list_world_backups(&app, &id)
+}
+
+#[tauri::command]
+fn restore_world_backup(
+    app: tauri::AppHandle,
+    id: String,
+    backup_file_name: String,
+) -> Result<(), String> {
+    worlds::restore_world_backup(&app, &id, &backup_file_name)
+}
+
+#[tauri::command]
+fn delete_world_backup(
+    app: tauri::AppHandle,
+    id: String,
+    backup_file_name: String,
+) -> Result<(), String> {
+    worlds::delete_world_backup(&app, &id, &backup_file_name)
+}
+
+#[tauri::command]
+fn delete_world_save(
+    app: tauri::AppHandle,
+    id: String,
+    folder_name: String,
+) -> Result<(), String> {
+    worlds::delete_world_save(&app, &id, &folder_name)
+}
+
+#[tauri::command]
+fn import_world_zip(
+    app: tauri::AppHandle,
+    id: String,
+    zip_path: String,
+) -> Result<worlds::WorldItem, String> {
+    worlds::import_world_zip(&app, &id, &zip_path)
+}
+
 
 #[tauri::command]
 fn get_active_account(app: tauri::AppHandle) -> Result<Option<auth::PublicAccountInfo>, String> {
@@ -850,7 +909,14 @@ pub fn run() {
             inspect_modpack_file,
             install_modpack_from_file,
             install_modpack_from_discovery,
-            pick_modpack_file
+            pick_modpack_file,
+            get_instance_worlds,
+            create_world_backup,
+            get_instance_world_backups,
+            restore_world_backup,
+            delete_world_backup,
+            delete_world_save,
+            import_world_zip
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

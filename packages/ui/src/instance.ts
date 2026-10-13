@@ -72,8 +72,28 @@ export type InstanceManagementTab =
   | "mods"
   | "resourcepacks"
   | "shaders"
+  | "worlds"
   | "screenshots"
   | "settings";
+
+export type WorldItem = {
+  folderName: string;
+  name: string;
+  lastPlayed: number;
+  gameType: "Survival" | "Creative" | "Adventure" | "Spectator" | "Hardcore" | string;
+  difficulty: "Peaceful" | "Easy" | "Normal" | "Hard" | string;
+  hardcore: boolean;
+  versionName?: string | null;
+  sizeBytes: number;
+  iconDataUrl?: string | null;
+};
+
+export type WorldBackupItem = {
+  fileName: string;
+  worldName: string;
+  createdAt: number;
+  sizeBytes: number;
+};
 
 export function formatPlayTime(seconds?: number | null): string {
   if (!seconds || seconds <= 0) {
