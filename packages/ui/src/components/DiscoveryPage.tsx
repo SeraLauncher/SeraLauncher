@@ -222,6 +222,8 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
         provider: installingProject.source,
         projectId: installingProject.id,
         versionId: resolvedVersionId,
+        title: installingProject.title,
+        iconUrl: installingProject.iconUrl || null,
       });
 
       const targetInstName = targetInst?.name || "instance";

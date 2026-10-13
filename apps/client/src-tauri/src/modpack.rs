@@ -705,6 +705,8 @@ pub async fn install_modpack_bytes(
                     file.file_id.as_deref(),
                     &hex_sha1,
                     bytes.len() as u64,
+                    None,
+                    None,
                 );
             }
 
@@ -793,6 +795,8 @@ pub async fn install_modpack_bytes(
                     Some(&ver),
                     "",
                     std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0),
+                    None,
+                    None,
                 );
             }
         }

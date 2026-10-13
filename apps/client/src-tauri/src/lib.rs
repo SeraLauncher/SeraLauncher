@@ -274,11 +274,7 @@ async fn get_installed_addons_list(
     instance_id: String,
     project_type: String,
 ) -> Result<Vec<discovery::InstalledAddonItem>, String> {
-    tokio::task::spawn_blocking(move || {
-        discovery::get_installed_addons_list(&app, &instance_id, &project_type)
-    })
-    .await
-    .map_err(|e| e.to_string())?
+    discovery::get_installed_addons_list(&app, &instance_id, &project_type).await
 }
 
 #[tauri::command]
@@ -330,6 +326,8 @@ async fn install_discovery_project(
     provider: Option<String>,
     project_id: Option<String>,
     version_id: Option<String>,
+    title: Option<String>,
+    icon_url: Option<String>,
 ) -> Result<Vec<String>, String> {
     discovery::install_project_with_dependencies(
         &app,
@@ -340,6 +338,8 @@ async fn install_discovery_project(
         provider.as_deref(),
         project_id.as_deref(),
         version_id.as_deref(),
+        title.as_deref(),
+        icon_url.as_deref(),
     ).await
 }
 

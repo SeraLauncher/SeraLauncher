@@ -752,6 +752,8 @@ export function InstanceAddonsTab({
         provider: item.source,
         projectId: item.id,
         versionId: resolvedVersionId,
+        title: item.title,
+        iconUrl: item.iconUrl || null,
       });
 
       refreshInstalledAddons();

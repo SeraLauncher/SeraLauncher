@@ -348,6 +348,8 @@ export function DiscoveryDetailsPage({
         provider: project.source,
         projectId: project.id,
         versionId: installingVersion.id || null,
+        title: details?.title || project.title,
+        iconUrl: details?.iconUrl || project.iconUrl || null,
       });
 
       const targetInst = instances.find((i) => i.id === selectedInstanceId)?.name || "instance";
@@ -391,6 +393,8 @@ export function DiscoveryDetailsPage({
         provider: project.source,
         projectId: project.id,
         versionId: null,
+        title: title || details?.title || project.title,
+        iconUrl: details?.iconUrl || project.iconUrl || null,
       });
 
       const targetObj = instances.find((i) => i.id === instId);

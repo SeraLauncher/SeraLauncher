@@ -451,6 +451,20 @@ async fn search_curseforge(
     })
 }
 
+/// Strips Minecraft section sign formatting codes (§0-§f, §k-§r) from display strings
+pub fn strip_minecraft_formatting(s: &str) -> String {
+    let mut res = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '§' {
+            chars.next(); // Skip formatting code
+        } else {
+            res.push(c);
+        }
+    }
+    res.trim().to_string()
+}
+
 /// Installs a downloaded mod, resourcepack, or shader directly into an instance folder.
 pub fn write_addon_index(
     sub_dir: &Path,
@@ -462,6 +476,8 @@ pub fn write_addon_index(
     version_id: Option<&str>,
     sha1_hash: &str,
     size_bytes: u64,
+    title: Option<&str>,
+    icon_url: Option<&str>,
 ) {
     let index_dir = sub_dir.join(".index");
     if let Err(_) = std::fs::create_dir_all(&index_dir) {
@@ -492,15 +508,26 @@ pub fn write_addon_index(
         }
     });
 
+    let clean_title = title
+        .map(strip_minecraft_formatting)
+        .filter(|t| !t.is_empty())
+        .unwrap_or_else(|| strip_minecraft_formatting(stem));
+
+    let icon_line = icon_url
+        .filter(|u| !u.trim().is_empty())
+        .map(|u| format!("icon_url = \"{}\"\n", u.trim()))
+        .unwrap_or_default();
+
     let conf_content = format!(
-        "# SeraLauncher Addon Index\n[addon]\nname = \"{stem}\"\nfilename = \"{file_name}\"\ntype = \"{project_type}\"\n\n[source]\nprovider = \"{prov}\"\nproject_id = \"{proj_id}\"\nversion_id = \"{ver_id}\"\nurl = \"{download_url}\"\n\n[integrity]\nalgorithm = \"sha1\"\nhash = \"{sha1_hash}\"\nsize_bytes = {size_bytes}\n\n[meta]\ninstalled_at_unix = {now}\nmanaged_by = \"sera\"\n",
-        stem = stem,
+        "# SeraLauncher Addon Index\n[addon]\nname = \"{clean_title}\"\nfilename = \"{file_name}\"\ntype = \"{project_type}\"\n\n[source]\nprovider = \"{prov}\"\nproject_id = \"{proj_id}\"\nversion_id = \"{ver_id}\"\nurl = \"{download_url}\"\n{icon_line}\n[integrity]\nalgorithm = \"sha1\"\nhash = \"{sha1_hash}\"\nsize_bytes = {size_bytes}\n\n[meta]\ninstalled_at_unix = {now}\nmanaged_by = \"sera\"\n",
+        clean_title = clean_title,
         file_name = file_name,
         project_type = project_type,
         prov = provider.unwrap_or("unknown"),
         proj_id = project_id.unwrap_or(""),
         ver_id = resolved_version_id,
         download_url = download_url,
+        icon_line = icon_line,
         sha1_hash = sha1_hash,
         size_bytes = size_bytes,
         now = now
@@ -518,6 +545,8 @@ pub async fn install_file_to_instance(
     provider: Option<&str>,
     project_id: Option<&str>,
     version_id: Option<&str>,
+    title: Option<&str>,
+    icon_url: Option<&str>,
 ) -> Result<PathBuf, String> {
     let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
     let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
@@ -687,6 +716,8 @@ pub async fn install_file_to_instance(
         version_id,
         &digest,
         downloaded,
+        title,
+        icon_url,
     );
 
     Ok(target_file)
@@ -1459,11 +1490,13 @@ pub async fn install_project_with_dependencies(
     provider: Option<&str>,
     project_id: Option<&str>,
     version_id: Option<&str>,
+    title: Option<&str>,
+    icon_url: Option<&str>,
 ) -> Result<Vec<String>, String> {
     let mut installed_list = Vec::new();
 
     // 1. Install primary file
-    install_file_to_instance(app, instance_id, project_type, download_url, file_name, provider, project_id, version_id).await?;
+    install_file_to_instance(app, instance_id, project_type, download_url, file_name, provider, project_id, version_id, title, icon_url).await?;
     installed_list.push(file_name.to_string());
 
     if !project_type.eq_ignore_ascii_case("mods") && !project_type.eq_ignore_ascii_case("mod") {
@@ -1576,7 +1609,7 @@ pub async fn install_project_with_dependencies(
                                         visited_projects.insert(pid_lower.clone());
                                         if let Ok(dep_versions) = get_project_versions("modrinth", &dep_proj_id, Some(mc_version), Some(&loader)).await {
                                             if let Some(best_ver) = dep_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| dep_versions.first()).cloned() {
-                                                if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best_ver.download_url, &best_ver.file_name, Some("modrinth"), Some(&dep_proj_id), Some(&best_ver.id)).await {
+                                                if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best_ver.download_url, &best_ver.file_name, Some("modrinth"), Some(&dep_proj_id), Some(&best_ver.id), None, None).await {
                                                     installed_list.push(best_ver.file_name.clone());
                                                     installed_identifiers.insert(pid_lower.clone());
                                                     let stem = Path::new(&best_ver.file_name).file_stem().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
@@ -1646,7 +1679,7 @@ pub async fn install_project_with_dependencies(
                                                 let dl_url = best_file.download_url.clone().unwrap_or_else(|| {
                                                     format!("https://edge.forgecdn.net/files/{}/{}/{}", best_file.id / 1000, best_file.id % 1000, best_file.file_name)
                                                 });
-                                                if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &dl_url, &best_file.file_name, Some("curseforge"), Some(&dep_key), Some(&best_file.id.to_string())).await {
+                                                if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &dl_url, &best_file.file_name, Some("curseforge"), Some(&dep_key), Some(&best_file.id.to_string()), None, None).await {
                                                     installed_list.push(best_file.file_name.clone());
                                                 }
                                             }
@@ -1685,7 +1718,7 @@ pub async fn install_project_with_dependencies(
                 if mc_version == "1.8.9" {
                     let dl_url = "https://edge.forgecdn.net/files/3758/10/legacy-fabric-api-1.4.0%2b1.8.9.jar";
                     let f_name = "legacy-fabric-api-1.4.0+1.8.9.jar";
-                    if let Ok(_) = install_file_to_instance(app, instance_id, "mods", dl_url, f_name, Some("curseforge"), Some("400281"), None).await {
+                    if let Ok(_) = install_file_to_instance(app, instance_id, "mods", dl_url, f_name, Some("curseforge"), Some("400281"), None, Some("Legacy Fabric API"), None).await {
                         installed_list.push(f_name.to_string());
                     }
                 } else {
@@ -1704,12 +1737,12 @@ pub async fn install_project_with_dependencies(
                     }.await;
 
                     if let Some((dl_url, f_name)) = cf_resolved {
-                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &dl_url, &f_name, Some("curseforge"), Some("400281"), None).await {
+                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &dl_url, &f_name, Some("curseforge"), Some("400281"), None, Some("Legacy Fabric API"), None).await {
                             installed_list.push(f_name);
                         }
                     } else if let Ok(api_versions) = get_project_versions("modrinth", "9CJED7xi", Some(mc_version), Some("fabric")).await {
                         if let Some(best) = api_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| api_versions.first()).cloned() {
-                            if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name, Some("modrinth"), Some("9CJED7xi"), Some(&best.id)).await {
+                            if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name, Some("modrinth"), Some("9CJED7xi"), Some(&best.id), Some("Legacy Fabric API"), None).await {
                                 installed_list.push(best.file_name);
                             }
                         }
@@ -1725,7 +1758,7 @@ pub async fn install_project_with_dependencies(
             if !has_fabric_api {
                 if let Ok(api_versions) = get_project_versions("modrinth", "P7dR8mSH", Some(mc_version), Some("fabric")).await {
                     if let Some(best) = api_versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| api_versions.first()).cloned() {
-                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name, Some("modrinth"), Some("9CJED7xi"), Some(&best.id)).await {
+                        if let Ok(_) = install_file_to_instance(app, instance_id, "mods", &best.download_url, &best.file_name, Some("modrinth"), Some("9CJED7xi"), Some(&best.id), Some("Fabric API"), None).await {
                             installed_list.push(best.file_name);
                         }
                     }
@@ -2125,8 +2158,8 @@ fn inspect_mod_archive<R: Read + Seek>(
 
 /// Lists all installed addon files in the instance directory (including .disabled files)
 /// with metadata parsed from .index configs and JAR archives, using an in-memory mtime cache
-/// to keep loading instantaneous even with 50+ installed mods.
-pub fn get_installed_addons_list(
+/// and automated Modrinth/CurseForge metadata enrichment for shader packs and resource packs.
+pub async fn get_installed_addons_list(
     app: &tauri::AppHandle,
     instance_id: &str,
     project_type: &str,
@@ -2193,7 +2226,7 @@ pub fn get_installed_addons_list(
             let stem = clean_name.strip_suffix(&format!(".{}", ext)).unwrap_or(&clean_name).to_string();
 
             // Default values
-            let mut name = stem.clone();
+            let mut name = strip_minecraft_formatting(&stem);
             let mut version = None;
             let mut description = None;
             let mut source = None;
@@ -2210,8 +2243,9 @@ pub fn get_installed_addons_list(
                         if trimmed.starts_with("name =") {
                             if let Some(val) = trimmed.split('=').nth(1) {
                                 let n = val.trim().trim_matches(|c| c == '"' || c == '\'');
-                                if !n.is_empty() && n != stem {
-                                    name = n.to_string();
+                                let cleaned = strip_minecraft_formatting(n);
+                                if !cleaned.is_empty() && cleaned != stem {
+                                    name = cleaned;
                                 }
                             }
                         } else if trimmed.starts_with("provider =") {
@@ -2243,7 +2277,7 @@ pub fn get_installed_addons_list(
                     if let Ok(mut archive) = zip::ZipArchive::new(f) {
                         let (m_name, m_id, m_ver, m_desc, m_icon) = inspect_mod_archive(&mut archive, &stem);
                         if m_name != stem {
-                            name = m_name;
+                            name = strip_minecraft_formatting(&m_name);
                         }
                         if m_id.is_some() {
                             mod_id = m_id;
@@ -2263,13 +2297,56 @@ pub fn get_installed_addons_list(
                 if let Ok(f) = std::fs::File::open(&path) {
                     if let Ok(mut archive) = zip::ZipArchive::new(f) {
                         use std::io::Read;
-                        for cand in ["pack.png", "icon.png", "logo.png"] {
-                            if let Ok(mut icon_file) = archive.by_name(cand) {
-                                if icon_file.size() > 0 && icon_file.size() < 1_500_000 {
-                                    let mut bytes = Vec::with_capacity(icon_file.size() as usize);
-                                    if icon_file.read_to_end(&mut bytes).is_ok() {
-                                        icon_url = Some(format!("data:image/png;base64,{}", base64_encode(&bytes)));
-                                        break;
+
+                        // Check pack.mcmeta for description in resource packs
+                        if let Ok(mut mcmeta_file) = archive.by_name("pack.mcmeta") {
+                            let mut buf = String::new();
+                            if mcmeta_file.read_to_string(&mut buf).is_ok() {
+                                #[derive(Deserialize)]
+                                struct PackMcmeta {
+                                    pack: Option<PackMcmetaInner>,
+                                }
+                                #[derive(Deserialize)]
+                                struct PackMcmetaInner {
+                                    description: Option<serde_json::Value>,
+                                }
+                                if let Ok(parsed) = serde_json::from_str::<PackMcmeta>(&buf) {
+                                    if let Some(inner) = parsed.pack {
+                                        if let Some(desc_val) = inner.description {
+                                            if let Some(s) = desc_val.as_str() {
+                                                let cleaned = strip_minecraft_formatting(s);
+                                                if !cleaned.is_empty() {
+                                                    description = Some(cleaned);
+                                                }
+                                            } else if let Some(obj) = desc_val.as_object() {
+                                                if let Some(t) = obj.get("text").and_then(|v| v.as_str()) {
+                                                    let cleaned = strip_minecraft_formatting(t);
+                                                    if !cleaned.is_empty() {
+                                                        description = Some(cleaned);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Case-insensitive search across zip entries for pack.png or icon.png
+                        if icon_url.is_none() {
+                            for i in 0..archive.len() {
+                                if let Ok(mut icon_file) = archive.by_index(i) {
+                                    let entry_name = icon_file.name().to_string();
+                                    let lower = entry_name.to_lowercase();
+                                    if (lower == "pack.png" || lower == "icon.png" || lower == "logo.png"
+                                        || lower.ends_with("/pack.png") || lower.ends_with("/icon.png") || lower.ends_with("/logo.png"))
+                                        && icon_file.size() > 0 && icon_file.size() < 1_500_000
+                                    {
+                                        let mut bytes = Vec::with_capacity(icon_file.size() as usize);
+                                        if icon_file.read_to_end(&mut bytes).is_ok() {
+                                            icon_url = Some(format!("data:image/png;base64,{}", base64_encode(&bytes)));
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -2277,6 +2354,8 @@ pub fn get_installed_addons_list(
                     }
                 }
             }
+
+            name = strip_minecraft_formatting(&name);
 
             let parsed_item = InstalledAddonItem {
                 id: stem,
@@ -2293,13 +2372,98 @@ pub fn get_installed_addons_list(
                 project_id,
             };
 
-            // Store in in-memory cache
-            if let Ok(mut guard) = INSTALLED_ADDONS_CACHE.lock() {
-                let cache = guard.get_or_insert_with(HashMap::new);
-                cache.insert(path, (mtime_secs, size_bytes, is_disabled, parsed_item.clone()));
-            }
-
             items.push(parsed_item);
+        }
+    }
+
+    // 3. Batch metadata enrichment for items with missing icons or unformatted names
+    let client = reqwest::Client::builder()
+        .user_agent("SeraLauncher/0.1.6")
+        .timeout(std::time::Duration::from_secs(4))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    let mut modrinth_enrich_ids = Vec::new();
+    for item in &items {
+        let is_modrinth = item.source.as_deref().unwrap_or("").eq_ignore_ascii_case("modrinth");
+        let needs_info = item.icon_url.is_none() || item.name == item.id;
+        if is_modrinth && needs_info {
+            if let Some(ref pid) = item.project_id {
+                if !pid.is_empty() {
+                    modrinth_enrich_ids.push(pid.clone());
+                }
+            }
+        }
+    }
+
+    if !modrinth_enrich_ids.is_empty() {
+        #[derive(Deserialize)]
+        struct ModrinthBatchProject {
+            id: String,
+            title: String,
+            icon_url: Option<String>,
+        }
+
+        let ids_json = serde_json::to_string(&modrinth_enrich_ids).unwrap_or_else(|_| "[]".to_string());
+        let url = format!("https://api.modrinth.com/v2/projects?ids={}", urlencoding::encode(&ids_json));
+        if let Ok(res) = client.get(&url).send().await {
+            if let Ok(projects) = res.json::<Vec<ModrinthBatchProject>>().await {
+                for proj in projects {
+                    let clean_title = strip_minecraft_formatting(&proj.title);
+                    for item in &mut items {
+                        if item.project_id.as_deref() == Some(&proj.id) {
+                            if item.name == item.id || item.name.is_empty() {
+                                item.name = clean_title.clone();
+                            }
+                            if item.icon_url.is_none() && proj.icon_url.is_some() {
+                                item.icon_url = proj.icon_url.clone();
+                            }
+
+                            // Update .index/{stem}.conf with real name and icon_url
+                            let conf_path = index_dir.join(format!("{}.conf", item.id));
+                            if conf_path.is_file() {
+                                if let Ok(existing) = std::fs::read_to_string(&conf_path) {
+                                    let mut new_lines = Vec::new();
+                                    let mut has_icon = false;
+                                    for line in existing.lines() {
+                                        let trimmed = line.trim();
+                                        if trimmed.starts_with("name =") {
+                                            new_lines.push(format!("name = \"{}\"", item.name));
+                                        } else if trimmed.starts_with("icon_url =") {
+                                            if let Some(ref u) = item.icon_url {
+                                                new_lines.push(format!("icon_url = \"{}\"", u));
+                                                has_icon = true;
+                                            }
+                                        } else {
+                                            new_lines.push(line.to_string());
+                                        }
+                                    }
+                                    if !has_icon && item.icon_url.is_some() {
+                                        new_lines.push(format!("icon_url = \"{}\"", item.icon_url.as_deref().unwrap()));
+                                    }
+                                    let _ = std::fs::write(&conf_path, new_lines.join("\n"));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Update in-memory cache with enriched metadata
+    if let Ok(mut guard) = INSTALLED_ADDONS_CACHE.lock() {
+        let cache = guard.get_or_insert_with(HashMap::new);
+        for item in &items {
+            let path = sub_dir.join(if item.enabled { item.file_name.clone() } else { format!("{}.disabled", item.file_name) });
+            if let Ok(meta) = std::fs::metadata(&path) {
+                let size_b = meta.len();
+                let mtime = meta.modified().ok()
+                    .and_then(|st| st.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                cache.insert(path, (mtime, size_b, !item.enabled, item.clone()));
+            }
         }
     }
 

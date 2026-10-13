@@ -147,6 +147,8 @@ export function SelectVersionModal({
       provider: project.source,
       projectId: project.id,
       versionId: selectedVersion.id,
+      title: project.title,
+      iconUrl: project.iconUrl || null,
     })
       .then((installed) => {
         recordDownloadHistory({
