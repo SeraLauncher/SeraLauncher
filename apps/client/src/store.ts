@@ -219,10 +219,24 @@ export function useInstances() {
   }, []);
 
   const createInstance = useCallback(
-    async (name: string, mcVersion: string, versionType: string, icon?: string | null) => {
+    async (
+      name: string,
+      mcVersion: string,
+      versionType: string,
+      icon?: string | null,
+      loader?: string | null,
+      loaderVersion?: string | null,
+    ) => {
       // Trigger creation in background. Rust writes instance.json within 2ms and emits
       // "instances_changed", making the instance appear in the list instantly!
-      invoke("create_instance", { name, mcVersion, versionType, icon })
+      invoke("create_instance", {
+        name,
+        mcVersion,
+        versionType,
+        icon: icon || null,
+        loader: loader || null,
+        loaderVersion: loaderVersion || null,
+      })
         .then(() => {
           refreshInstances();
         })

@@ -39,6 +39,7 @@ import type {
   ScreenshotItem,
   CrashAnalysis,
   ModpackInspection,
+  LoaderVersionInfo,
 } from "../instance";
 import { formatPlayTime } from "../instance";
 import type { JavaRuntime, Settings } from "../settings";
@@ -120,6 +121,8 @@ export function InstancePage({
     mcVersion: string,
     versionType: string,
     icon?: string | null,
+    loader?: string | null,
+    loaderVersion?: string | null,
   ) => Promise<void>;
   onDeleteInstance: (id: string) => Promise<void>;
   onUpdateInstance: (instance: Instance) => Promise<void>;
@@ -495,8 +498,8 @@ export function InstancePage({
             theme={theme}
             versions={versions}
             onClose={() => setCreateModalOpen(false)}
-            onCreate={async (name, mcVersion, versionType, icon) => {
-              await onCreateInstance(name, mcVersion, versionType, icon);
+            onCreate={async (name, mcVersion, versionType, icon, loader, loaderVersion) => {
+              await onCreateInstance(name, mcVersion, versionType, icon, loader, loaderVersion);
               setCreateModalOpen(false);
             }}
           />
@@ -573,6 +576,9 @@ function CreateInstanceModal({
   const [loader, setLoader] = useState<"vanilla" | "fabric" | "forge" | "neoforge" | "quilt">(
     "vanilla",
   );
+  const [loaderVersion, setLoaderVersion] = useState<string>("");
+  const [availableLoaderVersions, setAvailableLoaderVersions] = useState<LoaderVersionInfo[]>([]);
+  const [loadingLoaderVersions, setLoadingLoaderVersions] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedVersion, setSelectedVersion] = useState<MinecraftVersion | null>(() => {
     return versions.find((v) => v.type === "release") ?? versions[0] ?? null;
@@ -668,10 +674,52 @@ function CreateInstanceModal({
 
   const handleSelectLoader = (newLoader: "vanilla" | "fabric" | "forge" | "neoforge" | "quilt") => {
     setLoader(newLoader);
+    if (newLoader === "vanilla") {
+      setAvailableLoaderVersions([]);
+      setLoaderVersion("");
+    }
     if (!nameManuallyEdited && selectedVersion) {
       setName(`${getPrefix(newLoader)} ${selectedVersion.id}`);
     }
   };
+
+  useEffect(() => {
+    if (loader === "vanilla" || !selectedVersion) return;
+    let active = true;
+
+    const timer = setTimeout(() => {
+      setLoadingLoaderVersions(true);
+    }, 0);
+
+    invoke<LoaderVersionInfo[]>("get_mod_loader_versions", {
+      mcVersion: selectedVersion.id,
+      loader,
+    })
+      .then((res) => {
+        if (!active) return;
+        const list = res || [];
+        setAvailableLoaderVersions(list);
+        if (list.length > 0) {
+          const def = list.find((v) => v.stable)?.version || list[0].version;
+          setLoaderVersion(def);
+        } else {
+          setLoaderVersion("latest");
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setAvailableLoaderVersions([]);
+        setLoaderVersion("latest");
+      })
+      .finally(() => {
+        if (active) setLoadingLoaderVersions(false);
+      });
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [loader, selectedVersion]);
 
   const handleRandomizeIcon = () => {
     setSelectedBlock(getRandomBlockIconKey());
@@ -681,12 +729,19 @@ function CreateInstanceModal({
   const handleCreate = () => {
     if (!selectedVersion || !name.trim()) return;
     const encodedIcon = encodeInstanceIcon(selectedBlock, selectedGradientName);
+    const chosenLoader = loader === "vanilla" ? undefined : loader;
+    const chosenLoaderVersion = loader === "vanilla" ? undefined : loaderVersion || undefined;
     onClose();
-    onCreate(name.trim(), selectedVersion.id, selectedVersion.type, encodedIcon).catch(
-      (err: unknown) => {
-        console.error("Failed to create instance:", err);
-      },
-    );
+    onCreate(
+      name.trim(),
+      selectedVersion.id,
+      selectedVersion.type,
+      encodedIcon,
+      chosenLoader,
+      chosenLoaderVersion,
+    ).catch((err: unknown) => {
+      console.error("Failed to create instance:", err);
+    });
   };
 
   const currentGradient = getPastelGradientByName(selectedGradientName);
@@ -1024,6 +1079,33 @@ function CreateInstanceModal({
                 );
               })}
             </div>
+
+            {loader !== "vanilla" && (
+              <div className="flex flex-col gap-1.5 pt-2">
+                <label className="text-xs font-semibold" style={{ color: theme.foreground }}>
+                  {getPrefix(loader)} Version
+                </label>
+                {loadingLoaderVersions ? (
+                  <div className="h-9 px-3 flex items-center rounded-lg border border-border bg-secondary text-xs text-muted-foreground animate-pulse">
+                    Fetching {getPrefix(loader)} versions...
+                  </div>
+                ) : (
+                  <Dropdown
+                    value={loaderVersion}
+                    options={availableLoaderVersions.map((v) => v.version)}
+                    render={(ver) => {
+                      const info = availableLoaderVersions.find((v) => v.version === ver);
+                      if (info?.stable) {
+                        return `${ver} (Stable)`;
+                      }
+                      return ver;
+                    }}
+                    onChange={(ver) => setLoaderVersion(ver)}
+                    theme={theme}
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Version Selector */}

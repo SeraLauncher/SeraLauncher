@@ -331,10 +331,24 @@ export default function App() {
                     onSelectManagementTab={setInstanceTab}
                     runningInstances={runningInstances}
                     onKillInstance={killInstance}
-                    onCreateInstance={async (name, mcVersion, versionType, icon) => {
+                    onCreateInstance={async (
+                      name,
+                      mcVersion,
+                      versionType,
+                      icon,
+                      loader,
+                      loaderVersion,
+                    ) => {
                       const histId = `inst-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
                       try {
-                        await createInstance(name, mcVersion, versionType, icon);
+                        await createInstance(
+                          name,
+                          mcVersion,
+                          versionType,
+                          icon,
+                          loader,
+                          loaderVersion,
+                        );
                         addHistoryItem({
                           id: histId,
                           instanceName: name,

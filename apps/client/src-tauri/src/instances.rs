@@ -194,6 +194,28 @@ pub async fn create_instance(
     }
     let _ = app.emit("instances_changed", ());
 
+    // 4. If a mod loader is selected, install the loader profile and libraries
+    if let Some(ldr) = instance.loader.clone() {
+        if !ldr.is_empty() && ldr != "vanilla" {
+            let ldr_ver = match instance.loader_version.clone() {
+                Some(v) if !v.trim().is_empty() => v,
+                _ => {
+                    let available = crate::loaders::fetch_loader_versions(&instance.mc_version, &ldr)
+                        .await
+                        .unwrap_or_default();
+                    available
+                        .first()
+                        .map(|v| v.version.clone())
+                        .unwrap_or_else(|| "latest".to_string())
+                }
+            };
+            if let Ok(updated_inst) = crate::loaders::install_mod_loader(app, &instance.id, &ldr, &ldr_ver).await {
+                instance = updated_inst;
+                let _ = app.emit("instances_changed", ());
+            }
+        }
+    }
+
     Ok(instance)
 }
 
