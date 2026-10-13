@@ -27,12 +27,7 @@ export function AppLoadingScreen({ appearance, theme, progress }: AppLoadingScre
     >
       {/* Centered logo and progress bar */}
       <div className="flex flex-col items-center justify-center gap-6">
-        <motion.div
-          initial={{ scale: 0.92, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="flex items-center justify-center"
-        >
+        <div className="flex items-center justify-center">
           <img
             src={logo[appearance]}
             alt="Sera Launcher"
@@ -41,7 +36,7 @@ export function AppLoadingScreen({ appearance, theme, progress }: AppLoadingScre
             className="drop-shadow-md"
             draggable={false}
           />
-        </motion.div>
+        </div>
 
         {/* Progress bar below the logo */}
         <div

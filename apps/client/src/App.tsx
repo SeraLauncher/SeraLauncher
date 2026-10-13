@@ -150,7 +150,7 @@ export default function App() {
         {/* the rail is one element for the whole app: going to settings widens it,
             coming back narrows it, and the page beside it never moves */}
         <motion.nav
-          className="relative z-30 shrink-0 flex flex-col items-center gap-2 pt-4 px-2.5 pb-3 border-r border-border"
+          className="relative z-30 shrink-0 flex flex-col items-center gap-2 pt-4 px-2.5 pb-3"
           animate={{ width: isRailOpen ? OPEN_WIDTH : RAIL_WIDTH }}
           transition={rail}
           style={{ background: theme.sidebar }}
