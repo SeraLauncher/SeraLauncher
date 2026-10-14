@@ -35,8 +35,16 @@ pub struct SafetyReport {
 struct FabricModMeta {
     id: Option<String>,
     name: Option<String>,
+    #[allow(dead_code)]
+    version: Option<String>,
     depends: Option<HashMap<String, serde_json::Value>>,
     breaks: Option<HashMap<String, serde_json::Value>>,
+    jars: Option<Vec<FabricNestedJar>>,
+}
+
+#[derive(Deserialize)]
+struct FabricNestedJar {
+    file: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -94,6 +102,57 @@ fn parse_json_lenient<T: for<'de> Deserialize<'de>>(raw: &str) -> Option<T> {
         }
     }
     serde_json::from_str::<T>(&sanitized).ok()
+}
+
+/// Compares two version strings (e.g. "0.28.8" vs "0.28.5-")
+/// Returns true if v1 is strictly older than v2.
+fn is_version_older(v1: &str, v2: &str) -> bool {
+    let p1: Vec<u64> = v1
+        .split(|c: char| !c.is_ascii_digit())
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    let p2: Vec<u64> = v2
+        .split(|c: char| !c.is_ascii_digit())
+        .filter_map(|s| s.parse().ok())
+        .collect();
+
+    let len = p1.len().min(p2.len());
+    for i in 0..len {
+        if p1[i] < p2[i] {
+            return true;
+        } else if p1[i] > p2[i] {
+            return false;
+        }
+    }
+    p1.len() < p2.len()
+}
+
+/// Evaluates a Fabric `breaks` condition against an installed version.
+/// Returns true if the installed version actually conflicts/breaks.
+fn breaks_condition_met(installed_ver: &str, break_constraint: &str) -> bool {
+    let trimmed = break_constraint.trim();
+    if trimmed == "*" || trimmed.is_empty() {
+        return true; // Absolute incompatibility
+    }
+
+    if let Some(rest) = trimmed.strip_prefix("<=") {
+        let target = rest.trim();
+        is_version_older(installed_ver, target) || installed_ver == target
+    } else if let Some(rest) = trimmed.strip_prefix('<') {
+        let target = rest.trim();
+        is_version_older(installed_ver, target)
+    } else if let Some(rest) = trimmed.strip_prefix(">=") {
+        let target = rest.trim();
+        !is_version_older(installed_ver, target)
+    } else if let Some(rest) = trimmed.strip_prefix('>') {
+        let target = rest.trim();
+        !is_version_older(installed_ver, target) && installed_ver != target
+    } else if let Some(rest) = trimmed.strip_prefix('=') {
+        let target = rest.trim();
+        installed_ver == target
+    } else {
+        false
+    }
 }
 
 /// Validates an instance for missing dependencies, mod conflicts, and Java version compatibility
@@ -161,13 +220,110 @@ pub fn validate_instance_safety(
         });
     }
 
-    // 1. Collect installed mod IDs and provides
+    // 1. Collect installed mod IDs, submodules, and provides
     let installed_map = scan_installed_mods(&mods_dir);
     let mut available_ids = HashSet::new();
 
     for (k, _) in &installed_map {
         available_ids.insert(k.to_lowercase());
     }
+
+    // Inspect nested jars inside mod JARs (e.g. Fabric API submodules)
+    if let Ok(entries) = std::fs::read_dir(&mods_dir) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_file() && p.extension().and_then(|e| e.to_str()) == Some("jar") {
+                if let Ok(f) = File::open(&p) {
+                    if let Ok(mut archive) = zip::ZipArchive::new(f) {
+                        let content_opt = {
+                            if let Ok(mut fabric_json) = archive.by_name("fabric.mod.json") {
+                                let mut content = String::new();
+                                if fabric_json.read_to_string(&mut content).is_ok() {
+                                    Some(content)
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        };
+
+                        if let Some(content) = content_opt {
+                            if let Some(parsed) = parse_json_lenient::<FabricModMeta>(&content) {
+                                if let Some(nested) = parsed.jars {
+                                    for n in nested {
+                                        if let Some(file_path) = n.file {
+                                            let stem = Path::new(&file_path)
+                                                .file_stem()
+                                                .and_then(|s| s.to_str())
+                                                .unwrap_or("")
+                                                .to_lowercase();
+                                            if let Some(idx) = stem.find('-') {
+                                                available_ids.insert(stem[..idx].to_string());
+                                            }
+                                            available_ids.insert(stem.clone());
+                                            available_ids.insert(stem.replace('-', "_"));
+                                            available_ids.insert(stem.replace('_', "-"));
+
+                                            // Deep inspect inner jar for its real mod ID and provides
+                                            if let Ok(mut inner_entry) = archive.by_name(&file_path) {
+                                                if inner_entry.size() > 0 && inner_entry.size() < 10_000_000 {
+                                                    let mut inner_bytes = Vec::with_capacity(inner_entry.size() as usize);
+                                                    if inner_entry.read_to_end(&mut inner_bytes).is_ok() {
+                                                        let cursor = std::io::Cursor::new(inner_bytes);
+                                                        if let Ok(mut inner_archive) = zip::ZipArchive::new(cursor) {
+                                                            if let Ok(mut inner_json) = inner_archive.by_name("fabric.mod.json") {
+                                                                let mut inner_buf = String::new();
+                                                                if inner_json.read_to_string(&mut inner_buf).is_ok() {
+                                                                    #[derive(Deserialize)]
+                                                                    struct InnerModMeta {
+                                                                        id: Option<String>,
+                                                                        provides: Option<Vec<String>>,
+                                                                    }
+                                                                    if let Some(inner_meta) = parse_json_lenient::<InnerModMeta>(&inner_buf) {
+                                                                        if let Some(iid) = inner_meta.id {
+                                                                            let low = iid.to_lowercase();
+                                                                            available_ids.insert(low.clone());
+                                                                            available_ids.insert(low.replace('-', "_"));
+                                                                            available_ids.insert(low.replace('_', "-"));
+                                                                        }
+                                                                        if let Some(provides) = inner_meta.provides {
+                                                                            for pr in provides {
+                                                                                let low = pr.to_lowercase();
+                                                                                available_ids.insert(low.clone());
+                                                                                available_ids.insert(low.replace('-', "_"));
+                                                                                available_ids.insert(low.replace('_', "-"));
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Check if Fabric API is present
+    let has_fabric_api = available_ids.contains("fabric-api")
+        || available_ids.contains("fabric")
+        || installed_map.contains_key("fabric-api")
+        || installed_map.contains_key("fabric")
+        || installed_map.keys().any(|k| k.starts_with("fabric-api"));
+
+    let has_quilt_api = available_ids.contains("qsl")
+        || available_ids.contains("quilted_fabric_api")
+        || installed_map.contains_key("qsl")
+        || installed_map.contains_key("quilted_fabric_api");
 
     // Also read .index/*.conf to know registered project IDs and names
     let index_dir = mods_dir.join(".index");
@@ -227,6 +383,16 @@ pub fn validate_instance_safety(
                                             continue;
                                         }
 
+                                        // If Fabric API is installed, it provides all fabric-* submodules
+                                        if has_fabric_api && (req_lower.starts_with("fabric-") || req_lower.starts_with("fabric_")) {
+                                            continue;
+                                        }
+
+                                        // If Quilt API is installed, it provides all quilt_* and qsl_* modules
+                                        if has_quilt_api && (req_lower.starts_with("quilt_") || req_lower.starts_with("qsl_") || req_lower.starts_with("fabric-")) {
+                                            continue;
+                                        }
+
                                         if !available_ids.contains(&req_lower) && !installed_map.contains_key(&req_lower) {
                                             let ver_str = match req_val {
                                                 serde_json::Value::String(s) => Some(s),
@@ -255,21 +421,24 @@ pub fn validate_instance_safety(
                                 }
 
                                 if let Some(breaks) = parsed.breaks {
-                                    for (conflict_id, _) in breaks {
+                                    for (conflict_id, constraint_val) in breaks {
                                         let conf_lower = conflict_id.to_lowercase();
-                                        if available_ids.contains(&conf_lower) || installed_map.contains_key(&conf_lower) {
-                                            issues.push(SafetyIssue {
-                                                issue_type: "mod_conflict".to_string(),
-                                                severity: "blocking".to_string(),
-                                                source_mod: mod_title.to_string(),
-                                                target_id: conflict_id.clone(),
-                                                required_version: None,
-                                                description: format!(
-                                                    "Mod '{}' conflicts with installed mod '{}'.",
-                                                    mod_title, conflict_id
-                                                ),
-                                                auto_resolvable: false,
-                                            });
+                                        if let Some((inst_ver, _)) = installed_map.get(&conf_lower) {
+                                            let constraint_str = constraint_val.as_str().unwrap_or("*");
+                                            if breaks_condition_met(inst_ver, constraint_str) {
+                                                issues.push(SafetyIssue {
+                                                    issue_type: "mod_conflict".to_string(),
+                                                    severity: "blocking".to_string(),
+                                                    source_mod: mod_title.to_string(),
+                                                    target_id: conflict_id.clone(),
+                                                    required_version: Some(constraint_str.to_string()),
+                                                    description: format!(
+                                                        "Mod '{}' conflicts with installed mod '{}' version {} (breaks: {}).",
+                                                        mod_title, conflict_id, inst_ver, constraint_str
+                                                    ),
+                                                    auto_resolvable: false,
+                                                });
+                                            }
                                         }
                                     }
                                 }
@@ -497,8 +666,21 @@ pub async fn resolve_missing_dependencies(
 
         let target_slug = issue.target_id.to_lowercase();
 
-        // Search Modrinth for matching mod versions
-        if let Ok(versions) = get_project_versions("modrinth", &target_slug, Some(&instance.mc_version), Some(loader)).await {
+        // Skip internal submodules and system libraries that cannot be downloaded standalone
+        if target_slug.starts_with("fabric-")
+            || target_slug.starts_with("fabric_")
+            || target_slug.starts_with("quilt_")
+            || target_slug.starts_with("qsl_")
+            || target_slug.contains("base")
+            || target_slug.contains("api")
+            || is_system_dependency(&target_slug)
+        {
+            continue;
+        }
+
+        // Search Modrinth with a 6-second timeout per mod
+        let query_future = get_project_versions("modrinth", &target_slug, Some(&instance.mc_version), Some(loader));
+        if let Ok(Ok(versions)) = tokio::time::timeout(std::time::Duration::from_secs(6), query_future).await {
             if let Some(best_ver) = versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| versions.first()) {
                 if let Ok(_) = install_project_with_dependencies(
                     app,

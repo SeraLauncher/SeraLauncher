@@ -1028,30 +1028,40 @@ export function InstanceAddonsTab({
               </div>
 
               {/* Proactive Missing Dependencies Warning Banner */}
-              {safetyReport && !safetyReport.isSafe && category === "mods" && (
-                <div className="w-full p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2.5 text-xs text-rose-300 min-w-0">
-                    <Icon name="alertCircle" size={16} color="currentColor" />
-                    <span className="truncate">
-                      <strong>
-                        {safetyReport.issues.length} compatibility{" "}
-                        {safetyReport.issues.length > 1 ? "issues" : "issue"} detected:
-                      </strong>{" "}
-                      {safetyReport.issues.map((i) => i.targetId).join(", ")}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleResolveDependencies}
-                    disabled={resolvingDependencies}
-                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg text-xs font-semibold cursor-pointer border-0 shadow-xs hover:brightness-110 disabled:opacity-50 select-none"
-                    style={{ background: theme.primary, color: theme.primaryForeground }}
-                  >
-                    <Icon name="download" size={12} color="currentColor" />
-                    <span>{resolvingDependencies ? "Resolving..." : "Resolve All"}</span>
-                  </button>
-                </div>
-              )}
+              {safetyReport &&
+                !safetyReport.isSafe &&
+                category === "mods" &&
+                (() => {
+                  const missingList = safetyReport.issues.filter(
+                    (i) => i.issueType === "missing_dependency",
+                  );
+                  if (missingList.length === 0) return null;
+
+                  return (
+                    <div className="w-full p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2.5 text-xs text-rose-300 min-w-0">
+                        <Icon name="alertCircle" size={16} color="currentColor" />
+                        <span className="truncate">
+                          <strong>
+                            {missingList.length} missing{" "}
+                            {missingList.length > 1 ? "dependencies" : "dependency"} detected:
+                          </strong>{" "}
+                          {missingList.map((i) => i.targetId).join(", ")}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleResolveDependencies}
+                        disabled={resolvingDependencies}
+                        className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg text-xs font-semibold cursor-pointer border-0 shadow-xs hover:brightness-110 disabled:opacity-50 select-none"
+                        style={{ background: theme.primary, color: theme.primaryForeground }}
+                      >
+                        <Icon name="download" size={12} color="currentColor" />
+                        <span>{resolvingDependencies ? "Resolving..." : "Resolve All"}</span>
+                      </button>
+                    </div>
+                  );
+                })()}
 
               {/* Installed List */}
               <div className="flex-1 overflow-y-auto pr-1">

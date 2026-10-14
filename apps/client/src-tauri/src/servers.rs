@@ -363,26 +363,27 @@ pub fn write_servers_dat(game_dir: &Path, servers: &[ServerEntry]) -> Result<(),
 }
 
 /// VarInt helpers for Minecraft Server List Ping protocol
-fn write_varint(vec: &mut Vec<u8>, mut val: i32) {
+fn write_varint(vec: &mut Vec<u8>, val: i32) {
+    let mut u = val as u32;
     loop {
-        let mut temp = (val & 0x7F) as u8;
-        val >>= 7;
-        if val != 0 {
-            temp |= 0x80;
-        }
-        vec.push(temp);
-        if val == 0 {
+        if (u & !0x7F) == 0 {
+            vec.push(u as u8);
             break;
         }
+        vec.push(((u & 0x7F) | 0x80) as u8);
+        u >>= 7;
     }
 }
 
 async fn read_varint<R: AsyncReadExt + Unpin>(reader: &mut R) -> Result<i32, String> {
     let mut num_read = 0;
-    let mut result = 0;
+    let mut result: i32 = 0;
 
     loop {
-        let read = reader.read_u8().await.map_err(|e| e.to_string())?;
+        let read = tokio::time::timeout(std::time::Duration::from_millis(2000), reader.read_u8())
+            .await
+            .map_err(|_| "Timeout reading VarInt byte".to_string())?
+            .map_err(|e| e.to_string())?;
         let value = (read & 0x7F) as i32;
         result |= value << (7 * num_read);
 
@@ -413,7 +414,7 @@ pub async fn ping_server(address: &str) -> Result<ServerPingResult, String> {
     let start_time = std::time::Instant::now();
 
     let connect_future = tokio::net::TcpStream::connect(&socket_addr);
-    let mut stream = tokio::time::timeout(std::time::Duration::from_millis(3500), connect_future)
+    let mut stream = tokio::time::timeout(std::time::Duration::from_millis(3000), connect_future)
         .await
         .map_err(|_| "Connection timed out".to_string())?
         .map_err(|e| format!("Failed to connect to {}: {}", socket_addr, e))?;
@@ -440,15 +441,30 @@ pub async fn ping_server(address: &str) -> Result<ServerPingResult, String> {
     stream.write_all(&request_packet).await.map_err(|e| e.to_string())?;
 
     // 3. Read Status Response
-    let _packet_len = read_varint(&mut stream).await?;
+    let packet_len = read_varint(&mut stream).await?;
+    if packet_len <= 0 || packet_len > 2_097_152 {
+        return Err(format!("Invalid packet length: {}", packet_len));
+    }
+
     let packet_id = read_varint(&mut stream).await?;
     if packet_id != 0x00 {
         return Err(format!("Unexpected response packet ID: {}", packet_id));
     }
 
-    let json_len = read_varint(&mut stream).await? as usize;
+    let json_len_raw = read_varint(&mut stream).await?;
+    if json_len_raw <= 0 || json_len_raw > 1_048_576 {
+        return Err(format!("Invalid JSON payload length: {}", json_len_raw));
+    }
+
+    let json_len = json_len_raw as usize;
     let mut json_buf = vec![0u8; json_len];
-    stream.read_exact(&mut json_buf).await.map_err(|e| e.to_string())?;
+    tokio::time::timeout(
+        std::time::Duration::from_millis(2500),
+        stream.read_exact(&mut json_buf),
+    )
+    .await
+    .map_err(|_| "Timeout reading status response body".to_string())?
+    .map_err(|e| e.to_string())?;
 
     let json_str = String::from_utf8_lossy(&json_buf);
 
@@ -524,5 +540,21 @@ mod tests {
         assert_eq!(read_back[0].name, "Nomad Survival");
         assert_eq!(read_back[0].ip, "nomad.aak.bar:25565");
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn encodes_negative_and_positive_varints_without_infinite_loop() {
+        let mut buf_neg = Vec::new();
+        write_varint(&mut buf_neg, -1);
+        // -1 in Minecraft protocol is 5 bytes: 0xFF, 0xFF, 0xFF, 0xFF, 0x0F
+        assert_eq!(buf_neg, vec![0xFF, 0xFF, 0xFF, 0xFF, 0x0F]);
+
+        let mut buf_zero = Vec::new();
+        write_varint(&mut buf_zero, 0);
+        assert_eq!(buf_zero, vec![0x00]);
+
+        let mut buf_port = Vec::new();
+        write_varint(&mut buf_port, 25565);
+        assert_eq!(buf_port, vec![0xDD, 0xC7, 0x01]);
     }
 }
