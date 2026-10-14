@@ -5,6 +5,7 @@ import {
   AppHeader,
   AppLoadingScreen,
   APP_VERSION,
+  CommandPalette,
   HomePage,
   InstancePage,
   DiscoveryPage,
@@ -107,6 +108,19 @@ export default function App() {
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
   const [managingInstanceId, setManagingInstanceId] = useState<string | null>(null);
   const [instanceTab, setInstanceTab] = useState<InstanceManagementTab>("overview");
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // Global Ctrl+K / Cmd+K shortcut listener to toggle Command Palette
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
 
   const theme = themes[settings.appearance];
   const isRailOpen = page === SETTINGS || (page === 1 && Boolean(managingInstanceId));
@@ -448,6 +462,40 @@ export default function App() {
           }
         }}
         loginReason={loginReason}
+      />
+
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        theme={theme}
+        appearance={settings.appearance}
+        instances={instances}
+        onNavigatePage={(p) => {
+          setManagingInstanceId(null);
+          setPage(p);
+        }}
+        onNavigateSettingsTab={(tab) => {
+          setSettingsTab(tab);
+        }}
+        onSelectInstance={(id) => {
+          setManagingInstanceId(id);
+          setInstanceTab("overview");
+        }}
+        onLaunchInstance={async (inst) => {
+          if (!activeAccount) {
+            setLoginReason("launch_required");
+            setShowAccountModal(true);
+            return;
+          }
+          await launchInstance(inst.id);
+        }}
+        onToggleTheme={() =>
+          update({ appearance: settings.appearance === "dark" ? "light" : "dark" })
+        }
+        onOpenAccountModal={() => {
+          setLoginReason(null);
+          setShowAccountModal(true);
+        }}
       />
 
       <AnimatePresence>

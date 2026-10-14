@@ -1514,6 +1514,7 @@ function InstanceManagementView({
   const [screenshots, setScreenshots] = useState<ScreenshotItem[]>(() => cachedScreenshots ?? []);
   const [loadingScreenshots, setLoadingScreenshots] = useState(() => !cachedScreenshots);
   const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotItem | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState(false);
   const [deleteScreenshotConfirm, setDeleteScreenshotConfirm] = useState<ScreenshotItem | null>(
     null,
   );
@@ -1613,6 +1614,43 @@ function InstanceManagementView({
       toast.error(`Failed to delete screenshot: ${err}`);
     }
   };
+
+  const handlePrevScreenshot = useCallback(() => {
+    if (!selectedScreenshot || sortedScreenshots.length <= 1) return;
+    const idx = sortedScreenshots.findIndex((s) => s.fileName === selectedScreenshot.fileName);
+    if (idx !== -1) {
+      const nextIdx = (idx - 1 + sortedScreenshots.length) % sortedScreenshots.length;
+      setSelectedScreenshot(sortedScreenshots[nextIdx]);
+    }
+  }, [selectedScreenshot, sortedScreenshots]);
+
+  const handleNextScreenshot = useCallback(() => {
+    if (!selectedScreenshot || sortedScreenshots.length <= 1) return;
+    const idx = sortedScreenshots.findIndex((s) => s.fileName === selectedScreenshot.fileName);
+    if (idx !== -1) {
+      const nextIdx = (idx + 1) % sortedScreenshots.length;
+      setSelectedScreenshot(sortedScreenshots[nextIdx]);
+    }
+  }, [selectedScreenshot, sortedScreenshots]);
+
+  // Keyboard navigation for full-screen screenshot lightbox (Left/Right arrows, Escape)
+  useEffect(() => {
+    if (!selectedScreenshot) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrevScreenshot();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNextScreenshot();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setSelectedScreenshot(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedScreenshot, handlePrevScreenshot, handleNextScreenshot]);
 
   // Initial load of current session logs
   useEffect(() => {
@@ -2855,6 +2893,20 @@ function InstanceManagementView({
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
+                    onClick={() => setLightboxZoom((prev) => !prev)}
+                    className="h-7.5 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium text-white cursor-pointer border-0 transition-colors flex items-center gap-1.5"
+                    title={lightboxZoom ? "Fit to screen" : "Zoom view"}
+                  >
+                    <Icon
+                      name={lightboxZoom ? "minimize" : "maximize"}
+                      size={13}
+                      color="currentColor"
+                    />
+                    <span>{lightboxZoom ? "Fit" : "Zoom"}</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => copyScreenshotImage(selectedScreenshot)}
                     className="h-7.5 px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium text-white cursor-pointer border-0 transition-colors flex items-center gap-1.5"
                     title="Copy image to clipboard"
@@ -2875,21 +2927,57 @@ function InstanceManagementView({
 
                   <button
                     type="button"
-                    onClick={() => setSelectedScreenshot(null)}
+                    onClick={() => {
+                      setSelectedScreenshot(null);
+                      setLightboxZoom(false);
+                    }}
                     className="size-7.5 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer border-0 transition-colors"
-                    title="Close preview"
+                    title="Close preview (Esc)"
                   >
                     <Icon name="x" size={16} color="currentColor" />
                   </button>
                 </div>
               </div>
 
+              {/* Floating Previous & Next Navigation Buttons */}
+              {sortedScreenshots.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrevScreenshot();
+                    }}
+                    className="absolute left-[-20px] md:left-[-44px] top-1/2 -translate-y-1/2 size-9 rounded-full bg-black/75 hover:bg-black/95 text-white flex items-center justify-center cursor-pointer border border-white/20 shadow-xl transition-all hover:scale-110 z-10 select-none"
+                    title="Previous screenshot (Left Arrow)"
+                  >
+                    <Icon name="chevronLeft" size={18} color="currentColor" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNextScreenshot();
+                    }}
+                    className="absolute right-[-20px] md:right-[-44px] top-1/2 -translate-y-1/2 size-9 rounded-full bg-black/75 hover:bg-black/95 text-white flex items-center justify-center cursor-pointer border border-white/20 shadow-xl transition-all hover:scale-110 z-10 select-none"
+                    title="Next screenshot (Right Arrow)"
+                  >
+                    <Icon name="chevronRight" size={18} color="currentColor" />
+                  </button>
+                </>
+              )}
+
               {/* Full Image */}
-              <img
-                src={selectedScreenshot.dataUrl}
-                alt={selectedScreenshot.fileName}
-                className="max-h-[75vh] w-auto max-w-full rounded-xl object-contain border border-white/10 shadow-2xl block"
-              />
+              <div
+                className={`flex items-center justify-center ${lightboxZoom ? "max-h-[85vh] max-w-[90vw] overflow-auto" : ""}`}
+                onClick={() => setLightboxZoom((prev) => !prev)}
+              >
+                <img
+                  src={selectedScreenshot.dataUrl}
+                  alt={selectedScreenshot.fileName}
+                  className={`${lightboxZoom ? "max-h-none w-auto max-w-none cursor-zoom-out" : "max-h-[75vh] w-auto max-w-full cursor-zoom-in"} rounded-xl object-contain border border-white/10 shadow-2xl block transition-all`}
+                />
+              </div>
             </div>
           </div>
         )}

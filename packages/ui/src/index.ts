@@ -43,4 +43,5 @@ export { Toaster, toast } from "sonner";
 
 export * from "./components/CrashReportModal";
 export * from "./components/CompatibilityModal";
+export * from "./components/CommandPalette";
 export * from "./instanceCache";
