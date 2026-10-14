@@ -1,8 +1,11 @@
 import { EffectiveJavaArgsModal } from "./EffectiveJavaArgsModal";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import { Dropdown } from "./Dropdown";
 import { AppearancePicker } from "./Appearance";
 import { Icon } from "./Icon";
+import { Badge } from "./ui/badge";
 import type { SettingsTab } from "./PageHeader";
 import {
   BUNDLED_FAMILY,
@@ -15,6 +18,7 @@ import {
   type FontChoice,
   type GcPreset,
   type JavaRuntime,
+  type ManagedJavaRuntime,
   type Settings,
 } from "../settings";
 import type { Theme } from "../theme";
@@ -26,6 +30,15 @@ const MEMORY_PRESETS = [
   { label: "8 GB", value: 8192 },
   { label: "12 GB", value: 12288 },
 ];
+
+function formatSize(bytes: number): string {
+  if (bytes <= 0) return "0 MB";
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1024) {
+    return `${(mb / 1024).toFixed(1)} GB`;
+  }
+  return `${Math.round(mb)} MB`;
+}
 
 /** Full-screen settings organized by category tabs. */
 export function SettingsPage({
@@ -64,6 +77,74 @@ export function SettingsPage({
     () => Boolean(settings.javaPath) && !javaRuntimes.some((r) => r.path === settings.javaPath),
   );
   const [showArgsModal, setShowArgsModal] = useState(false);
+
+  // Managed Adoptium Temurin runtimes state
+  const [managedRuntimes, setManagedRuntimes] = useState<ManagedJavaRuntime[]>([]);
+  const [loadingManagedRuntimes, setLoadingManagedRuntimes] = useState(false);
+  const [busyVersion, setBusyVersion] = useState<number | null>(null);
+
+  const refreshManagedRuntimes = () => {
+    setLoadingManagedRuntimes(true);
+    invoke<ManagedJavaRuntime[]>("get_managed_java_runtimes")
+      .then((res) => {
+        setManagedRuntimes(res || []);
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch managed runtimes:", err);
+      })
+      .finally(() => {
+        setLoadingManagedRuntimes(false);
+      });
+  };
+
+  useEffect(() => {
+    if (activeTab !== "java") return;
+    let active = true;
+    invoke<ManagedJavaRuntime[]>("get_managed_java_runtimes")
+      .then((res) => {
+        if (active) setManagedRuntimes(res || []);
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch managed runtimes:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeTab]);
+
+  const handleInstallManagedRuntime = async (major: number) => {
+    setBusyVersion(major);
+    toast.info(`Downloading Adoptium Eclipse Temurin Java ${major}...`, {
+      description: "Progress is visible in the top header download manager.",
+    });
+    try {
+      await invoke("install_java_runtime", { majorVersion: major });
+      toast.success(`Java ${major} installed successfully!`);
+      refreshManagedRuntimes();
+      onRefreshJava?.();
+    } catch (err) {
+      toast.error(`Failed to install Java ${major}: ${err}`);
+    } finally {
+      setBusyVersion(null);
+    }
+  };
+
+  const handleUninstallManagedRuntime = async (major: number) => {
+    setBusyVersion(major);
+    try {
+      await invoke("uninstall_managed_java_runtime", { majorVersion: major });
+      toast.success(`Removed Java ${major} runtime from disk`);
+      if (settings.javaPath?.includes(`java-${major}`)) {
+        onJavaPath?.(null);
+      }
+      refreshManagedRuntimes();
+      onRefreshJava?.();
+    } catch (err) {
+      toast.error(`Failed to uninstall Java ${major}: ${err}`);
+    } finally {
+      setBusyVersion(null);
+    }
+  };
 
   const memoryDefault =
     settings.minMemory === DEFAULT_MIN_MEMORY && settings.maxMemory === DEFAULT_MAX_MEMORY;
@@ -439,6 +520,121 @@ export function SettingsPage({
               placeholder="e.g. -Dsun.rmi.dgc.server.gcInterval=2147483646 -XX:+UseStringDeduplication"
               onChange={(e) => onJvmArgs?.(e.target.value)}
             />
+          </div>
+        </Group>
+
+        {/* Managed Java Runtimes Section */}
+        <Group title="Managed Java Runtimes (Eclipse Temurin)" theme={theme}>
+          <div className="flex flex-col gap-2.5 py-1 w-full">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                Isolated JVM installations managed by SeraLauncher in{" "}
+                <code className="text-[11px] font-mono px-1 py-0.5 rounded bg-secondary">
+                  ~/.local/share/SeraLauncher/runtimes
+                </code>
+              </span>
+              <button
+                type="button"
+                onClick={refreshManagedRuntimes}
+                disabled={loadingManagedRuntimes}
+                className="cursor-pointer transition-colors hover:text-primary disabled:opacity-50"
+                style={{ color: theme.mutedForeground }}
+                title="Refresh managed runtime list"
+                aria-label="Refresh managed runtime list"
+              >
+                <Icon name="refresh" size={14} color="currentColor" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2 mt-1">
+              {managedRuntimes.map((rt) => {
+                const isSelected = rt.path && settings.javaPath === rt.path;
+                const isBusy = busyVersion === rt.majorVersion;
+
+                return (
+                  <div
+                    key={rt.majorVersion}
+                    className="flex items-center justify-between p-3 rounded-xl border border-border transition-colors"
+                    style={{ background: theme.secondary }}
+                  >
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold" style={{ color: theme.foreground }}>
+                          {rt.title}
+                        </span>
+                        {rt.isInstalled ? (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] py-0 px-1.5 border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                          >
+                            Installed · {formatSize(rt.diskSizeBytes)}
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] py-0 px-1.5 text-muted-foreground border-border"
+                          >
+                            Not Installed
+                          </Badge>
+                        )}
+                        {isSelected && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] py-0 px-1.5 border-primary/40 text-primary bg-primary/10"
+                          >
+                            Active Default
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {rt.releaseName}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {rt.isInstalled ? (
+                        <>
+                          {!isSelected && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (rt.path) {
+                                  onJavaPath?.(rt.path);
+                                  toast.success(`Set ${rt.title} as default runtime`);
+                                }
+                              }}
+                              className="h-7 px-2.5 rounded-lg border border-border bg-card text-xs font-medium cursor-pointer transition-colors hover:bg-foreground/5 select-none"
+                              style={{ color: theme.foreground }}
+                            >
+                              Set Default
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleUninstallManagedRuntime(rt.majorVersion)}
+                            disabled={isBusy}
+                            className="h-7 px-2.5 rounded-lg border border-rose-500/30 text-rose-400 bg-rose-500/10 text-xs font-medium cursor-pointer transition-colors hover:bg-rose-500/20 disabled:opacity-50 select-none"
+                          >
+                            {isBusy ? "Removing..." : "Uninstall"}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleInstallManagedRuntime(rt.majorVersion)}
+                          disabled={isBusy}
+                          className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg text-xs font-semibold cursor-pointer shadow-xs transition-all hover:brightness-110 disabled:opacity-50 select-none"
+                          style={{ background: theme.primary, color: theme.primaryForeground }}
+                        >
+                          <Icon name="download" size={12} color="currentColor" />
+                          <span>{isBusy ? "Downloading..." : "Install"}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </Group>
 

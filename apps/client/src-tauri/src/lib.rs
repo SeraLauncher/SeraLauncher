@@ -171,6 +171,16 @@ async fn install_java_runtime(app: tauri::AppHandle, major_version: u32) -> Resu
 }
 
 #[tauri::command]
+fn get_managed_java_runtimes(app: tauri::AppHandle) -> Result<Vec<downloader::ManagedJavaRuntime>, String> {
+    downloader::get_managed_java_runtimes(&app)
+}
+
+#[tauri::command]
+fn uninstall_managed_java_runtime(app: tauri::AppHandle, major_version: u32) -> Result<(), String> {
+    downloader::uninstall_managed_java_runtime(&app, major_version)
+}
+
+#[tauri::command]
 async fn get_minecraft_versions() -> Result<minecraft::MinecraftVersionsResponse, String> {
     minecraft::fetch_minecraft_versions().await
 }
@@ -989,6 +999,8 @@ pub fn run() {
             fetch_minecraft_news,
             list_java_runtimes,
             install_java_runtime,
+            get_managed_java_runtimes,
+            uninstall_managed_java_runtime,
             get_system_memory,
             validate_java_path,
             get_required_java_version,

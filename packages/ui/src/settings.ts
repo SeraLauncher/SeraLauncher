@@ -44,6 +44,16 @@ export type JavaRuntime = {
   is64Bit: boolean;
 };
 
+/** Managed Adoptium Eclipse Temurin JDK status */
+export interface ManagedJavaRuntime {
+  majorVersion: number;
+  title: string;
+  releaseName: string;
+  isInstalled: boolean;
+  diskSizeBytes: number;
+  path: string | null;
+}
+
 /** User preferences, persisted as json by the rust side. */
 export type Settings = {
   appearance: Appearance;

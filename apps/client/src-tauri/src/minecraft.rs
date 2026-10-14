@@ -590,7 +590,7 @@ pub async fn install_minecraft_version_with_instance(
         e
     })?;
 
-    // 3. Download Libraries and Extract Natives
+    // 3. Download Libraries and Extract Natives with Bounded Concurrency
     crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
         id: task_id.clone(),
         title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {}", mc_version)),
@@ -612,19 +612,19 @@ pub async fn install_minecraft_version_with_instance(
     let natives_dir = instance_dir.join("natives");
     let _ = std::fs::create_dir_all(&natives_dir);
 
-    for lib in &pkg.libraries {
-        if crate::downloads::is_download_stopped(&task_id) {
-            crate::downloads::fail_download(app, &task_id, "Download cancelled");
-            return Err("Download cancelled by user".to_string());
-        }
-        while crate::downloads::is_download_paused(&task_id) {
-            if crate::downloads::is_download_stopped(&task_id) {
-                crate::downloads::fail_download(app, &task_id, "Download cancelled");
-                return Err("Download cancelled by user".to_string());
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-        }
+    // Collect all library download tasks
+    struct LibTask {
+        url: String,
+        dest: PathBuf,
+        sha1: String,
+        is_native: bool,
+        extract_dest: Option<PathBuf>,
+        excludes: Option<Vec<String>>,
+    }
 
+    let mut lib_tasks = Vec::new();
+
+    for lib in &pkg.libraries {
         if let Some(rules) = &lib.rules {
             if !library_rules_allow(rules) {
                 continue;
@@ -646,7 +646,14 @@ pub async fn install_minecraft_version_with_instance(
                     }
                 });
                 let dest = libs_base.join(rel_path);
-                download_file_with_verify(&client, &artifact.url, &dest, Some(&artifact.sha1)).await?;
+                lib_tasks.push(LibTask {
+                    url: artifact.url.clone(),
+                    dest,
+                    sha1: artifact.sha1.clone(),
+                    is_native: false,
+                    extract_dest: None,
+                    excludes: None,
+                });
             }
 
             // Classifier / Natives
@@ -659,12 +666,61 @@ pub async fn install_minecraft_version_with_instance(
                                 format!("{}-{}.jar", lib.name, key)
                             });
                             let dest = libs_base.join(rel_path);
-                            download_file_with_verify(&client, &native_artifact.url, &dest, Some(&native_artifact.sha1)).await?;
-                            let excludes = lib.extract.as_ref().and_then(|e| e.exclude.as_deref());
-                            let _ = extract_native_jar(&dest, &natives_dir, excludes);
+                            let excludes = lib.extract.as_ref().and_then(|e| e.exclude.clone());
+                            lib_tasks.push(LibTask {
+                                url: native_artifact.url.clone(),
+                                dest: dest.clone(),
+                                sha1: native_artifact.sha1.clone(),
+                                is_native: true,
+                                extract_dest: Some(dest),
+                                excludes,
+                            });
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Download libraries concurrently in parallel chunks of 16
+    for chunk in lib_tasks.chunks(16) {
+        if crate::downloads::is_download_stopped(&task_id) {
+            crate::downloads::fail_download(app, &task_id, "Download cancelled");
+            return Err("Download cancelled by user".to_string());
+        }
+        while crate::downloads::is_download_paused(&task_id) {
+            if crate::downloads::is_download_stopped(&task_id) {
+                crate::downloads::fail_download(app, &task_id, "Download cancelled");
+                return Err("Download cancelled by user".to_string());
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+
+        let mut futures = Vec::new();
+        for task in chunk {
+            let client_ref = client.clone();
+            let url = task.url.clone();
+            let dest = task.dest.clone();
+            let sha1 = task.sha1.clone();
+            futures.push(async move {
+                download_file_with_verify(&client_ref, &url, &dest, Some(&sha1)).await
+            });
+        }
+
+        let results = futures::future::join_all(futures).await;
+        for r in results {
+            if let Err(e) = r {
+                crate::downloads::fail_download(app, &task_id, &e);
+                return Err(e);
+            }
+        }
+    }
+
+    // Extract native libraries
+    for task in &lib_tasks {
+        if task.is_native {
+            if let Some(ref dest) = task.extract_dest {
+                let _ = extract_native_jar(dest, &natives_dir, task.excludes.as_deref());
             }
         }
     }

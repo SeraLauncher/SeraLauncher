@@ -384,3 +384,102 @@ pub async fn ensure_authlib_injector(app: &tauri::AppHandle) -> Result<PathBuf, 
         Err("Failed to download authlib-injector and no cached version is available. Check your internet connection.".to_string())
     }
 }
+
+/// Information about an Adoptium Temurin JDK managed by the launcher.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedJavaRuntime {
+    pub major_version: u32,
+    pub title: String,
+    pub release_name: String,
+    pub is_installed: bool,
+    pub disk_size_bytes: u64,
+    pub path: Option<String>,
+}
+
+fn calculate_dir_size(dir: &Path) -> u64 {
+    let mut total = 0u64;
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_file() {
+                if let Ok(meta) = p.metadata() {
+                    total += meta.len();
+                }
+            } else if p.is_dir() {
+                total += calculate_dir_size(&p);
+            }
+        }
+    }
+    total
+}
+
+/// Returns the status of all standard managed Java runtimes (Java 8, 17, 21, and 25).
+pub fn get_managed_java_runtimes(app: &tauri::AppHandle) -> Result<Vec<ManagedJavaRuntime>, String> {
+    let base_dir = runtimes_dir(app)?;
+    let targets = [
+        (8, "Java 8", "Legacy (Minecraft 1.16.5 and older)"),
+        (17, "Java 17", "Standard (Minecraft 1.17 to 1.20.4)"),
+        (21, "Java 21", "LTS (Minecraft 1.20.5 and newer)"),
+        (25, "Java 25", "Next-Gen (Minecraft 25.x, 26.x, and snapshots)"),
+    ];
+
+    let mut list = Vec::new();
+
+    for (major, title, release_name) in targets {
+        let dir = base_dir.join(format!("java-{}", major));
+        let is_installed = dir.is_dir();
+        let (disk_size, path) = if is_installed {
+            let size = calculate_dir_size(&dir);
+            let bin = find_java_binary(&dir).map(|p| p.to_string_lossy().to_string());
+            (size, bin)
+        } else {
+            (0, None)
+        };
+
+        list.push(ManagedJavaRuntime {
+            major_version: major,
+            title: title.to_string(),
+            release_name: release_name.to_string(),
+            is_installed: is_installed && path.is_some(),
+            disk_size_bytes: disk_size,
+            path,
+        });
+    }
+
+    Ok(list)
+}
+
+/// Uninstalls and frees disk space for a managed Adoptium JDK.
+pub fn uninstall_managed_java_runtime(app: &tauri::AppHandle, major_version: u32) -> Result<(), String> {
+    let base_dir = runtimes_dir(app)?;
+    let dir = base_dir.join(format!("java-{}", major_version));
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir)
+            .map_err(|e| format!("Failed to remove Java {}: {}", major_version, e))?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn calculates_directory_size_recursively() {
+        let temp_dir = std::env::temp_dir().join(format!("dir-size-test-{}", std::process::id()));
+        let sub_dir = temp_dir.join("sub");
+        let _ = std::fs::create_dir_all(&sub_dir);
+
+        let file1 = temp_dir.join("a.bin");
+        let file2 = sub_dir.join("b.bin");
+
+        let _ = std::fs::write(&file1, vec![0u8; 1024]);
+        let _ = std::fs::write(&file2, vec![0u8; 2048]);
+
+        let size = calculate_dir_size(&temp_dir);
+        assert_eq!(size, 3072);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+}
