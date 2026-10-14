@@ -272,7 +272,7 @@ export default function App() {
               <motion.main
                 key={
                   page === 1 && managingInstanceId
-                    ? `instance-${managingInstanceId}-${instanceTab}`
+                    ? `instance-${managingInstanceId}`
                     : NAV[page].label
                 }
                 {...pageFade}

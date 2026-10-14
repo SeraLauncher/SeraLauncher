@@ -2,11 +2,14 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 
 use crate::discovery::{get_project_versions, install_project_with_dependencies, scan_installed_mods};
 use crate::instances::Instance;
 use crate::java::{inspect_java_binary, required_java_version};
+
+static SAFETY_CACHE: Mutex<Option<HashMap<String, (u64, usize, SafetyReport)>>> = Mutex::new(None);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -218,6 +221,27 @@ pub fn validate_instance_safety(
             configured_java_version: configured_java,
             is_java_compatible,
         });
+    }
+
+    // Check fast in-memory safety cache by mods directory mtime & file count
+    let mods_meta = std::fs::metadata(&mods_dir).ok();
+    let mods_mtime = mods_meta
+        .and_then(|m| m.modified().ok())
+        .and_then(|st| st.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let dir_entries_count = std::fs::read_dir(&mods_dir)
+        .map(|e| e.count())
+        .unwrap_or(0);
+
+    if let Ok(guard) = SAFETY_CACHE.lock() {
+        if let Some(ref cache) = *guard {
+            if let Some((c_mtime, c_count, ref report)) = cache.get(instance_id) {
+                if *c_mtime == mods_mtime && *c_count == dir_entries_count {
+                    return Ok(report.clone());
+                }
+            }
+        }
     }
 
     // 1. Collect installed mod IDs, submodules, and provides
@@ -484,14 +508,21 @@ pub fn validate_instance_safety(
 
     let is_safe = !issues.iter().any(|i| i.severity == "blocking");
 
-    Ok(SafetyReport {
+    let report = SafetyReport {
         is_safe,
         issues,
         installed_mods_count: installed_count,
         required_java_version: req_java,
         configured_java_version: configured_java,
         is_java_compatible,
-    })
+    };
+
+    if let Ok(mut guard) = SAFETY_CACHE.lock() {
+        let cache = guard.get_or_insert_with(HashMap::new);
+        cache.insert(instance_id.to_string(), (mods_mtime, dir_entries_count, report.clone()));
+    }
+
+    Ok(report)
 }
 
 fn is_system_dependency(id: &str) -> bool {
@@ -696,6 +727,14 @@ pub async fn resolve_missing_dependencies(
                 ).await {
                     resolved.push(best_ver.file_name.clone());
                 }
+            }
+        }
+    }
+
+    if !resolved.is_empty() {
+        if let Ok(mut guard) = SAFETY_CACHE.lock() {
+            if let Some(ref mut cache) = *guard {
+                cache.remove(instance_id);
             }
         }
     }

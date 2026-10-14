@@ -2376,13 +2376,7 @@ pub async fn get_installed_addons_list(
         }
     }
 
-    // 3. Batch metadata enrichment for items with missing icons or unformatted names
-    let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
-        .timeout(std::time::Duration::from_secs(4))
-        .build()
-        .unwrap_or_else(|_| reqwest::Client::new());
-
+    // 3. Background metadata enrichment for items with missing icons or unformatted names
     let mut modrinth_enrich_ids = Vec::new();
     for item in &items {
         let is_modrinth = item.source.as_deref().unwrap_or("").eq_ignore_ascii_case("modrinth");
@@ -2397,65 +2391,69 @@ pub async fn get_installed_addons_list(
     }
 
     if !modrinth_enrich_ids.is_empty() {
-        #[derive(Deserialize)]
-        struct ModrinthBatchProject {
-            id: String,
-            title: String,
-            icon_url: Option<String>,
-        }
+        let enrich_ids = modrinth_enrich_ids.clone();
+        let enrich_index_dir = index_dir.clone();
+        tokio::spawn(async move {
+            #[derive(Deserialize)]
+            struct ModrinthBatchProject {
+                id: String,
+                title: String,
+                icon_url: Option<String>,
+            }
 
-        let ids_json = serde_json::to_string(&modrinth_enrich_ids).unwrap_or_else(|_| "[]".to_string());
-        let url = format!("https://api.modrinth.com/v2/projects?ids={}", urlencoding::encode(&ids_json));
-        if let Ok(res) = client.get(&url).send().await {
-            if let Ok(projects) = res.json::<Vec<ModrinthBatchProject>>().await {
-                for proj in projects {
-                    let clean_title = strip_minecraft_formatting(&proj.title);
-                    for item in &mut items {
-                        if item.project_id.as_deref() == Some(&proj.id) {
-                            if item.name == item.id || item.name.is_empty() {
-                                item.name = clean_title.clone();
-                            }
-                            if item.icon_url.is_none() && proj.icon_url.is_some() {
-                                item.icon_url = proj.icon_url.clone();
-                            }
+            let client = reqwest::Client::builder()
+                .user_agent("SeraLauncher/0.1.6")
+                .timeout(std::time::Duration::from_secs(3))
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new());
 
-                            // Update .index/{stem}.conf with real name and icon_url
-                            let conf_path = index_dir.join(format!("{}.conf", item.id));
-                            if conf_path.is_file() {
-                                if let Ok(existing) = std::fs::read_to_string(&conf_path) {
-                                    let mut new_lines = Vec::new();
-                                    let mut has_icon = false;
-                                    for line in existing.lines() {
-                                        let trimmed = line.trim();
-                                        if trimmed.starts_with("name =") {
-                                            new_lines.push(format!("name = \"{}\"", item.name));
-                                        } else if trimmed.starts_with("icon_url =") {
-                                            if let Some(ref u) = item.icon_url {
-                                                new_lines.push(format!("icon_url = \"{}\"", u));
-                                                has_icon = true;
+            let ids_json = serde_json::to_string(&enrich_ids).unwrap_or_else(|_| "[]".to_string());
+            let url = format!("https://api.modrinth.com/v2/projects?ids={}", urlencoding::encode(&ids_json));
+            if let Ok(res) = client.get(&url).send().await {
+                if let Ok(projects) = res.json::<Vec<ModrinthBatchProject>>().await {
+                    for proj in projects {
+                        let clean_title = strip_minecraft_formatting(&proj.title);
+                        if let Ok(entries) = std::fs::read_dir(&enrich_index_dir) {
+                            for e in entries.flatten() {
+                                let conf_path = e.path();
+                                if conf_path.extension().and_then(|x| x.to_str()) == Some("conf") {
+                                    if let Ok(existing) = std::fs::read_to_string(&conf_path) {
+                                        if existing.contains(&format!("project_id = \"{}\"", proj.id)) {
+                                            let mut new_lines = Vec::new();
+                                            let mut has_icon = false;
+                                            for line in existing.lines() {
+                                                let trimmed = line.trim();
+                                                if trimmed.starts_with("name =") && !clean_title.is_empty() {
+                                                    new_lines.push(format!("name = \"{}\"", clean_title));
+                                                } else if trimmed.starts_with("icon_url =") {
+                                                    if let Some(ref u) = proj.icon_url {
+                                                        new_lines.push(format!("icon_url = \"{}\"", u));
+                                                        has_icon = true;
+                                                    }
+                                                } else {
+                                                    new_lines.push(line.to_string());
+                                                }
                                             }
-                                        } else {
-                                            new_lines.push(line.to_string());
+                                            if !has_icon && proj.icon_url.is_some() {
+                                                new_lines.push(format!("icon_url = \"{}\"", proj.icon_url.as_deref().unwrap()));
+                                            }
+                                            let _ = std::fs::write(&conf_path, new_lines.join("\n"));
                                         }
                                     }
-                                    if !has_icon && item.icon_url.is_some() {
-                                        new_lines.push(format!("icon_url = \"{}\"", item.icon_url.as_deref().unwrap()));
-                                    }
-                                    let _ = std::fs::write(&conf_path, new_lines.join("\n"));
                                 }
                             }
                         }
                     }
                 }
             }
-        }
+        });
     }
 
     // 4. Update in-memory cache with enriched metadata
     if let Ok(mut guard) = INSTALLED_ADDONS_CACHE.lock() {
         let cache = guard.get_or_insert_with(HashMap::new);
         for item in &items {
-            let path = sub_dir.join(if item.enabled { item.file_name.clone() } else { format!("{}.disabled", item.file_name) });
+            let path = sub_dir.join(&item.file_name);
             if let Ok(meta) = std::fs::metadata(&path) {
                 let size_b = meta.len();
                 let mtime = meta.modified().ok()
