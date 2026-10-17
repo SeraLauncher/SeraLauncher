@@ -1,0 +1,77 @@
+name: Pre-Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Mark as pre-release"
+        required: true
+        type: boolean
+        default: true
+      custom_tag:
+        description: "Custom tag name (optional, defaults to v<version>)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            args: "--target universal-apple-darwin"
+            rust_targets: "aarch64-apple-darwin,x86_64-apple-darwin"
+          - platform: "ubuntu-22.04"
+            args: ""
+            rust_targets: ""
+          - platform: "windows-latest"
+            args: ""
+            rust_targets: ""
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Cache Rust build artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "apps/client/src-tauri -> target"
+
+      - name: Install workspace dependencies
+        run: bun install
+
+      - name: Build Tauri application and create pre-release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ./apps/client
+          tagName: ${{ inputs.custom_tag != '' && inputs.custom_tag || 'v__VERSION__' }}
+          releaseName: ${{ inputs.custom_tag != '' && format('Sera Launcher {0}', inputs.custom_tag) || 'Sera Launcher v__VERSION__' }}
+          releaseBody: "Automated pre-release build of Sera Launcher across Windows, Linux, and macOS."
+          prerelease: ${{ inputs.prerelease }}
+          releaseDraft: false
+          args: ${{ matrix.args }}
