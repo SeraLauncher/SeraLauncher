@@ -1453,6 +1453,7 @@ function InstanceManagementView({
       })
       .catch((err) => {
         console.warn("Failed to analyze crash:", err);
+        toast.error(`Crash analysis failed: ${err}`);
       })
       .finally(() => {
         setLoadingCrashAnalysis(false);
@@ -3052,6 +3053,17 @@ function InstanceManagementView({
             setLogs("");
             onLaunch();
           }}
+        />
+
+        {/* Crash Log Analyzer Modal */}
+        <CrashReportModal
+          isOpen={showCrashModal}
+          onClose={() => setShowCrashModal(false)}
+          theme={theme}
+          analysis={crashAnalysis}
+          loading={loadingCrashAnalysis}
+          onSelectTab={onSelectTab}
+          onOpenFolder={onOpenFolder}
         />
       </div>
     </div>

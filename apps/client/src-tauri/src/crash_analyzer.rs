@@ -24,19 +24,25 @@ pub fn analyze_crash_logs(
     let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
     let mc_dir = crate::instances::get_instance_game_dir(&inst_dir);
 
-    // 1. Check for newest crash-report in minecraft/crash-reports
+    // 1. Check for newest crash-report in minecraft/crash-reports or hs_err_pid files
     let crash_reports_dir = mc_dir.join("crash-reports");
     let mut newest_crash_file: Option<(PathBuf, std::time::SystemTime)> = None;
 
-    if crash_reports_dir.exists() {
-        if let Ok(entries) = std::fs::read_dir(&crash_reports_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("txt") {
-                    if let Ok(meta) = entry.metadata() {
-                        if let Ok(modified) = meta.modified() {
-                            if newest_crash_file.as_ref().map_or(true, |(_, t)| modified > *t) {
-                                newest_crash_file = Some((path, modified));
+    let scan_dirs = [&crash_reports_dir, &mc_dir, &inst_dir];
+    for d in scan_dirs {
+        if d.exists() {
+            if let Ok(entries) = std::fs::read_dir(d) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    let is_crash = (name.starts_with("crash-") && name.ends_with(".txt"))
+                        || (name.starts_with("hs_err_pid") && name.ends_with(".log"));
+                    if path.is_file() && is_crash {
+                        if let Ok(meta) = entry.metadata() {
+                            if let Ok(modified) = meta.modified() {
+                                if newest_crash_file.as_ref().map_or(true, |(_, t)| modified > *t) {
+                                    newest_crash_file = Some((path, modified));
+                                }
                             }
                         }
                     }
