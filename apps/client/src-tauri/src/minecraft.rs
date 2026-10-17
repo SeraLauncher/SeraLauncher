@@ -1269,8 +1269,21 @@ pub async fn launch_minecraft_instance_with_quick_play(
     let inst_id_clone = instance.id.clone();
     std::thread::spawn(move || {
         let mut exit_status = None;
+        let mut last_sync = std::time::Instant::now();
+
         loop {
-            std::thread::sleep(std::time::Duration::from_millis(300));
+            std::thread::sleep(std::time::Duration::from_millis(500));
+
+            // Periodically sync elapsed playtime every 10 seconds to disk
+            if last_sync.elapsed() >= std::time::Duration::from_secs(10) {
+                let delta = last_sync.elapsed().as_secs();
+                last_sync = std::time::Instant::now();
+                if let Ok(mut inst) = crate::instances::get_instance(&app_clone, &inst_id_clone) {
+                    inst.play_time_seconds += delta;
+                    let _ = crate::instances::update_instance(&app_clone, inst);
+                }
+            }
+
             let exited = {
                 if let Ok(mut lock) = child_arc.lock() {
                     if let Some(child) = lock.as_mut() {
@@ -1291,6 +1304,15 @@ pub async fn launch_minecraft_instance_with_quick_play(
             };
             if exited {
                 break;
+            }
+        }
+
+        // Flush remaining elapsed playtime upon game termination
+        let remaining = last_sync.elapsed().as_secs();
+        if remaining > 0 {
+            if let Ok(mut inst) = crate::instances::get_instance(&app_clone, &inst_id_clone) {
+                inst.play_time_seconds += remaining;
+                let _ = crate::instances::update_instance(&app_clone, inst);
             }
         }
 

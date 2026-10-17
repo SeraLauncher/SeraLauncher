@@ -1283,7 +1283,23 @@ function InstanceManagementView({
 }) {
   const gradient = getPastelGradientForInstance(instance.id || instance.name, instance.icon);
   const iconSrc = getBlockIconSrc(instance.icon);
-  const isRunning = Boolean(runningInstances?.some((r) => r.id === instance.id));
+  const runningInfo = runningInstances?.find((r) => r.id === instance.id);
+  const isRunning = Boolean(runningInfo);
+  const [liveElapsed, setLiveElapsed] = useState(0);
+
+  // Live playtime ticker while instance is active
+  useEffect(() => {
+    if (!isRunning || !runningInfo) {
+      return;
+    }
+    const timer = setInterval(() => {
+      const now = Math.floor(Date.now() / 1000);
+      setLiveElapsed(Math.max(0, now - runningInfo.startedAt));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isRunning, runningInfo]);
+
+  const displayPlayTime = (instance.playTimeSeconds || 0) + (isRunning ? liveElapsed : 0);
 
   // Top banner 3-dots action menu
   const [isDragOver, setIsDragOver] = useState(false);
@@ -2440,7 +2456,7 @@ function InstanceManagementView({
                     <span className="opacity-40">•</span>
                     <span className="inline-flex items-center gap-1.5 font-medium">
                       <Icon name="clock" size={13} color="currentColor" />
-                      <span>{formatPlayTime(instance.playTimeSeconds)}</span>
+                      <span>{formatPlayTime(displayPlayTime)}</span>
                     </span>
                   </div>
                 </div>

@@ -335,6 +335,15 @@ mod tests {
 }
 
 
+pub fn get_instance(app: &tauri::AppHandle, id: &str) -> Result<Instance, String> {
+    let dir = get_instance_dir(app, id)?;
+    let inst_data = std::fs::read_to_string(instance_file(&dir))
+        .map_err(|e| format!("Failed to read instance.json: {}", e))?;
+    let instance: Instance = serde_json::from_str(&inst_data)
+        .map_err(|e| format!("Failed to parse instance.json: {}", e))?;
+    Ok(instance)
+}
+
 pub fn get_instance_name(app: &tauri::AppHandle, id: &str) -> Result<String, String> {
     let dir = get_instance_dir(app, id)?;
     let inst_data = std::fs::read_to_string(instance_file(&dir)).map_err(|e| e.to_string())?;
