@@ -526,17 +526,29 @@ pub fn validate_instance_safety(
 }
 
 fn is_system_dependency(id: &str) -> bool {
+    let clean = id.trim().to_lowercase();
+    let norm = clean.replace('_', "-");
     matches!(
-        id,
+        norm.as_str(),
         "minecraft"
             | "java"
             | "fabricloader"
             | "fabric-loader"
+            | "fabric"
             | "quilt_loader"
             | "quilt-loader"
+            | "quiltloader"
+            | "quilt"
             | "forge"
             | "neoforge"
-    )
+            | "mixinextras"
+            | "mixin-extras"
+            | "mixinsquared"
+            | "mixin-squared"
+    ) || norm.starts_with("mixinextras")
+        || norm.starts_with("mixin-extras")
+        || norm.starts_with("mixinsquared")
+        || norm.starts_with("mixin-squared")
 }
 
 fn extract_quilt_dependencies(
@@ -697,20 +709,29 @@ pub async fn resolve_missing_dependencies(
 
         let target_slug = issue.target_id.to_lowercase();
 
-        // Skip internal submodules and system libraries that cannot be downloaded standalone
-        if target_slug.starts_with("fabric-")
-            || target_slug.starts_with("fabric_")
-            || target_slug.starts_with("quilt_")
-            || target_slug.starts_with("qsl_")
-            || target_slug.contains("base")
-            || target_slug.contains("api")
-            || is_system_dependency(&target_slug)
-        {
+        // Skip internal bytecode/system libraries that cannot be downloaded standalone
+        if is_system_dependency(&target_slug) || target_slug.contains("base") {
             continue;
         }
 
+        // Map submodules to parent standalone projects on Modrinth
+        let modrinth_slug = if target_slug == "fabric-api"
+            || target_slug == "fabric_api"
+            || target_slug.starts_with("fabric-")
+            || target_slug.starts_with("fabric_")
+        {
+            "fabric-api"
+        } else if target_slug == "quilted_fabric_api"
+            || target_slug.starts_with("qsl_")
+            || target_slug.starts_with("quilt_")
+        {
+            "qsl"
+        } else {
+            &target_slug
+        };
+
         // Search Modrinth with a 6-second timeout per mod
-        let query_future = get_project_versions("modrinth", &target_slug, Some(&instance.mc_version), Some(loader));
+        let query_future = get_project_versions("modrinth", modrinth_slug, Some(&instance.mc_version), Some(loader));
         if let Ok(Ok(versions)) = tokio::time::timeout(std::time::Duration::from_secs(6), query_future).await {
             if let Some(best_ver) = versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| versions.first()) {
                 if let Ok(_) = install_project_with_dependencies(
@@ -776,6 +797,9 @@ mod tests {
         assert!(is_system_dependency("minecraft"));
         assert!(is_system_dependency("java"));
         assert!(is_system_dependency("fabricloader"));
+        assert!(is_system_dependency("mixinextras"));
+        assert!(is_system_dependency("mixin-extras"));
+        assert!(is_system_dependency("mixinextras-fabric"));
         assert!(!is_system_dependency("ukulib"));
         assert!(!is_system_dependency("puzzleslib"));
     }
