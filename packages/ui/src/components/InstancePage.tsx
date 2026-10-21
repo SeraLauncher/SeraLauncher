@@ -28,7 +28,6 @@ import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "motion/react";
 import { Icon } from "./Icon";
 import { Modal } from "./ui/modal";
-import { CrashReportModal } from "./CrashReportModal";
 import { CompatibilityModal } from "./CompatibilityModal";
 import { toast } from "sonner";
 import type { Theme } from "../theme";
@@ -38,7 +37,6 @@ import type {
   InstanceManagementTab,
   RunningInstanceInfo,
   ScreenshotItem,
-  CrashAnalysis,
   ModpackInspection,
   LoaderVersionInfo,
   SafetyReport,
@@ -1454,28 +1452,6 @@ function InstanceManagementView({
 
   const terminalScreenRef = useRef<HTMLDivElement>(null);
 
-  // Crash analyzer state
-  const [crashAnalysis, setCrashAnalysis] = useState<CrashAnalysis | null>(null);
-  const [loadingCrashAnalysis, setLoadingCrashAnalysis] = useState(false);
-  const [showCrashModal, setShowCrashModal] = useState(false);
-  const [hasCrashAlert, setHasCrashAlert] = useState(false);
-
-  const runCrashAnalysis = useCallback(() => {
-    setLoadingCrashAnalysis(true);
-    setShowCrashModal(true);
-    invoke<CrashAnalysis>("analyze_instance_crash", { id: instance.id })
-      .then((res) => {
-        setCrashAnalysis(res);
-      })
-      .catch((err) => {
-        console.warn("Failed to analyze crash:", err);
-        toast.error(`Crash analysis failed: ${err}`);
-      })
-      .finally(() => {
-        setLoadingCrashAnalysis(false);
-      });
-  }, [instance.id, setShowCrashModal, setCrashAnalysis, setLoadingCrashAnalysis]);
-
   // Listen for instance_crashed events
   useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -1488,14 +1464,7 @@ function InstanceManagementView({
 
     listen<CrashPayload>("instance_crashed", (event) => {
       if (event.payload.id === instance.id) {
-        setHasCrashAlert(true);
-        toast.error(`${instance.name} crashed`, {
-          description: "Click Analyze Crash to inspect the cause.",
-          action: {
-            label: "Analyze",
-            onClick: () => runCrashAnalysis(),
-          },
-        });
+        toast.error(`${instance.name} crashed`);
       }
     }).then((unsub) => {
       if (cancelled) unsub();
@@ -1506,7 +1475,7 @@ function InstanceManagementView({
       cancelled = true;
       if (unlisten) unlisten();
     };
-  }, [instance.id, instance.name, runCrashAnalysis]);
+  }, [instance.id, instance.name]);
 
   // Screenshots gallery state (loads instantly if preloaded)
   // Pre-flight safety validation state
@@ -2316,16 +2285,6 @@ function InstanceManagementView({
           </form>
         </section>
 
-        <CrashReportModal
-          isOpen={showCrashModal}
-          onClose={() => setShowCrashModal(false)}
-          theme={theme}
-          analysis={crashAnalysis}
-          loading={loadingCrashAnalysis}
-          onSelectTab={onSelectTab}
-          onOpenFolder={onOpenFolder}
-        />
-
         <EffectiveJavaArgsModal
           isOpen={showArgsModal}
           onClose={() => setShowArgsModal(false)}
@@ -2631,16 +2590,6 @@ function InstanceManagementView({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={runCrashAnalysis}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-border bg-secondary hover:bg-card hover:text-foreground text-muted-foreground transition-colors cursor-pointer shrink-0 select-none"
-                    title="Analyze crash reports and session logs"
-                  >
-                    <Icon name="bug" size={13} color="currentColor" />
-                    <span>Analyze Crash</span>
-                  </button>
-
-                  <button
-                    type="button"
                     className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md border border-border bg-secondary hover:bg-card transition-colors cursor-pointer shrink-0"
                     onClick={() => setLogExpanded(!logExpanded)}
                     title={logExpanded ? "Minimize" : "Expand"}
@@ -2654,30 +2603,6 @@ function InstanceManagementView({
                   </button>
                 </div>
               </div>
-
-              {/* Crash Alert Banner if a crash occurred */}
-              {(hasCrashAlert ||
-                (logs &&
-                  (logs.includes("Minecraft Crash Report") ||
-                    logs.includes("Minecraft has crashed!")))) && (
-                <div
-                  className="flex items-center justify-between px-3 py-2 rounded-xl border border-destructive/30 text-xs select-none"
-                  style={{ background: "color-mix(in srgb, var(--destructive) 10%, transparent)" }}
-                >
-                  <div className="flex items-center gap-2 text-foreground font-medium">
-                    <Icon name="bug" size={15} color={theme.destructive} />
-                    <span>Game crashed in previous session</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={runCrashAnalysis}
-                    className="px-2.5 py-0.5 rounded-md text-xs font-semibold cursor-pointer border-0 select-none transition-all hover:brightness-110"
-                    style={{ background: theme.destructive, color: theme.destructiveForeground }}
-                  >
-                    Analyze Root Cause
-                  </button>
-                </div>
-              )}
 
               {/* Row 3: Terminal screen */}
               <div
@@ -3069,17 +2994,6 @@ function InstanceManagementView({
             setLogs("");
             onLaunch();
           }}
-        />
-
-        {/* Crash Log Analyzer Modal */}
-        <CrashReportModal
-          isOpen={showCrashModal}
-          onClose={() => setShowCrashModal(false)}
-          theme={theme}
-          analysis={crashAnalysis}
-          loading={loadingCrashAnalysis}
-          onSelectTab={onSelectTab}
-          onOpenFolder={onOpenFolder}
         />
       </div>
     </div>

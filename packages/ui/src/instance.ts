@@ -303,24 +303,3 @@ export interface ScreenshotItem {
   createdAt: number;
   dataUrl: string;
 }
-
-export interface CrashAnalysis {
-  hasCrashed: boolean;
-  title: string;
-  causeCategory:
-    | "out_of_memory"
-    | "missing_dependency"
-    | "incompatible_java"
-    | "native_library"
-    | "mod_conflict"
-    | "corrupt_jar"
-    | "general"
-    | "none"
-    | string;
-  summary: string;
-  suspectedMods: string[];
-  suggestedFix: string;
-  technicalDetails?: string | null;
-  crashReportFile?: string | null;
-  timestamp?: string | null;
-}

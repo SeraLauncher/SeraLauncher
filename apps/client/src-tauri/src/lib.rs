@@ -14,7 +14,6 @@ mod discovery;
 mod java;
 mod minecraft;
 mod paths;
-mod crash_analyzer;
 mod modpack;
 mod worlds;
 mod visual_options;
@@ -371,14 +370,6 @@ fn delete_instance_screenshot(
     file_name: String,
 ) -> Result<(), String> {
     instances::delete_instance_screenshot(&app, &id, &file_name)
-}
-
-#[tauri::command]
-fn analyze_instance_crash(
-    app: tauri::AppHandle,
-    id: String,
-) -> Result<crash_analyzer::CrashAnalysis, String> {
-    crash_analyzer::analyze_crash_logs(&app, &id)
 }
 
 #[tauri::command]
@@ -1019,7 +1010,6 @@ pub fn run() {
             get_discovery_project_details,
             get_discovery_project_versions,
             delete_instance,
-            analyze_instance_crash,
             get_instance_screenshots,
             delete_instance_screenshot,
             update_instance,
