@@ -2305,6 +2305,7 @@ function InstanceManagementView({
         onDrop={handleDrop}
       >
         <InstanceAddonsTab
+          key={`addons-${instance.id}-${activeTab}`}
           theme={theme}
           instance={instance}
           instances={instances}

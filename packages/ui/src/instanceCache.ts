@@ -1,6 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { InstalledAddonItem, WorldItem, WorldBackupItem, ScreenshotItem } from "./instance";
 
+export interface AddonTabNavState {
+  viewMode: "installed" | "discovery";
+  page: number;
+  search: string;
+  installedSearch: string;
+  provider: "modrinth" | "curseforge";
+}
+
 export interface InstanceDataCache {
   instanceId: string;
   mods?: InstalledAddonItem[];
@@ -11,6 +19,7 @@ export interface InstanceDataCache {
   worlds?: WorldItem[];
   worldBackups?: WorldBackupItem[];
   screenshots?: ScreenshotItem[];
+  addonTabStates?: Record<string, AddonTabNavState>;
 }
 
 /** Active in-memory cache for currently managed instance data. */
@@ -87,6 +96,29 @@ export function getCachedScreenshots(instanceId: string): ScreenshotItem[] | und
 
 export function setCachedScreenshots(instanceId: string, screenshots: ScreenshotItem[]): void {
   updateInstanceCache(instanceId, { screenshots });
+}
+
+export function getCachedAddonTabState(
+  instanceId: string,
+  category: string,
+): AddonTabNavState | undefined {
+  return activeCaches.get(instanceId)?.addonTabStates?.[category];
+}
+
+export function setCachedAddonTabState(
+  instanceId: string,
+  category: string,
+  state: AddonTabNavState,
+): void {
+  const cache = activeCaches.get(instanceId) || { instanceId };
+  const currentStates = cache.addonTabStates || {};
+  activeCaches.set(instanceId, {
+    ...cache,
+    addonTabStates: {
+      ...currentStates,
+      [category]: state,
+    },
+  });
 }
 
 /**

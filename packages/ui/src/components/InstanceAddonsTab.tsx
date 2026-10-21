@@ -240,6 +240,8 @@ import {
   setCachedActiveResourcePacks,
   getCachedActiveShaderPack,
   setCachedActiveShaderPack,
+  getCachedAddonTabState,
+  setCachedAddonTabState,
 } from "../instanceCache";
 
 interface InstanceAddonsTabProps {
@@ -280,9 +282,12 @@ export function InstanceAddonsTab({
   onOpenFolder,
   onUpdate,
 }: InstanceAddonsTabProps) {
+  const cachedNav = getCachedAddonTabState(instance.id, category);
   const [showInstallLoaderModal, setShowInstallLoaderModal] = useState(false);
-  const [provider, setProvider] = useState<DiscoveryProvider>("modrinth");
-  const [search, setSearch] = useState("");
+  const [provider, setProvider] = useState<DiscoveryProvider>(
+    () => cachedNav?.provider ?? "modrinth",
+  );
+  const [search, setSearch] = useState(() => cachedNav?.search ?? "");
 
   // Automatically initialize Game Version based on instance
   const [selectedVersion, setSelectedVersion] = useState<string>(() => instance.mcVersion || "all");
@@ -299,7 +304,7 @@ export function InstanceAddonsTab({
   const [environment, setEnvironment] = useState<EnvironmentFilter>("all");
   const [sort, setSort] = useState<"relevance" | "downloads" | "updated" | "newest">("relevance");
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => cachedNav?.page ?? 1);
   const limit = 25;
 
   const [searchSettingsOpen, setSearchSettingsOpen] = useState(false);
@@ -314,8 +319,8 @@ export function InstanceAddonsTab({
   const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
 
   // View mode: default to installed list for mods (and can switch to discovery)
-  const [viewMode, setViewMode] = useState<"installed" | "discovery">(() =>
-    category === "mods" ? "installed" : "installed",
+  const [viewMode, setViewMode] = useState<"installed" | "discovery">(
+    () => cachedNav?.viewMode ?? "installed",
   );
 
   // Installed addons list state (instant synchronous load if preloaded)
@@ -324,8 +329,19 @@ export function InstanceAddonsTab({
     () => cachedAddons ?? [],
   );
   const [loadingInstalled, setLoadingInstalled] = useState(() => !cachedAddons);
-  const [installedSearch, setInstalledSearch] = useState("");
+  const [installedSearch, setInstalledSearch] = useState(() => cachedNav?.installedSearch ?? "");
   const [updates, setUpdates] = useState<AddonUpdateInfo[]>([]);
+
+  // Synchronize navigation state in memory so switching tabs preserves independent states
+  useEffect(() => {
+    setCachedAddonTabState(instance.id, category, {
+      viewMode,
+      page,
+      search,
+      installedSearch,
+      provider,
+    });
+  }, [instance.id, category, viewMode, page, search, installedSearch, provider]);
 
   // In-launcher visual options activator state
   const [activeResourcePacks, setActiveResourcePacks] = useState<string[]>(
