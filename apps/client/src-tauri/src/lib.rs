@@ -672,7 +672,7 @@ async fn fetch_skin_as_data_url(app: tauri::AppHandle, url: String) -> Result<St
 
     // Fetch from remote if not yet cached
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .timeout(std::time::Duration::from_secs(8))
         .build()
         .map_err(|e| e.to_string())?;

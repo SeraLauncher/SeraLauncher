@@ -64,7 +64,7 @@ pub async fn fetch_loader_versions(
     loader: &str,
 ) -> Result<Vec<LoaderVersionInfo>, String> {
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .timeout(std::time::Duration::from_secs(6))
         .build()
         .map_err(|e| e.to_string())?;
@@ -202,7 +202,7 @@ pub async fn install_mod_loader(
     });
 
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| e.to_string())?;
