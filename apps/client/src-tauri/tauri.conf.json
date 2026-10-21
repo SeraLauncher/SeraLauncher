@@ -17,7 +17,14 @@
         "height": 700,
         "minWidth": 900,
         "minHeight": 600,
-        "backgroundColor": "#161413"
+        "backgroundColor": "#161413",
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "acceptFirstMouse": true,
+        "trafficLightPosition": {
+          "x": 14,
+          "y": 18
+        }
       }
     ],
     "security": {

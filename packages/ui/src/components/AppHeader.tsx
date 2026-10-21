@@ -1,6 +1,7 @@
 import { PlayerHeadView } from "@sera/player-model";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Icon } from "./Icon";
 import type { Appearance } from "../settings";
 import type { Theme } from "../theme";
@@ -82,6 +83,22 @@ export type RunningTaskInstance = {
 };
 
 export { PlayerHeadView, MinecraftHead } from "@sera/player-model";
+
+function handleHeaderMouseDown(e: React.MouseEvent) {
+  if (e.button !== 0) return;
+  const target = e.target as HTMLElement | null;
+  if (target?.closest("button, a, input, select, textarea, [role='button']")) return;
+  try {
+    const win = getCurrentWindow();
+    if (e.detail === 2) {
+      void win.toggleMaximize();
+    } else {
+      void win.startDragging();
+    }
+  } catch {
+    // @note ignore when running outside tauri
+  }
+}
 
 export function AppHeader({
   theme,
@@ -238,11 +255,13 @@ export function AppHeader({
 
   return (
     <header
-      className="h-9 flex items-center justify-between px-5 border-0 outline-none shrink-0 z-20 bg-sidebar"
+      className="h-11 flex items-center justify-between px-5 border-0 outline-none shrink-0 z-20 bg-sidebar select-none"
       style={{ background: theme.sidebar }}
+      data-tauri-drag-region
+      onMouseDown={handleHeaderMouseDown}
     >
       {/* left slot for running task indicator and instance dropdown */}
-      <div className="flex items-center gap-3" />
+      <div className="flex items-center gap-3" data-tauri-drag-region />
       <div className="flex items-center gap-2">
         {/* Download Manager indicator on the left of instance info */}
         <div className="relative flex items-center" ref={downloadsRef}>

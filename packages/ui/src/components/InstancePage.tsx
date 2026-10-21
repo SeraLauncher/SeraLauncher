@@ -443,10 +443,11 @@ export function InstancePage({
             <Icon name="instance" size={40} color={theme.primary} />
           </div>
           <h2 style={{ color: theme.foreground }}>No instances yet</h2>
-          <p style={{ color: theme.mutedForeground }}>
-            Create your first pure vanilla Minecraft instance to get started. SeraLauncher supports
-            versions from 1.8 to the latest release and automatically installs the required Java
-            runtime for you.
+          <p
+            className="text-xs max-w-sm px-4 leading-relaxed"
+            style={{ color: theme.mutedForeground }}
+          >
+            Create your first instance in SeraLauncher to get started.
           </p>
           <button
             type="button"
