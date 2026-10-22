@@ -125,6 +125,18 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
+  // Ensure frameless window on Windows/Linux
+  useEffect(() => {
+    if (!isMac) {
+      try {
+        const win = getCurrentWindow();
+        void win.setDecorations(false);
+      } catch {
+        // @note outside tauri
+      }
+    }
+  }, []);
+
   const theme = themes[settings.appearance];
   const isRailOpen = page === SETTINGS || (page === 1 && Boolean(managingInstanceId));
 
