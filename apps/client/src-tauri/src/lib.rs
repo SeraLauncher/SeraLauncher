@@ -28,6 +28,10 @@ const DEFAULT_FONT_SIZE: u32 = 16;
 const MIN_FONT_SIZE: u32 = 12;
 const MAX_FONT_SIZE: u32 = 20;
 
+const DEFAULT_ZOOM: u32 = 100;
+const MIN_ZOOM: u32 = 70;
+const MAX_ZOOM: u32 = 150;
+
 const DEFAULT_MIN_MEMORY: u32 = 2048;
 const DEFAULT_MAX_MEMORY: u32 = 4096;
 const DEFAULT_GC_PRESET: &str = "g1gc";
@@ -42,6 +46,7 @@ pub struct Settings {
     pub appearance: String,
     pub font: String,
     pub font_size: u32,
+    pub zoom: u32,
     pub java_path: Option<String>,
     pub min_memory: u32,
     pub max_memory: u32,
@@ -64,6 +69,7 @@ impl Settings {
             appearance: DEFAULT_APPEARANCE.into(),
             font: BUNDLED_FAMILY.into(),
             font_size: DEFAULT_FONT_SIZE,
+            zoom: DEFAULT_ZOOM,
             java_path: None,
             min_memory: DEFAULT_MIN_MEMORY,
             max_memory: DEFAULT_MAX_MEMORY,
@@ -83,6 +89,7 @@ impl Settings {
             self.font = BUNDLED_FAMILY.into();
         }
         self.font_size = self.font_size.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE);
+        self.zoom = self.zoom.clamp(MIN_ZOOM, MAX_ZOOM);
 
         self.java_path = self.java_path.and_then(|p| {
             let t = p.trim();
@@ -1079,6 +1086,7 @@ mod tests {
             appearance: "light".into(),
             font: "Inter".into(),
             font_size: 18,
+            zoom: DEFAULT_ZOOM,
             java_path: Some("/usr/bin/java".into()),
             min_memory: 1024,
             max_memory: 8192,
@@ -1118,6 +1126,7 @@ mod tests {
 
         assert_eq!(loaded, Settings::defaults());
         assert!(matches!(loaded.appearance.as_str(), "dark" | "light"));
+        assert_eq!(loaded.zoom, DEFAULT_ZOOM);
         assert_eq!(loaded.min_memory, DEFAULT_MIN_MEMORY);
         assert_eq!(loaded.max_memory, DEFAULT_MAX_MEMORY);
         assert_eq!(loaded.gc_preset, DEFAULT_GC_PRESET);
@@ -1147,6 +1156,17 @@ mod tests {
         std::fs::write(&path, r#"{ "fontSize": 900 }"#).unwrap();
 
         assert_eq!(Settings::read(&path).sanitized().font_size, MAX_FONT_SIZE);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn a_wild_zoom_is_clamped() {
+        let dir = scratch("zoom");
+        let path = settings_path(&dir);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, r#"{ "zoom": 500 }"#).unwrap();
+
+        assert_eq!(Settings::read(&path).sanitized().zoom, MAX_ZOOM);
         std::fs::remove_dir_all(&dir).ok();
     }
 

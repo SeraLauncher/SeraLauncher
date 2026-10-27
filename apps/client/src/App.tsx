@@ -17,6 +17,9 @@ import {
   SettingsRailNav,
   InstanceRailNav,
   type InstanceManagementTab,
+  DEFAULT_ZOOM,
+  MAX_ZOOM,
+  MIN_ZOOM,
   fade,
   fontFamily,
   pageFade,
@@ -110,17 +113,55 @@ export default function App() {
   const [instanceTab, setInstanceTab] = useState<InstanceManagementTab>("overview");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-  // Global Ctrl+K / Cmd+K shortcut listener to toggle Command Palette
+  // Global shortcuts listener for Command Palette (Ctrl+K) and UI Zoom (Ctrl+Shift+-/+)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      const modifier = e.metaKey || e.ctrlKey;
+      if (!modifier) return;
+
+      if (e.key.toLowerCase() === "k") {
         e.preventDefault();
         setCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // Zoom in shortcut: Ctrl/Cmd + Shift + Plus / Equal / NumpadAdd
+      const isZoomIn =
+        (e.shiftKey && (e.key === "+" || e.key === "=" || e.code === "Equal")) ||
+        e.key === "+" ||
+        e.code === "NumpadAdd";
+
+      // Zoom out shortcut: Ctrl/Cmd + Shift + Minus / Underscore / NumpadSubtract
+      const isZoomOut =
+        (e.shiftKey && (e.key === "_" || e.key === "-" || e.code === "Minus")) ||
+        e.key === "-" ||
+        e.code === "NumpadSubtract";
+
+      // Zoom reset shortcut: Ctrl/Cmd + 0 or Ctrl/Cmd + Shift + 0
+      const isZoomReset =
+        (e.shiftKey && (e.key === ")" || e.key === "0" || e.code === "Digit0")) ||
+        e.key === "0" ||
+        e.code === "Numpad0";
+
+      if (isZoomIn) {
+        e.preventDefault();
+        update({ zoom: Math.min(MAX_ZOOM, settings.zoom + 5) });
+      } else if (isZoomOut) {
+        e.preventDefault();
+        update({ zoom: Math.max(MIN_ZOOM, settings.zoom - 5) });
+      } else if (isZoomReset) {
+        e.preventDefault();
+        update({ zoom: DEFAULT_ZOOM });
       }
     };
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, []);
+  }, [settings.zoom, update]);
+
+  // Sync zoom setting to document element for proportional application scaling
+  useEffect(() => {
+    document.documentElement.style.zoom = `${settings.zoom}%`;
+  }, [settings.zoom]);
 
   const theme = themes[settings.appearance];
   const isRailOpen = page === SETTINGS || (page === 1 && Boolean(managingInstanceId));
@@ -304,6 +345,7 @@ export default function App() {
                     javaRuntimes={javaRuntimes}
                     systemMemoryMb={systemMemoryMb}
                     onFont={(font) => update({ font })}
+                    onZoom={(zoom) => update({ zoom })}
                     onAppearance={(appearance: Appearance) => update({ appearance })}
                     onJavaPath={(javaPath) => update({ javaPath })}
                     onMemory={(minMemory, maxMemory) => update({ minMemory, maxMemory })}

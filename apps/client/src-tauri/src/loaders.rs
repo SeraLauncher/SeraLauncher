@@ -28,19 +28,64 @@ struct QuiltLoaderDetail {
     version: String,
 }
 
+#[derive(Deserialize)]
+struct PrismIndex {
+    versions: Vec<PrismIndexVersion>,
+}
+
+#[derive(Deserialize)]
+struct PrismIndexVersion {
+    version: String,
+    #[serde(default)]
+    recommended: bool,
+    #[serde(default)]
+    requires: Vec<PrismRequirement>,
+    #[serde(rename = "type")]
+    version_type: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct PrismRequirement {
+    uid: String,
+    equals: Option<String>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoaderProfilePackage {
+    #[serde(default)]
     pub id: String,
     pub inherits_from: Option<String>,
+    #[serde(rename = "mainClass")]
     pub main_class: String,
+    #[serde(default)]
     pub libraries: Vec<LoaderLibraryEntry>,
+    #[serde(default, rename = "mavenFiles")]
+    pub maven_files: Option<Vec<LoaderLibraryEntry>>,
+    #[serde(default, rename = "+tweakers")]
+    pub tweakers: Option<Vec<String>>,
+    #[serde(default, rename = "minecraftArguments")]
+    pub minecraft_arguments: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LoaderLibraryEntry {
     pub name: String,
     pub url: Option<String>,
+    pub downloads: Option<LoaderLibraryDownloads>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct LoaderLibraryDownloads {
+    pub artifact: Option<LoaderArtifact>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct LoaderArtifact {
+    pub url: Option<String>,
+    pub path: Option<String>,
+    pub sha1: Option<String>,
+    pub size: Option<u64>,
 }
 
 /// Converts a maven coordinate like "net.fabricmc:sponge-mixin:0.15.4+mixin.0.8.7"
@@ -65,7 +110,7 @@ pub async fn fetch_loader_versions(
 ) -> Result<Vec<LoaderVersionInfo>, String> {
     let client = reqwest::Client::builder()
         .user_agent("SeraLauncher/0.1.6")
-        .timeout(std::time::Duration::from_secs(6))
+        .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -123,6 +168,28 @@ pub async fn fetch_loader_versions(
             }
         }
         "neoforge" => {
+            let url = "https://meta.prismlauncher.org/v1/net.neoforged/index.json";
+            if let Ok(res) = client.get(url).send().await {
+                if let Ok(index) = res.json::<PrismIndex>().await {
+                    let versions: Vec<LoaderVersionInfo> = index
+                        .versions
+                        .into_iter()
+                        .filter(|v| {
+                            v.requires.iter().any(|r| {
+                                r.uid == "net.minecraft" && r.equals.as_deref() == Some(mc_version)
+                            })
+                        })
+                        .map(|v| LoaderVersionInfo {
+                            version: v.version,
+                            stable: v.recommended || v.version_type.as_deref() == Some("release"),
+                        })
+                        .collect();
+                    if !versions.is_empty() {
+                        return Ok(versions);
+                    }
+                }
+            }
+
             let trimmed = mc_version.trim_start_matches("1.");
             return Ok(vec![
                 LoaderVersionInfo {
@@ -136,6 +203,28 @@ pub async fn fetch_loader_versions(
             ]);
         }
         "forge" => {
+            let url = "https://meta.prismlauncher.org/v1/net.minecraftforge/index.json";
+            if let Ok(res) = client.get(url).send().await {
+                if let Ok(index) = res.json::<PrismIndex>().await {
+                    let versions: Vec<LoaderVersionInfo> = index
+                        .versions
+                        .into_iter()
+                        .filter(|v| {
+                            v.requires.iter().any(|r| {
+                                r.uid == "net.minecraft" && r.equals.as_deref() == Some(mc_version)
+                            })
+                        })
+                        .map(|v| LoaderVersionInfo {
+                            version: v.version,
+                            stable: v.recommended,
+                        })
+                        .collect();
+                    if !versions.is_empty() {
+                        return Ok(versions);
+                    }
+                }
+            }
+
             return Ok(vec![
                 LoaderVersionInfo {
                     version: "recommended".to_string(),
@@ -213,8 +302,9 @@ pub async fn install_mod_loader(
     let libs_dir = crate::paths::libraries_dir(app)?;
     let _ = std::fs::create_dir_all(&libs_dir);
 
-    // 2. Fetch profile json for Fabric / Quilt
+    // 2. Fetch profile json for Fabric / Quilt / Forge / NeoForge
     let mut profile_json_bytes: Option<Vec<u8>> = None;
+    let mut resolved_loader_version = loader_version.to_string();
     let mut profile_id = format!("{}-loader-{}-{}", loader.to_lowercase(), loader_version, instance.mc_version);
 
     if loader.eq_ignore_ascii_case("fabric") {
@@ -256,19 +346,86 @@ pub async fn install_mod_loader(
                 }
             }
         }
+    } else if loader.eq_ignore_ascii_case("forge") || loader.eq_ignore_ascii_case("neoforge") {
+        let uid = if loader.eq_ignore_ascii_case("forge") {
+            "net.minecraftforge"
+        } else {
+            "net.neoforged"
+        };
+
+        // Resolve "recommended" or "latest" to a concrete version string via Prism meta index
+        let is_keyword = loader_version.eq_ignore_ascii_case("recommended")
+            || loader_version.eq_ignore_ascii_case("latest")
+            || loader_version.contains("recommended")
+            || loader_version.contains("latest");
+
+        if is_keyword {
+            let index_url = format!("https://meta.prismlauncher.org/v1/{}/index.json", uid);
+            if let Ok(res) = client.get(&index_url).send().await {
+                if let Ok(index) = res.json::<PrismIndex>().await {
+                    let matching: Vec<PrismIndexVersion> = index
+                        .versions
+                        .into_iter()
+                        .filter(|v| {
+                            v.requires.iter().any(|r| {
+                                r.uid == "net.minecraft" && r.equals.as_deref() == Some(&instance.mc_version)
+                            })
+                        })
+                        .collect();
+
+                    if loader_version.contains("recommended") {
+                        if let Some(rec) = matching.iter().find(|v| v.recommended) {
+                            resolved_loader_version = rec.version.clone();
+                        } else if let Some(first) = matching.first() {
+                            resolved_loader_version = first.version.clone();
+                        }
+                    } else if let Some(first) = matching.first() {
+                        resolved_loader_version = first.version.clone();
+                    }
+                }
+            }
+        }
+
+        let component_url = format!(
+            "https://meta.prismlauncher.org/v1/{}/{}.json",
+            uid, resolved_loader_version
+        );
+        if let Ok(res) = client.get(&component_url).send().await {
+            if res.status().is_success() {
+                if let Ok(bytes) = res.bytes().await {
+                    profile_json_bytes = Some(bytes.to_vec());
+                }
+            }
+        }
     }
 
     if let Some(bytes) = profile_json_bytes {
         if let Ok(parsed) = serde_json::from_slice::<LoaderProfilePackage>(&bytes) {
-            profile_id = parsed.id.clone();
-            let total_libs = parsed.libraries.len();
+            if !parsed.id.is_empty() {
+                profile_id = parsed.id.clone();
+            }
+
+            // Collect all libraries including modern Forge mavenFiles
+            let mut all_libs = parsed.libraries.clone();
+            if let Some(extra_maven) = &parsed.maven_files {
+                for m in extra_maven {
+                    all_libs.push(m.clone());
+                }
+            }
+            let total_libs = all_libs.len();
 
             let loader_dl_start = std::time::Instant::now();
             let mut total_downloaded_bytes: u64 = 0;
 
             // Download every library in the loader profile
-            for (idx, lib) in parsed.libraries.iter().enumerate() {
-                let rel_path = maven_to_relative_path(&lib.name);
+            for (idx, lib) in all_libs.iter().enumerate() {
+                let rel_path = lib
+                    .downloads
+                    .as_ref()
+                    .and_then(|d| d.artifact.as_ref())
+                    .and_then(|a| a.path.as_ref())
+                    .cloned()
+                    .unwrap_or_else(|| maven_to_relative_path(&lib.name));
                 let dest_file = libs_dir.join(&rel_path);
 
                 let elapsed_secs = loader_dl_start.elapsed().as_secs_f64();
@@ -283,7 +440,7 @@ pub async fn install_mod_loader(
                     id: task_id.clone(),
                     title: instance.name.clone(),
                     phase: "libraries".to_string(),
-                    phase_label: format!("Downloading {} ({}/{})", lib.name.split(":").nth(1).unwrap_or(&lib.name), idx + 1, total_libs),
+                    phase_label: format!("Downloading {} ({}/{})", lib.name.split(':').nth(1).unwrap_or(&lib.name), idx + 1, total_libs),
                     downloaded_bytes: (idx + 1) as u64,
                     total_bytes: Some(total_libs as u64),
                     speed_bytes_per_sec: current_speed,
@@ -300,29 +457,63 @@ pub async fn install_mod_loader(
                         let _ = std::fs::create_dir_all(parent);
                     }
 
-                    // Build download URL from maven URL or fallback to maven.fabricmc.net / central
-                    let base_url = lib.url.clone().unwrap_or_else(|| "https://maven.fabricmc.net/".to_string());
-                    let full_url = if base_url.ends_with("/") {
-                        format!("{}{}", base_url, rel_path)
-                    } else {
-                        format!("{}/{}", base_url, rel_path)
-                    };
+                    // Assemble download URL candidates across known Maven repositories
+                    let mut candidate_urls = Vec::new();
+                    if let Some(artifact_url) = lib
+                        .downloads
+                        .as_ref()
+                        .and_then(|d| d.artifact.as_ref())
+                        .and_then(|a| a.url.as_ref())
+                    {
+                        candidate_urls.push(artifact_url.clone());
+                    }
 
-                    if let Ok(resp) = client.get(&full_url).send().await {
-                        if resp.status().is_success() {
-                            if let Ok(lib_bytes) = resp.bytes().await {
-                                total_downloaded_bytes += lib_bytes.len() as u64;
-                                let _ = std::fs::write(&dest_file, &lib_bytes);
+                    if let Some(base_url) = &lib.url {
+                        if base_url.ends_with('/') {
+                            candidate_urls.push(format!("{}{}", base_url, rel_path));
+                        } else {
+                            candidate_urls.push(format!("{}/{}", base_url, rel_path));
+                        }
+                    }
+
+                    // Repository fallback cascade for standard and legacy libraries
+                    candidate_urls.push(format!("https://libraries.minecraft.net/{}", rel_path));
+                    candidate_urls.push(format!("https://repo1.maven.org/maven2/{}", rel_path));
+                    candidate_urls.push(format!("https://maven.minecraftforge.net/{}", rel_path));
+                    candidate_urls.push(format!("https://maven.fabricmc.net/{}", rel_path));
+
+                    for dl_url in candidate_urls {
+                        if let Ok(resp) = client.get(&dl_url).send().await {
+                            if resp.status().is_success() {
+                                if let Ok(lib_bytes) = resp.bytes().await {
+                                    total_downloaded_bytes += lib_bytes.len() as u64;
+                                    let _ = std::fs::write(&dest_file, &lib_bytes);
+                                    break;
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Save profile JSON
+            // Save profile JSON under primary ID and convenience aliases so launcher lookups find it
             let target_version_dir = versions_dir.join(&profile_id);
             let _ = std::fs::create_dir_all(&target_version_dir);
             let _ = std::fs::write(target_version_dir.join(format!("{}.json", profile_id)), &bytes);
+
+            let alias_profile_name = format!("{}-loader-{}-{}", loader.to_lowercase(), loader_version, instance.mc_version);
+            if alias_profile_name != profile_id {
+                let alias_dir = versions_dir.join(&alias_profile_name);
+                let _ = std::fs::create_dir_all(&alias_dir);
+                let _ = std::fs::write(alias_dir.join(format!("{}.json", alias_profile_name)), &bytes);
+            }
+
+            let resolved_alias = format!("{}-loader-{}-{}", loader.to_lowercase(), resolved_loader_version, instance.mc_version);
+            if resolved_alias != profile_id && resolved_alias != alias_profile_name {
+                let res_dir = versions_dir.join(&resolved_alias);
+                let _ = std::fs::create_dir_all(&res_dir);
+                let _ = std::fs::write(res_dir.join(format!("{}.json", resolved_alias)), &bytes);
+            }
         }
     }
 
@@ -354,7 +545,7 @@ pub async fn install_mod_loader(
 
     // 4. Update instance.json with loader and rename default Vanilla instances
     instance.loader = Some(loader.to_string());
-    instance.loader_version = Some(loader_version.to_string());
+    instance.loader_version = Some(resolved_loader_version);
 
     let mut final_file = inst_file;
 
@@ -406,4 +597,51 @@ pub async fn install_mod_loader(
 
     let _ = app.emit("instances_changed", ());
     Ok(instance)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_forge_1_8_9_profile_with_tweakers() {
+        let sample = r#"{
+            "formatVersion": 1,
+            "name": "Forge",
+            "uid": "net.minecraftforge",
+            "version": "11.15.1.2318",
+            "mainClass": "net.minecraft.launchwrapper.Launch",
+            "+tweakers": [
+                "net.minecraftforge.fml.common.launcher.FMLTweaker"
+            ],
+            "libraries": [
+                {
+                    "name": "net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9:universal",
+                    "url": "https://maven.minecraftforge.net/"
+                },
+                {
+                    "name": "net.minecraft:launchwrapper:1.12"
+                }
+            ]
+        }"#;
+
+        let pkg: LoaderProfilePackage = serde_json::from_str(sample).unwrap();
+        assert_eq!(pkg.main_class, "net.minecraft.launchwrapper.Launch");
+        assert_eq!(
+            pkg.tweakers.as_deref(),
+            Some(&["net.minecraftforge.fml.common.launcher.FMLTweaker".to_string()][..])
+        );
+        assert_eq!(pkg.libraries.len(), 2);
+    }
+
+    #[test]
+    fn fetches_forge_versions_for_1_8_9() {
+        tauri::async_runtime::block_on(async {
+            let res = fetch_loader_versions("1.8.9", "forge").await;
+            assert!(res.is_ok());
+            let list = res.unwrap();
+            assert!(!list.is_empty());
+            assert!(list.iter().any(|v| v.version == "11.15.1.2318" && v.stable));
+        });
+    }
 }

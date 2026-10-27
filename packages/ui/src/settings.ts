@@ -17,6 +17,11 @@ export const DEFAULT_FONT_SIZE = 16;
 export const MIN_FONT_SIZE = 12;
 export const MAX_FONT_SIZE = 20;
 
+/** Interface zoom scale in percent (e.g. 100 = 100%). */
+export const DEFAULT_ZOOM = 100;
+export const MIN_ZOOM = 70;
+export const MAX_ZOOM = 150;
+
 /** Supported garbage collection presets for Minecraft runtime execution. */
 export type GcPreset = "none" | "g1gc" | "zgc";
 
@@ -59,6 +64,7 @@ export type Settings = {
   appearance: Appearance;
   font: FontChoice;
   fontSize: number;
+  zoom: number;
   javaPath: string | null;
   minMemory: number;
   maxMemory: number;

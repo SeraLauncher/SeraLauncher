@@ -958,32 +958,87 @@ pub async fn launch_minecraft_instance_with_quick_play(
         installed.path
     };
 
+    let java_major = crate::java::inspect_java_binary(Path::new(&java_exec))
+        .map(|rt| rt.major_version)
+        .unwrap_or(req_java);
+
     // 2. Ensure Minecraft version, libraries, assets & natives are downloaded/extracted
     let pkg = install_minecraft_version(app, &instance.mc_version, &inst_dir).await?;
 
     // 3. Assemble Classpath (including mod loader libraries if installed)
     let mut classpath_jars = collect_classpath(app, &pkg, &instance.mc_version)?;
     let mut main_class_to_run = pkg.main_class.clone();
+    let mut loaded_loader_profile: Option<crate::loaders::LoaderProfilePackage> = None;
 
     if let (Some(ldr), Some(ldr_ver)) = (&instance.loader, &instance.loader_version) {
         let l = ldr.to_lowercase();
         if l != "vanilla" && l != "none" {
             let profile_name = format!("{}-loader-{}-{}", l, ldr_ver, instance.mc_version);
             let game_dir = crate::instances::get_instance_game_dir(&inst_dir);
-            let profile_json_file = game_dir.join("versions").join(&profile_name).join(format!("{}.json", profile_name));
+            let mut profile_json_file = game_dir.join("versions").join(&profile_name).join(format!("{}.json", profile_name));
+
+            // If loader is configured but files are missing on disk, auto-install them before launch
+            if !profile_json_file.exists() {
+                if let Ok(updated_inst) = crate::loaders::install_mod_loader(app, &instance.id, &l, ldr_ver).await {
+                    if let Some(ref new_ver) = updated_inst.loader_version {
+                        let new_profile_name = format!("{}-loader-{}-{}", l, new_ver, instance.mc_version);
+                        let candidate = game_dir.join("versions").join(&new_profile_name).join(format!("{}.json", new_profile_name));
+                        if candidate.exists() {
+                            profile_json_file = candidate;
+                        }
+                    }
+                }
+            }
+
+            // Fallback lookup: check if any version json exists in versions/ matching loader
+            if !profile_json_file.exists() {
+                let versions_dir = game_dir.join("versions");
+                if let Ok(entries) = std::fs::read_dir(&versions_dir) {
+                    for entry in entries.flatten() {
+                        let p = entry.path();
+                        if p.is_dir() {
+                            let fname = p.file_name().unwrap_or_default().to_string_lossy().to_string();
+                            if fname.to_lowercase().contains(&l) {
+                                let json_candidate = p.join(format!("{}.json", fname));
+                                if json_candidate.exists() {
+                                    profile_json_file = json_candidate;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             if profile_json_file.exists() {
                 if let Ok(content) = std::fs::read_to_string(&profile_json_file) {
                     if let Ok(profile_pkg) = serde_json::from_str::<crate::loaders::LoaderProfilePackage>(&content) {
                         main_class_to_run = profile_pkg.main_class.clone();
                         let libs_dir = libraries_dir(app)?;
-                        for lib in profile_pkg.libraries {
-                            let rel_path = crate::loaders::maven_to_relative_path(&lib.name);
+
+                        // Collect both standard libraries and modern Forge mavenFiles
+                        let mut all_loader_libs = profile_pkg.libraries.clone();
+                        if let Some(ref extra) = profile_pkg.maven_files {
+                            for m in extra {
+                                all_loader_libs.push(m.clone());
+                            }
+                        }
+
+                        for lib in all_loader_libs {
+                            let rel_path = lib
+                                .downloads
+                                .as_ref()
+                                .and_then(|d| d.artifact.as_ref())
+                                .and_then(|a| a.path.as_ref())
+                                .cloned()
+                                .unwrap_or_else(|| crate::loaders::maven_to_relative_path(&lib.name));
                             let lib_path = libs_dir.join(rel_path);
                             if lib_path.exists() {
                                 classpath_jars.push(lib_path);
                             }
                         }
+
+                        loaded_loader_profile = Some(profile_pkg);
                     }
                 }
             }
@@ -1028,11 +1083,14 @@ pub async fn launch_minecraft_instance_with_quick_play(
         };
         cmd_args.push(format!("-javaagent:{}={}", authlib_jar.to_string_lossy(), auth_server));
         cmd_args.push("-Dauthlibinjector.side=client".to_string());
-        // Java 16+ module opens required so authlib-injector can transform Yggdrasil session service classes
-        cmd_args.push("--add-opens".to_string());
-        cmd_args.push("java.base/java.lang=ALL-UNNAMED".to_string());
-        cmd_args.push("--add-opens".to_string());
-        cmd_args.push("java.base/java.net=ALL-UNNAMED".to_string());
+        // Java 9+ module opens required so authlib-injector can transform Yggdrasil session service classes
+        // Java 8 does not recognize --add-opens and exits with a fatal exception if passed
+        if java_major >= 9 {
+            cmd_args.push("--add-opens".to_string());
+            cmd_args.push("java.base/java.lang=ALL-UNNAMED".to_string());
+            cmd_args.push("--add-opens".to_string());
+            cmd_args.push("java.base/java.net=ALL-UNNAMED".to_string());
+        }
     }
 
     cmd_args.push("-cp".to_string());
@@ -1062,7 +1120,13 @@ pub async fn launch_minecraft_instance_with_quick_play(
         _ => account.uuid.clone(),
     };
 
-    if let Some(mc_args) = &pkg.minecraft_arguments {
+    // Determine effective game arguments: loader profile may supply custom arguments (e.g. modern Forge launchTarget)
+    let effective_mc_args = loaded_loader_profile
+        .as_ref()
+        .and_then(|p| p.minecraft_arguments.as_ref())
+        .or(pkg.minecraft_arguments.as_ref());
+
+    if let Some(mc_args) = effective_mc_args {
         for token in mc_args.split_whitespace() {
             let replaced = token
                 .replace("${auth_player_name}", &account.username)
@@ -1099,6 +1163,14 @@ pub async fn launch_minecraft_instance_with_quick_play(
         cmd_args.push(instance.version_type.clone());
         cmd_args.push("--userProperties".to_string());
         cmd_args.push("{}".to_string());
+    }
+
+    // Append tweakers if declared by the mod loader (e.g. Forge 1.8.9 FMLTweaker)
+    if let Some(tweakers) = loaded_loader_profile.as_ref().and_then(|p| p.tweakers.as_ref()) {
+        for t in tweakers {
+            cmd_args.push("--tweakClass".to_string());
+            cmd_args.push(t.clone());
+        }
     }
 
     // Quick Play: Direct entry into singleplayer world or multiplayer server
