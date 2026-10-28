@@ -33,6 +33,7 @@ import {
   toast,
 } from "@sera/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettings, useInstances, useAccounts, useDownloads, useDownloadHistory } from "./store";
 
 /** the settings item is last in NAV, so its index is the settings page */
@@ -220,6 +221,18 @@ export default function App() {
     document.documentElement.style.zoom = `${settings.zoom}%`;
   }, [settings.zoom]);
 
+  // Ensure frameless window on Windows/Linux
+  useEffect(() => {
+    if (!isMac) {
+      try {
+        const win = getCurrentWindow();
+        void win.setDecorations(false);
+      } catch {
+        // @note outside tauri
+      }
+    }
+  }, []);
+
   const theme = themes[settings.appearance];
   const isRailOpen = page === SETTINGS || (page === 1 && Boolean(managingInstanceId));
 
@@ -262,11 +275,32 @@ export default function App() {
         {/* the rail is one element for the whole app: going to settings widens it,
             coming back narrows it, and the page beside it never moves */}
         <motion.nav
-          className="relative z-30 shrink-0 flex flex-col items-center gap-2 pt-4 px-2.5 pb-3"
+          className={`relative z-30 shrink-0 flex flex-col items-center gap-2 px-2.5 pb-3 ${
+            isMac ? "pt-0" : "pt-4"
+          }`}
           animate={{ width: isRailOpen ? OPEN_WIDTH : RAIL_WIDTH }}
           transition={rail}
           style={{ background: theme.sidebar }}
         >
+          {isMac && (
+            <div
+              className="w-full h-11 shrink-0"
+              data-tauri-drag-region
+              onMouseDown={(e) => {
+                if (e.button !== 0) return;
+                try {
+                  const win = getCurrentWindow();
+                  if (e.detail === 2) {
+                    void win.toggleMaximize();
+                  } else {
+                    void win.startDragging();
+                  }
+                } catch {
+                  // @note ignore when running outside tauri
+                }
+              }}
+            />
+          )}
           {/* the logo is pinned to the rail and never moves between pages; only the
               wordmark beside it comes and goes */}
           <div className="flex items-center gap-3 w-full h-[30px] pl-[9px]">

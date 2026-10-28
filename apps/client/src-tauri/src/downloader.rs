@@ -183,7 +183,7 @@ pub async fn install_adoptium_runtime_with_instance(
     );
 
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .build()
         .map_err(|err| format!("Failed to create HTTP client: {}", err))?;
 
@@ -378,7 +378,7 @@ pub async fn ensure_authlib_injector(app: &tauri::AppHandle) -> Result<PathBuf, 
             .unwrap_or(false);
 
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());

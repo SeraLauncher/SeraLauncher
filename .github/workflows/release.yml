@@ -24,13 +24,13 @@ jobs:
       matrix:
         include:
           - platform: "macos-latest"
-            args: "--target universal-apple-darwin"
+            args: "--target universal-apple-darwin --bundles dmg"
             rust_targets: "aarch64-apple-darwin,x86_64-apple-darwin"
           - platform: "ubuntu-22.04"
-            args: ""
+            args: "--bundles deb,appimage"
             rust_targets: ""
           - platform: "windows-latest"
-            args: ""
+            args: "--bundles nsis"
             rust_targets: ""
 
     runs-on: ${{ matrix.platform }}

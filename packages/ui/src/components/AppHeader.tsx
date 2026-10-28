@@ -1,6 +1,7 @@
 import { PlayerHeadView } from "@sera/player-model";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Icon } from "./Icon";
 import type { Appearance } from "../settings";
 import type { Theme } from "../theme";
@@ -82,6 +83,51 @@ export type RunningTaskInstance = {
 };
 
 export { PlayerHeadView, MinecraftHead } from "@sera/player-model";
+
+const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
+
+function handleHeaderMouseDown(e: React.MouseEvent) {
+  if (e.button !== 0) return;
+  const target = e.target as HTMLElement | null;
+  if (target?.closest("button, a, input, select, textarea, [role='button']")) return;
+  try {
+    const win = getCurrentWindow();
+    if (e.detail === 2) {
+      void win.toggleMaximize();
+    } else {
+      void win.startDragging();
+    }
+  } catch {
+    // @note ignore when running outside tauri
+  }
+}
+
+function handleMinimize(e: React.MouseEvent) {
+  e.stopPropagation();
+  try {
+    void getCurrentWindow().minimize();
+  } catch {
+    // @note ignore outside tauri
+  }
+}
+
+function handleToggleMaximize(e: React.MouseEvent) {
+  e.stopPropagation();
+  try {
+    void getCurrentWindow().toggleMaximize();
+  } catch {
+    // @note ignore outside tauri
+  }
+}
+
+function handleClose(e: React.MouseEvent) {
+  e.stopPropagation();
+  try {
+    void getCurrentWindow().close();
+  } catch {
+    // @note ignore outside tauri
+  }
+}
 
 export function AppHeader({
   theme,
@@ -236,13 +282,45 @@ export function AppHeader({
         ? "1 instance running"
         : `${runningCount} instances running`;
 
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    if (isMac) return;
+    let unlisten: (() => void) | undefined;
+    try {
+      const win = getCurrentWindow();
+      win
+        .isMaximized()
+        .then(setIsMaximized)
+        .catch(() => {});
+      win
+        .onResized(() => {
+          win
+            .isMaximized()
+            .then(setIsMaximized)
+            .catch(() => {});
+        })
+        .then((fn) => {
+          unlisten = fn;
+        })
+        .catch(() => {});
+    } catch {
+      // @note ignore outside tauri
+    }
+    return () => {
+      unlisten?.();
+    };
+  }, []);
+
   return (
     <header
-      className="h-9 flex items-center justify-between px-5 border-0 outline-none shrink-0 z-20 bg-sidebar"
+      className={`h-11 flex items-center justify-between pl-5 ${isMac ? "pr-5" : "pr-2"} border-0 outline-none shrink-0 z-20 bg-sidebar select-none`}
       style={{ background: theme.sidebar }}
+      data-tauri-drag-region
+      onMouseDown={handleHeaderMouseDown}
     >
       {/* left slot for running task indicator and instance dropdown */}
-      <div className="flex items-center gap-3" />
+      <div className="flex items-center gap-3" data-tauri-drag-region />
       <div className="flex items-center gap-2">
         {/* Download Manager indicator on the left of instance info */}
         <div className="relative flex items-center" ref={downloadsRef}>
@@ -768,6 +846,66 @@ export function AppHeader({
         >
           <Icon name={appearance === "dark" ? "sun" : "moon"} size={16} color="currentColor" />
         </motion.button>
+
+        {/* Windows title bar controls (Minimize, Maximize / Restore, Close) */}
+        {!isMac && (
+          <div className="flex items-center ml-1">
+            <button
+              type="button"
+              className="inline-flex items-center justify-center w-8 h-7 rounded-sm border-0 bg-transparent cursor-pointer transition-colors duration-120 text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+              onClick={handleMinimize}
+              title="Minimize"
+              aria-label="Minimize"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path d="M0 5H10" stroke="currentColor" strokeWidth="1" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center w-8 h-7 rounded-sm border-0 bg-transparent cursor-pointer transition-colors duration-120 text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+              onClick={handleToggleMaximize}
+              title={isMaximized ? "Restore" : "Maximize"}
+              aria-label={isMaximized ? "Restore" : "Maximize"}
+            >
+              {isMaximized ? (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <path d="M2.5 2.5V0.5H9.5V7.5H7.5" stroke="currentColor" strokeWidth="1" />
+                  <rect
+                    x="0.5"
+                    y="2.5"
+                    width="7"
+                    height="7"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                  />
+                </svg>
+              ) : (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <rect
+                    x="0.5"
+                    y="0.5"
+                    width="9"
+                    height="9"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                  />
+                </svg>
+              )}
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center w-8 h-7 rounded-sm border-0 bg-transparent cursor-pointer transition-colors duration-120 text-muted-foreground hover:text-white hover:bg-[#e81123]"
+              onClick={handleClose}
+              title="Close"
+              aria-label="Close"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" stroke="currentColor" strokeWidth="1" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

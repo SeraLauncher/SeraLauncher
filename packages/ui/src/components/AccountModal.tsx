@@ -28,7 +28,14 @@ function ProviderFavicon({
 
   if (failed || (!loaded && !FAVICON_CACHE.has(url))) {
     return (
-      <span style={{ display: "inline-flex", alignItems: "center", position: "relative" }}>
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          position: "relative",
+          flexShrink: 0,
+        }}
+      >
         <Icon name={fallbackIcon} size={size} color="currentColor" />
         <img
           src={url}
@@ -57,6 +64,7 @@ function ProviderFavicon({
         flexShrink: 0,
         borderRadius: 2,
         objectFit: "contain",
+        display: "block",
       }}
       onError={() => {
         FAVICON_CACHE.delete(url);
@@ -389,10 +397,14 @@ function AccountModalDialog({
       {mode === "login" ? (
         <div className="flex flex-col gap-3 w-full">
           {/* Segmented Auth Type Tabs */}
-          <div className="flex bg-foreground/6 p-[3px] rounded-lg gap-1 w-full">
+          <div className="grid grid-cols-4 items-center gap-1 p-1 rounded-lg border border-border bg-secondary w-full">
             <button
               type="button"
-              className={`account-type-tab ${authType === "microsoft" ? "active" : ""}`}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all cursor-pointer select-none border-0 whitespace-nowrap ${
+                authType === "microsoft"
+                  ? "bg-card text-foreground font-semibold shadow-xs"
+                  : "bg-transparent text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => {
                 setAuthType("microsoft");
               }}
@@ -402,7 +414,11 @@ function AccountModalDialog({
             </button>
             <button
               type="button"
-              className={`account-type-tab ${authType === "elyby" ? "active" : ""}`}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all cursor-pointer select-none border-0 whitespace-nowrap ${
+                authType === "elyby"
+                  ? "bg-card text-foreground font-semibold shadow-xs"
+                  : "bg-transparent text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => {
                 stopPolling();
                 setAuthType("elyby");
@@ -413,7 +429,11 @@ function AccountModalDialog({
             </button>
             <button
               type="button"
-              className={`account-type-tab ${authType === "littleskin" ? "active" : ""}`}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all cursor-pointer select-none border-0 whitespace-nowrap ${
+                authType === "littleskin"
+                  ? "bg-card text-foreground font-semibold shadow-xs"
+                  : "bg-transparent text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => {
                 stopPolling();
                 setAuthType("littleskin");
@@ -428,7 +448,11 @@ function AccountModalDialog({
             </button>
             <button
               type="button"
-              className={`account-type-tab ${authType === "offline" ? "active" : ""}`}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all cursor-pointer select-none border-0 whitespace-nowrap ${
+                authType === "offline"
+                  ? "bg-card text-foreground font-semibold shadow-xs"
+                  : "bg-transparent text-muted-foreground hover:text-foreground"
+              }`}
               onClick={() => {
                 stopPolling();
                 setAuthType("offline");
@@ -479,7 +503,7 @@ function AccountModalDialog({
 
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={offlineBusy || !offlineName.trim()}
                   style={{
                     background: theme.primary,
@@ -574,7 +598,7 @@ function AccountModalDialog({
 
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={elyBusy || !elyUsername.trim() || !elyPassword.trim()}
                   style={{
                     background: theme.primary,
@@ -687,7 +711,7 @@ function AccountModalDialog({
 
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={littleBusy || !littleUsername.trim() || !littlePassword.trim()}
                   style={{
                     background: theme.primary,
@@ -721,7 +745,7 @@ function AccountModalDialog({
             <div className="flex flex-col gap-3 w-full">
               <button
                 type="button"
-                className="inline-flex items-center justify-center h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border-0 text-xs font-semibold cursor-pointer hover:brightness-108 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleStartMicrosoftLogin}
                 disabled={loadingCode}
                 style={{

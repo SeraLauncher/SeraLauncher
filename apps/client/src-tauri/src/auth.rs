@@ -263,7 +263,7 @@ pub fn set_active_account_by_id(app: &tauri::AppHandle, id: &str) -> Result<(), 
 
 pub async fn start_device_code_flow() -> Result<DeviceCodeResponse, String> {
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
@@ -650,7 +650,7 @@ pub async fn get_valid_active_account(app: &tauri::AppHandle) -> Result<StoredAc
     }
 
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
 
@@ -901,7 +901,7 @@ pub async fn login_elyby(
     };
 
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .build()
         .map_err(|e| format!("HTTP client error: {}", e))?;
 
@@ -978,7 +978,7 @@ pub async fn refresh_account_skins(
     }
 
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .timeout(std::time::Duration::from_secs(8))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
@@ -1055,7 +1055,7 @@ pub async fn login_littleskin(
     };
 
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .build()
         .map_err(|e| format!("HTTP client error: {}", e))?;
 

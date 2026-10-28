@@ -567,7 +567,7 @@ pub async fn install_modpack_bytes(
     custom_icon: Option<String>,
 ) -> Result<Instance, String> {
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .timeout(std::time::Duration::from_secs(45))
         .build()
         .map_err(|e| e.to_string())?;
@@ -869,7 +869,7 @@ pub async fn install_modpack_from_url(
     custom_icon: Option<String>,
 ) -> Result<Instance, String> {
     let client = reqwest::Client::builder()
-        .user_agent("SeraLauncher/0.1.6")
+        .user_agent("SeraLauncher/0.1.8")
         .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(|e| e.to_string())?;
