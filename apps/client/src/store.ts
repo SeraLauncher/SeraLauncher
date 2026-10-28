@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   BUNDLED_FAMILY,
+  DEFAULT_DISCORD_DETAILED,
+  DEFAULT_DISCORD_RPC,
   DEFAULT_FONT_SIZE,
   DEFAULT_GC_PRESET,
   DEFAULT_JAVA_OPTIMIZE,
@@ -39,6 +41,8 @@ const DEFAULTS: Settings = {
   gcPreset: DEFAULT_GC_PRESET,
   javaOptimize: DEFAULT_JAVA_OPTIMIZE,
   jvmArgs: DEFAULT_JVM_ARGS,
+  discordRpc: DEFAULT_DISCORD_RPC,
+  discordDetailed: DEFAULT_DISCORD_DETAILED,
 };
 
 /** Anything the ui does not recognise is replaced, so a hand-edited or older settings
@@ -70,6 +74,11 @@ function usable(loaded: Partial<Settings>): Settings {
     javaOptimize:
       typeof loaded.javaOptimize === "boolean" ? loaded.javaOptimize : DEFAULTS.javaOptimize,
     jvmArgs: typeof loaded.jvmArgs === "string" ? loaded.jvmArgs : DEFAULTS.jvmArgs,
+    discordRpc: typeof loaded.discordRpc === "boolean" ? loaded.discordRpc : DEFAULTS.discordRpc,
+    discordDetailed:
+      typeof loaded.discordDetailed === "boolean"
+        ? loaded.discordDetailed
+        : DEFAULTS.discordDetailed,
   };
 }
 

@@ -1,9 +1,9 @@
+use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
-use serde::{Deserialize, Serialize};
-use sha1::{Digest, Sha1};
 
 use crate::java::required_java_version;
 use crate::paths::{assets_dir, libraries_dir, versions_dir};
@@ -214,7 +214,6 @@ pub async fn fetch_minecraft_versions() -> Result<MinecraftVersionsResponse, Str
 // Version JSON & Assets Data Structures
 // =========================================================================
 #[allow(dead_code)]
-
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize)]
 pub struct VersionPackage {
@@ -344,7 +343,11 @@ fn verify_file_sha1(path: &Path, expected_sha1: &str) -> bool {
     };
     let mut hasher = Sha1::new();
     hasher.update(&data);
-    let hash: String = hasher.finalize().into_iter().map(|b| format!("{:02x}", b)).collect();
+    let hash: String = hasher
+        .finalize()
+        .into_iter()
+        .map(|b| format!("{:02x}", b))
+        .collect();
     hash.eq_ignore_ascii_case(expected_sha1)
 }
 
@@ -372,7 +375,11 @@ async fn download_file_attempt(
     if let Some(sha1) = expected_sha1 {
         let mut hasher = Sha1::new();
         hasher.update(&bytes);
-        let actual_hash: String = hasher.finalize().into_iter().map(|b| format!("{:02x}", b)).collect();
+        let actual_hash: String = hasher
+            .finalize()
+            .into_iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
         if !actual_hash.eq_ignore_ascii_case(sha1) {
             return Err(format!(
                 "Checksum mismatch for {}. Expected {}, got {}",
@@ -419,7 +426,11 @@ async fn download_file_with_verify(
     Err(last_err)
 }
 
-fn extract_native_jar(jar_path: &Path, natives_dir: &Path, excludes: Option<&[String]>) -> Result<(), String> {
+fn extract_native_jar(
+    jar_path: &Path,
+    natives_dir: &Path,
+    excludes: Option<&[String]>,
+) -> Result<(), String> {
     let file = std::fs::File::open(jar_path)
         .map_err(|e| format!("Failed to open jar {}: {}", jar_path.display(), e))?;
     let mut archive = zip::ZipArchive::new(file)
@@ -449,8 +460,13 @@ fn extract_native_jar(jar_path: &Path, natives_dir: &Path, excludes: Option<&[St
             if let Some(p) = outpath.parent() {
                 let _ = std::fs::create_dir_all(p);
             }
-            let mut outfile = std::fs::File::create(&outpath)
-                .map_err(|e| format!("Failed to create extracted file {}: {}", outpath.display(), e))?;
+            let mut outfile = std::fs::File::create(&outpath).map_err(|e| {
+                format!(
+                    "Failed to create extracted file {}: {}",
+                    outpath.display(),
+                    e
+                )
+            })?;
             std::io::copy(&mut file, &mut outfile)
                 .map_err(|e| format!("Failed to extract file {}: {}", outpath.display(), e))?;
 
@@ -491,38 +507,48 @@ pub async fn install_minecraft_version_with_instance(
     let task_id = format!("mc-{}", mc_version);
 
     // 0. Immediately signal download manager that Minecraft is installing!
-    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-        id: task_id.clone(),
-        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {}", mc_version)),
-        phase: "client".to_string(),
-        phase_label: format!("Preparing Minecraft {}", mc_version),
-        downloaded_bytes: 0,
-        total_bytes: None,
-        speed_bytes_per_sec: 0,
-        progress: 2.0,
-        status: "downloading".to_string(),
-        error: None,
-        order: 0,
-        instance_name: instance_name.map(|n| n.to_string()),
-        instance_icon: instance_icon.map(|i| i.to_string()),
-    });
+    crate::downloads::update_download_progress(
+        app,
+        crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: instance_name
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("Minecraft {}", mc_version)),
+            phase: "client".to_string(),
+            phase_label: format!("Preparing Minecraft {}", mc_version),
+            downloaded_bytes: 0,
+            total_bytes: None,
+            speed_bytes_per_sec: 0,
+            progress: 2.0,
+            status: "downloading".to_string(),
+            error: None,
+            order: 0,
+            instance_name: instance_name.map(|n| n.to_string()),
+            instance_icon: instance_icon.map(|i| i.to_string()),
+        },
+    );
 
     // 1. Fetch Version Manifest to find the version URL
-    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-        id: task_id.clone(),
-        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {}", mc_version)),
-        phase: "client".to_string(),
-        phase_label: "Resolving Version Manifest".to_string(),
-        downloaded_bytes: 0,
-        total_bytes: None,
-        speed_bytes_per_sec: 0,
-        progress: 5.0,
-        status: "downloading".to_string(),
-        error: None,
-        order: 0,
-        instance_name: instance_name.map(|n| n.to_string()),
-        instance_icon: instance_icon.map(|i| i.to_string()),
-    });
+    crate::downloads::update_download_progress(
+        app,
+        crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: instance_name
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("Minecraft {}", mc_version)),
+            phase: "client".to_string(),
+            phase_label: "Resolving Version Manifest".to_string(),
+            downloaded_bytes: 0,
+            total_bytes: None,
+            speed_bytes_per_sec: 0,
+            progress: 5.0,
+            status: "downloading".to_string(),
+            error: None,
+            order: 0,
+            instance_name: instance_name.map(|n| n.to_string()),
+            instance_icon: instance_icon.map(|i| i.to_string()),
+        },
+    );
     let manifest = fetch_minecraft_versions().await?;
     let entry = manifest
         .versions
@@ -562,21 +588,26 @@ pub async fn install_minecraft_version_with_instance(
     // 2. Download client.jar
     let client_jar_file = ver_folder.join(format!("{}.jar", mc_version));
     let client_size = pkg.downloads.client.size;
-    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-        id: task_id.clone(),
-        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {}", mc_version)),
-        phase: "client".to_string(),
-        phase_label: format!("Downloading Minecraft {} Client", mc_version),
-        downloaded_bytes: 0,
-        total_bytes: Some(client_size),
-        speed_bytes_per_sec: 0,
-        progress: 8.0,
-        status: "downloading".to_string(),
-        error: None,
-        order: 0,
-        instance_name: instance_name.map(|n| n.to_string()),
-        instance_icon: instance_icon.map(|i| i.to_string()),
-    });
+    crate::downloads::update_download_progress(
+        app,
+        crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: instance_name
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("Minecraft {}", mc_version)),
+            phase: "client".to_string(),
+            phase_label: format!("Downloading Minecraft {} Client", mc_version),
+            downloaded_bytes: 0,
+            total_bytes: Some(client_size),
+            speed_bytes_per_sec: 0,
+            progress: 8.0,
+            status: "downloading".to_string(),
+            error: None,
+            order: 0,
+            instance_name: instance_name.map(|n| n.to_string()),
+            instance_icon: instance_icon.map(|i| i.to_string()),
+        },
+    );
 
     download_file_with_verify(
         &client,
@@ -591,21 +622,26 @@ pub async fn install_minecraft_version_with_instance(
     })?;
 
     // 3. Download Libraries and Extract Natives with Bounded Concurrency
-    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-        id: task_id.clone(),
-        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {}", mc_version)),
-        phase: "libraries".to_string(),
-        phase_label: "Downloading Libraries & Natives".to_string(),
-        downloaded_bytes: client_size,
-        total_bytes: None,
-        speed_bytes_per_sec: 0,
-        progress: 15.0,
-        status: "downloading".to_string(),
-        error: None,
-        order: 0,
-        instance_name: instance_name.map(|n| n.to_string()),
-        instance_icon: instance_icon.map(|i| i.to_string()),
-    });
+    crate::downloads::update_download_progress(
+        app,
+        crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: instance_name
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("Minecraft {}", mc_version)),
+            phase: "libraries".to_string(),
+            phase_label: "Downloading Libraries & Natives".to_string(),
+            downloaded_bytes: client_size,
+            total_bytes: None,
+            speed_bytes_per_sec: 0,
+            progress: 15.0,
+            status: "downloading".to_string(),
+            error: None,
+            order: 0,
+            instance_name: instance_name.map(|n| n.to_string()),
+            instance_icon: instance_icon.map(|i| i.to_string()),
+        },
+    );
 
     let libs_base = libraries_dir(app)?;
     let current_os = current_os_name();
@@ -659,12 +695,20 @@ pub async fn install_minecraft_version_with_instance(
             // Classifier / Natives
             if let Some(natives_map) = &lib.natives {
                 if let Some(classifier_key) = natives_map.get(current_os) {
-                    let key = classifier_key.replace("${arch}", if cfg!(target_pointer_width = "64") { "64" } else { "32" });
+                    let key = classifier_key.replace(
+                        "${arch}",
+                        if cfg!(target_pointer_width = "64") {
+                            "64"
+                        } else {
+                            "32"
+                        },
+                    );
                     if let Some(classifiers) = &downloads.classifiers {
                         if let Some(native_artifact) = classifiers.get(&key) {
-                            let rel_path = native_artifact.path.clone().unwrap_or_else(|| {
-                                format!("{}-{}.jar", lib.name, key)
-                            });
+                            let rel_path = native_artifact
+                                .path
+                                .clone()
+                                .unwrap_or_else(|| format!("{}-{}.jar", lib.name, key));
                             let dest = libs_base.join(rel_path);
                             let excludes = lib.extract.as_ref().and_then(|e| e.exclude.clone());
                             lib_tasks.push(LibTask {
@@ -733,14 +777,21 @@ pub async fn install_minecraft_version_with_instance(
     let _ = std::fs::create_dir_all(&objects_dir);
 
     let index_file = indexes_dir.join(format!("{}.json", pkg.asset_index.id));
-    let index_json_str = if index_file.exists() && verify_file_sha1(&index_file, &pkg.asset_index.sha1) {
-        std::fs::read_to_string(&index_file)
-            .map_err(|e| format!("Failed to read asset index: {}", e))?
-    } else {
-        download_file_with_verify(&client, &pkg.asset_index.url, &index_file, Some(&pkg.asset_index.sha1)).await?;
-        std::fs::read_to_string(&index_file)
-            .map_err(|e| format!("Failed to read asset index: {}", e))?
-    };
+    let index_json_str =
+        if index_file.exists() && verify_file_sha1(&index_file, &pkg.asset_index.sha1) {
+            std::fs::read_to_string(&index_file)
+                .map_err(|e| format!("Failed to read asset index: {}", e))?
+        } else {
+            download_file_with_verify(
+                &client,
+                &pkg.asset_index.url,
+                &index_file,
+                Some(&pkg.asset_index.sha1),
+            )
+            .await?;
+            std::fs::read_to_string(&index_file)
+                .map_err(|e| format!("Failed to read asset index: {}", e))?
+        };
 
     let asset_manifest: AssetIndexManifest = serde_json::from_str(&index_json_str)
         .map_err(|e| format!("Failed to parse asset index JSON: {}", e))?;
@@ -752,28 +803,36 @@ pub async fn install_minecraft_version_with_instance(
         let prefix = &obj.hash[..2];
         let target_path = objects_dir.join(prefix).join(&obj.hash);
         if !target_path.exists() {
-            let url = format!("https://resources.download.minecraft.net/{}/{}", prefix, obj.hash);
+            let url = format!(
+                "https://resources.download.minecraft.net/{}/{}",
+                prefix, obj.hash
+            );
             missing_assets.push((url, target_path, obj.hash.clone(), obj.size));
             total_missing_size += obj.size;
         }
     }
 
     if !missing_assets.is_empty() {
-        crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-            id: task_id.clone(),
-            title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {} Assets", mc_version)),
-            phase: "assets".to_string(),
-            phase_label: format!("Downloading Minecraft {} Assets", mc_version),
-            downloaded_bytes: 0,
-            total_bytes: Some(total_missing_size),
-            speed_bytes_per_sec: 0,
-            progress: 0.0,
-            status: "downloading".to_string(),
-            error: None,
-            order: 0,
-            instance_name: instance_name.map(|n| n.to_string()),
-            instance_icon: instance_icon.map(|i| i.to_string()),
-        });
+        crate::downloads::update_download_progress(
+            app,
+            crate::downloads::DownloadItem {
+                id: task_id.clone(),
+                title: instance_name
+                    .map(|n| n.to_string())
+                    .unwrap_or_else(|| format!("Minecraft {} Assets", mc_version)),
+                phase: "assets".to_string(),
+                phase_label: format!("Downloading Minecraft {} Assets", mc_version),
+                downloaded_bytes: 0,
+                total_bytes: Some(total_missing_size),
+                speed_bytes_per_sec: 0,
+                progress: 0.0,
+                status: "downloading".to_string(),
+                error: None,
+                order: 0,
+                instance_name: instance_name.map(|n| n.to_string()),
+                instance_icon: instance_icon.map(|i| i.to_string()),
+            },
+        );
 
         const BATCH_SIZE: usize = 32;
         let mut downloaded_asset_size: u64 = 0;
@@ -819,7 +878,8 @@ pub async fn install_minecraft_version_with_instance(
             if last_emit.elapsed() >= std::time::Duration::from_millis(150) {
                 let delta = last_emit.elapsed().as_secs_f64();
                 if delta > 0.0 {
-                    current_speed = ((downloaded_asset_size.saturating_sub(last_bytes)) as f64 / delta) as u64;
+                    current_speed =
+                        ((downloaded_asset_size.saturating_sub(last_bytes)) as f64 / delta) as u64;
                 }
                 last_bytes = downloaded_asset_size;
                 last_emit = std::time::Instant::now();
@@ -830,24 +890,28 @@ pub async fn install_minecraft_version_with_instance(
                     100.0
                 };
 
-                crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-                    id: task_id.clone(),
-                    title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Minecraft {} Assets", mc_version)),
-                    phase: "assets".to_string(),
-                    phase_label: format!("Downloading Minecraft {} Assets", mc_version),
-                    downloaded_bytes: downloaded_asset_size,
-                    total_bytes: Some(total_missing_size),
-                    speed_bytes_per_sec: current_speed,
-                    progress,
-                    status: "downloading".to_string(),
-                    error: None,
-                    order: 0,
-                    instance_name: instance_name.map(|n| n.to_string()),
-                    instance_icon: instance_icon.map(|i| i.to_string()),
-                });
+                crate::downloads::update_download_progress(
+                    app,
+                    crate::downloads::DownloadItem {
+                        id: task_id.clone(),
+                        title: instance_name
+                            .map(|n| n.to_string())
+                            .unwrap_or_else(|| format!("Minecraft {} Assets", mc_version)),
+                        phase: "assets".to_string(),
+                        phase_label: format!("Downloading Minecraft {} Assets", mc_version),
+                        downloaded_bytes: downloaded_asset_size,
+                        total_bytes: Some(total_missing_size),
+                        speed_bytes_per_sec: current_speed,
+                        progress,
+                        status: "downloading".to_string(),
+                        error: None,
+                        order: 0,
+                        instance_name: instance_name.map(|n| n.to_string()),
+                        instance_icon: instance_icon.map(|i| i.to_string()),
+                    },
+                );
             }
         }
-
     }
 
     crate::downloads::finish_download(app, &task_id);
@@ -975,14 +1039,23 @@ pub async fn launch_minecraft_instance_with_quick_play(
         if l != "vanilla" && l != "none" {
             let profile_name = format!("{}-loader-{}-{}", l, ldr_ver, instance.mc_version);
             let game_dir = crate::instances::get_instance_game_dir(&inst_dir);
-            let mut profile_json_file = game_dir.join("versions").join(&profile_name).join(format!("{}.json", profile_name));
+            let mut profile_json_file = game_dir
+                .join("versions")
+                .join(&profile_name)
+                .join(format!("{}.json", profile_name));
 
             // If loader is configured but files are missing on disk, auto-install them before launch
             if !profile_json_file.exists() {
-                if let Ok(updated_inst) = crate::loaders::install_mod_loader(app, &instance.id, &l, ldr_ver).await {
+                if let Ok(updated_inst) =
+                    crate::loaders::install_mod_loader(app, &instance.id, &l, ldr_ver).await
+                {
                     if let Some(ref new_ver) = updated_inst.loader_version {
-                        let new_profile_name = format!("{}-loader-{}-{}", l, new_ver, instance.mc_version);
-                        let candidate = game_dir.join("versions").join(&new_profile_name).join(format!("{}.json", new_profile_name));
+                        let new_profile_name =
+                            format!("{}-loader-{}-{}", l, new_ver, instance.mc_version);
+                        let candidate = game_dir
+                            .join("versions")
+                            .join(&new_profile_name)
+                            .join(format!("{}.json", new_profile_name));
                         if candidate.exists() {
                             profile_json_file = candidate;
                         }
@@ -997,7 +1070,11 @@ pub async fn launch_minecraft_instance_with_quick_play(
                     for entry in entries.flatten() {
                         let p = entry.path();
                         if p.is_dir() {
-                            let fname = p.file_name().unwrap_or_default().to_string_lossy().to_string();
+                            let fname = p
+                                .file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
                             if fname.to_lowercase().contains(&l) {
                                 let json_candidate = p.join(format!("{}.json", fname));
                                 if json_candidate.exists() {
@@ -1012,7 +1089,9 @@ pub async fn launch_minecraft_instance_with_quick_play(
 
             if profile_json_file.exists() {
                 if let Ok(content) = std::fs::read_to_string(&profile_json_file) {
-                    if let Ok(profile_pkg) = serde_json::from_str::<crate::loaders::LoaderProfilePackage>(&content) {
+                    if let Ok(profile_pkg) =
+                        serde_json::from_str::<crate::loaders::LoaderProfilePackage>(&content)
+                    {
                         main_class_to_run = profile_pkg.main_class.clone();
                         let libs_dir = libraries_dir(app)?;
 
@@ -1031,7 +1110,9 @@ pub async fn launch_minecraft_instance_with_quick_play(
                                 .and_then(|d| d.artifact.as_ref())
                                 .and_then(|a| a.path.as_ref())
                                 .cloned()
-                                .unwrap_or_else(|| crate::loaders::maven_to_relative_path(&lib.name));
+                                .unwrap_or_else(|| {
+                                    crate::loaders::maven_to_relative_path(&lib.name)
+                                });
                             let lib_path = libs_dir.join(rel_path);
                             if lib_path.exists() {
                                 classpath_jars.push(lib_path);
@@ -1045,7 +1126,11 @@ pub async fn launch_minecraft_instance_with_quick_play(
         }
     }
 
-    let sep = if cfg!(target_os = "windows") { ";" } else { ":" };
+    let sep = if cfg!(target_os = "windows") {
+        ";"
+    } else {
+        ":"
+    };
     let classpath_str = classpath_jars
         .iter()
         .map(|p| p.to_string_lossy().to_string())
@@ -1062,8 +1147,14 @@ pub async fn launch_minecraft_instance_with_quick_play(
     cmd_args.push(format!("-Xmx{}M", max_mem));
 
     let natives_dir = inst_dir.join("natives");
-    cmd_args.push(format!("-Djava.library.path={}", natives_dir.to_string_lossy()));
-    cmd_args.push(format!("-Dorg.lwjgl.librarypath={}", natives_dir.to_string_lossy()));
+    cmd_args.push(format!(
+        "-Djava.library.path={}",
+        natives_dir.to_string_lossy()
+    ));
+    cmd_args.push(format!(
+        "-Dorg.lwjgl.librarypath={}",
+        natives_dir.to_string_lossy()
+    ));
 
     if let Some(extra_jvm) = &instance.jvm_args {
         for part in extra_jvm.split_whitespace() {
@@ -1079,9 +1170,16 @@ pub async fn launch_minecraft_instance_with_quick_play(
         let auth_server = match account.account_type.as_str() {
             "elyby" => crate::auth::ELYBY_SERVER_URL,
             "littleskin" => crate::auth::LITTLESKIN_SERVER_URL,
-            _ => account.auth_server_url.as_deref().unwrap_or(crate::auth::ELYBY_SERVER_URL),
+            _ => account
+                .auth_server_url
+                .as_deref()
+                .unwrap_or(crate::auth::ELYBY_SERVER_URL),
         };
-        cmd_args.push(format!("-javaagent:{}={}", authlib_jar.to_string_lossy(), auth_server));
+        cmd_args.push(format!(
+            "-javaagent:{}={}",
+            authlib_jar.to_string_lossy(),
+            auth_server
+        ));
         cmd_args.push("-Dauthlibinjector.side=client".to_string());
         // Java 9+ module opens required so authlib-injector can transform Yggdrasil session service classes
         // Java 8 does not recognize --add-opens and exits with a fatal exception if passed
@@ -1104,11 +1202,17 @@ pub async fn launch_minecraft_instance_with_quick_play(
     let (access_token, user_type) = match account.account_type.as_str() {
         "offline" => ("0".to_string(), "legacy".to_string()),
         "microsoft" => (
-            account.minecraft_access_token.clone().unwrap_or_else(|| "0".to_string()),
+            account
+                .minecraft_access_token
+                .clone()
+                .unwrap_or_else(|| "0".to_string()),
             "msa".to_string(),
         ),
         "elyby" | "littleskin" => (
-            account.minecraft_access_token.clone().unwrap_or_else(|| "0".to_string()),
+            account
+                .minecraft_access_token
+                .clone()
+                .unwrap_or_else(|| "0".to_string()),
             "msa".to_string(),
         ),
         _ => ("0".to_string(), "legacy".to_string()),
@@ -1166,7 +1270,10 @@ pub async fn launch_minecraft_instance_with_quick_play(
     }
 
     // Append tweakers if declared by the mod loader (e.g. Forge 1.8.9 FMLTweaker)
-    if let Some(tweakers) = loaded_loader_profile.as_ref().and_then(|p| p.tweakers.as_ref()) {
+    if let Some(tweakers) = loaded_loader_profile
+        .as_ref()
+        .and_then(|p| p.tweakers.as_ref())
+    {
         for t in tweakers {
             cmd_args.push("--tweakClass".to_string());
             cmd_args.push(t.clone());
@@ -1244,9 +1351,12 @@ pub async fn launch_minecraft_instance_with_quick_play(
         command.env("LD_LIBRARY_PATH", ld_string);
     }
 
-    let mut child = command
-        .spawn()
-        .map_err(|e| format!("Failed to launch Minecraft ({}) with {}: {}", instance.name, java_exec, e))?;
+    let mut child = command.spawn().map_err(|e| {
+        format!(
+            "Failed to launch Minecraft ({}) with {}: {}",
+            instance.name, java_exec, e
+        )
+    })?;
 
     let pid = child.id();
     let now_epoch = std::time::SystemTime::now()
@@ -1286,10 +1396,15 @@ pub async fn launch_minecraft_instance_with_quick_play(
                     let _ = writeln!(w, "{}", line);
                     let _ = w.flush();
                 }
-                let _ = app_out.emit("instance_log_line", InstanceLogPayload {
-                    id: inst_id_out.clone(),
-                    line,
-                });
+                // feeds the discord rich presence join/leave anchors
+                crate::discord::note_session_log_line(&inst_id_out, &line);
+                let _ = app_out.emit(
+                    "instance_log_line",
+                    InstanceLogPayload {
+                        id: inst_id_out.clone(),
+                        line,
+                    },
+                );
             }
         });
     }
@@ -1307,10 +1422,14 @@ pub async fn launch_minecraft_instance_with_quick_play(
                     let _ = writeln!(w, "{}", line);
                     let _ = w.flush();
                 }
-                let _ = app_err.emit("instance_log_line", InstanceLogPayload {
-                    id: inst_id_err.clone(),
-                    line,
-                });
+                crate::discord::note_session_log_line(&inst_id_err, &line);
+                let _ = app_err.emit(
+                    "instance_log_line",
+                    InstanceLogPayload {
+                        id: inst_id_err.clone(),
+                        line,
+                    },
+                );
             }
         });
     }
@@ -1325,13 +1444,17 @@ pub async fn launch_minecraft_instance_with_quick_play(
     };
 
     {
+        crate::discord::session_started(info.clone());
         let mut guard = RUNNING_INSTANCES.lock().unwrap();
         let map = guard.get_or_insert_with(HashMap::new);
-        map.insert(instance.id.clone(), ActiveInstance {
-            info,
-            pid,
-            child: child_arc.clone(),
-        });
+        map.insert(
+            instance.id.clone(),
+            ActiveInstance {
+                info,
+                pid,
+                child: child_arc.clone(),
+            },
+        );
     }
 
     let _ = app.emit("running_instances_changed", list_running_instances());
@@ -1393,6 +1516,7 @@ pub async fn launch_minecraft_instance_with_quick_play(
                 map.remove(&inst_id_clone);
             }
         }
+        crate::discord::session_exit(&inst_id_clone);
         let _ = app_clone.emit("running_instances_changed", list_running_instances());
 
         // If the instance exited with a non-zero exit code, emit an instance_crashed event
@@ -1403,10 +1527,13 @@ pub async fn launch_minecraft_instance_with_quick_play(
                     id: String,
                     exit_code: Option<i32>,
                 }
-                let _ = app_clone.emit("instance_crashed", CrashEventPayload {
-                    id: inst_id_clone.clone(),
-                    exit_code: status.code(),
-                });
+                let _ = app_clone.emit(
+                    "instance_crashed",
+                    CrashEventPayload {
+                        id: inst_id_clone.clone(),
+                        exit_code: status.code(),
+                    },
+                );
             }
         }
     });

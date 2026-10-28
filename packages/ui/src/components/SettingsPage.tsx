@@ -60,6 +60,8 @@ export function SettingsPage({
   onJavaOptimize,
   onJvmArgs,
   onRefreshJava,
+  onDiscordRpc,
+  onDiscordDetailed,
 }: {
   activeTab?: SettingsTab;
   settings: Settings;
@@ -77,6 +79,8 @@ export function SettingsPage({
   onJavaOptimize?: (javaOptimize: boolean) => void;
   onJvmArgs?: (jvmArgs: string) => void;
   onRefreshJava?: () => void;
+  onDiscordRpc?: (enabled: boolean) => void;
+  onDiscordDetailed?: (detailed: boolean) => void;
 }) {
   const [customPathMode, setCustomPathMode] = useState(
     () => Boolean(settings.javaPath) && !javaRuntimes.some((r) => r.path === settings.javaPath),
@@ -785,6 +789,63 @@ export function SettingsPage({
               }}
             >
               <Icon name="reset" size={16} color="currentColor" />
+            </button>
+          }
+        />
+      </Group>
+
+      {/* Discord Rich Presence Section */}
+      <Group title="Discord Rich Presence" theme={theme}>
+        <Row
+          label="Rich Presence"
+          hint="Share your Sera activity on your Discord profile"
+          theme={theme}
+          control={
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.discordRpc}
+              aria-label="Toggle Discord rich presence"
+              className="relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out outline-none"
+              style={{
+                background: settings.discordRpc ? theme.primary : theme.secondary,
+              }}
+              onClick={() => onDiscordRpc?.(!settings.discordRpc)}
+            >
+              <span
+                className="pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform duration-150 ease-in-out"
+                style={{
+                  background: settings.discordRpc ? theme.card : theme.mutedForeground,
+                  transform: settings.discordRpc ? "translateX(22px)" : "translateX(2px)",
+                }}
+              />
+            </button>
+          }
+        />
+        <Row
+          label="Detailed information"
+          hint={`While discovering or in settings, disclose your current page; while in a world,${"\n"}disclose whether you are surviving or on a server`}
+          theme={theme}
+          control={
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.discordDetailed}
+              disabled={!settings.discordRpc}
+              aria-label="Toggle detailed presence information"
+              className={`relative inline-flex items-center h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out outline-none ${settings.discordRpc ? "cursor-pointer" : "cursor-not-allowed opacity-40"}`}
+              style={{
+                background: settings.discordDetailed ? theme.primary : theme.secondary,
+              }}
+              onClick={() => onDiscordDetailed?.(!settings.discordDetailed)}
+            >
+              <span
+                className="pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform duration-150 ease-in-out"
+                style={{
+                  background: settings.discordDetailed ? theme.card : theme.mutedForeground,
+                  transform: settings.discordDetailed ? "translateX(22px)" : "translateX(2px)",
+                }}
+              />
             </button>
           }
         />

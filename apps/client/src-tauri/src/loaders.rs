@@ -96,8 +96,15 @@ pub fn maven_to_relative_path(name: &str) -> String {
         let group = parts[0].replace(".", "/");
         let artifact = parts[1];
         let ver = parts[2];
-        let classifier = if parts.len() >= 4 { format!("-{}", parts[3]) } else { "".to_string() };
-        format!("{}/{}/{}/{}-{}{}.jar", group, artifact, ver, artifact, ver, classifier)
+        let classifier = if parts.len() >= 4 {
+            format!("-{}", parts[3])
+        } else {
+            "".to_string()
+        };
+        format!(
+            "{}/{}/{}/{}-{}{}.jar",
+            group, artifact, ver, artifact, ver, classifier
+        )
     } else {
         format!("{}.jar", name)
     }
@@ -117,7 +124,10 @@ pub async fn fetch_loader_versions(
     match loader.to_lowercase().as_str() {
         "fabric" => {
             // First attempt official Fabric meta
-            let url = format!("https://meta.fabricmc.net/v2/versions/loader/{}", mc_version);
+            let url = format!(
+                "https://meta.fabricmc.net/v2/versions/loader/{}",
+                mc_version
+            );
             if let Ok(res) = client.get(&url).send().await {
                 if let Ok(entries) = res.json::<Vec<FabricLoaderEntry>>().await {
                     let versions: Vec<LoaderVersionInfo> = entries
@@ -134,7 +144,10 @@ pub async fn fetch_loader_versions(
             }
 
             // Fallback for older legacy versions (1.8.9, 1.12.2, etc.) using Legacy Fabric
-            let legacy_url = format!("https://meta.legacyfabric.net/v2/versions/loader/{}", mc_version);
+            let legacy_url = format!(
+                "https://meta.legacyfabric.net/v2/versions/loader/{}",
+                mc_version
+            );
             if let Ok(res) = client.get(&legacy_url).send().await {
                 if let Ok(entries) = res.json::<Vec<FabricLoaderEntry>>().await {
                     let versions: Vec<LoaderVersionInfo> = entries
@@ -274,21 +287,24 @@ pub async fn install_mod_loader(
     let ldr_title = format!("{} Loader {}", ldr_name, loader_version);
 
     // 1. Signal download manager in header
-    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-        id: task_id.clone(),
-        title: instance.name.clone(),
-        phase: "libraries".to_string(),
-        phase_label: format!("Resolving {} Profile", ldr_title),
-        downloaded_bytes: 0,
-        total_bytes: None,
-        speed_bytes_per_sec: 0,
-        progress: 5.0,
-        status: "downloading".to_string(),
-        error: None,
-        order: 0,
-        instance_name: Some(instance.name.clone()),
-        instance_icon: instance.icon.clone(),
-    });
+    crate::downloads::update_download_progress(
+        app,
+        crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: instance.name.clone(),
+            phase: "libraries".to_string(),
+            phase_label: format!("Resolving {} Profile", ldr_title),
+            downloaded_bytes: 0,
+            total_bytes: None,
+            speed_bytes_per_sec: 0,
+            progress: 5.0,
+            status: "downloading".to_string(),
+            error: None,
+            order: 0,
+            instance_name: Some(instance.name.clone()),
+            instance_icon: instance.icon.clone(),
+        },
+    );
 
     let client = reqwest::Client::builder()
         .user_agent("SeraLauncher/0.1.6")
@@ -305,7 +321,12 @@ pub async fn install_mod_loader(
     // 2. Fetch profile json for Fabric / Quilt / Forge / NeoForge
     let mut profile_json_bytes: Option<Vec<u8>> = None;
     let mut resolved_loader_version = loader_version.to_string();
-    let mut profile_id = format!("{}-loader-{}-{}", loader.to_lowercase(), loader_version, instance.mc_version);
+    let mut profile_id = format!(
+        "{}-loader-{}-{}",
+        loader.to_lowercase(),
+        loader_version,
+        instance.mc_version
+    );
 
     if loader.eq_ignore_ascii_case("fabric") {
         let meta_url = format!(
@@ -368,7 +389,8 @@ pub async fn install_mod_loader(
                         .into_iter()
                         .filter(|v| {
                             v.requires.iter().any(|r| {
-                                r.uid == "net.minecraft" && r.equals.as_deref() == Some(&instance.mc_version)
+                                r.uid == "net.minecraft"
+                                    && r.equals.as_deref() == Some(&instance.mc_version)
                             })
                         })
                         .collect();
@@ -436,21 +458,29 @@ pub async fn install_mod_loader(
                 };
 
                 let progress = 10.0 + ((idx as f64 / total_libs.max(1) as f64) * 80.0);
-                crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-                    id: task_id.clone(),
-                    title: instance.name.clone(),
-                    phase: "libraries".to_string(),
-                    phase_label: format!("Downloading {} ({}/{})", lib.name.split(':').nth(1).unwrap_or(&lib.name), idx + 1, total_libs),
-                    downloaded_bytes: (idx + 1) as u64,
-                    total_bytes: Some(total_libs as u64),
-                    speed_bytes_per_sec: current_speed,
-                    progress,
-                    status: "downloading".to_string(),
-                    error: None,
-                    order: 0,
-                    instance_name: Some(instance.name.clone()),
-                    instance_icon: instance.icon.clone(),
-                });
+                crate::downloads::update_download_progress(
+                    app,
+                    crate::downloads::DownloadItem {
+                        id: task_id.clone(),
+                        title: instance.name.clone(),
+                        phase: "libraries".to_string(),
+                        phase_label: format!(
+                            "Downloading {} ({}/{})",
+                            lib.name.split(':').nth(1).unwrap_or(&lib.name),
+                            idx + 1,
+                            total_libs
+                        ),
+                        downloaded_bytes: (idx + 1) as u64,
+                        total_bytes: Some(total_libs as u64),
+                        speed_bytes_per_sec: current_speed,
+                        progress,
+                        status: "downloading".to_string(),
+                        error: None,
+                        order: 0,
+                        instance_name: Some(instance.name.clone()),
+                        instance_icon: instance.icon.clone(),
+                    },
+                );
 
                 if !dest_file.exists() {
                     if let Some(parent) = dest_file.parent() {
@@ -499,16 +529,32 @@ pub async fn install_mod_loader(
             // Save profile JSON under primary ID and convenience aliases so launcher lookups find it
             let target_version_dir = versions_dir.join(&profile_id);
             let _ = std::fs::create_dir_all(&target_version_dir);
-            let _ = std::fs::write(target_version_dir.join(format!("{}.json", profile_id)), &bytes);
+            let _ = std::fs::write(
+                target_version_dir.join(format!("{}.json", profile_id)),
+                &bytes,
+            );
 
-            let alias_profile_name = format!("{}-loader-{}-{}", loader.to_lowercase(), loader_version, instance.mc_version);
+            let alias_profile_name = format!(
+                "{}-loader-{}-{}",
+                loader.to_lowercase(),
+                loader_version,
+                instance.mc_version
+            );
             if alias_profile_name != profile_id {
                 let alias_dir = versions_dir.join(&alias_profile_name);
                 let _ = std::fs::create_dir_all(&alias_dir);
-                let _ = std::fs::write(alias_dir.join(format!("{}.json", alias_profile_name)), &bytes);
+                let _ = std::fs::write(
+                    alias_dir.join(format!("{}.json", alias_profile_name)),
+                    &bytes,
+                );
             }
 
-            let resolved_alias = format!("{}-loader-{}-{}", loader.to_lowercase(), resolved_loader_version, instance.mc_version);
+            let resolved_alias = format!(
+                "{}-loader-{}-{}",
+                loader.to_lowercase(),
+                resolved_loader_version,
+                instance.mc_version
+            );
             if resolved_alias != profile_id && resolved_alias != alias_profile_name {
                 let res_dir = versions_dir.join(&resolved_alias);
                 let _ = std::fs::create_dir_all(&res_dir);
@@ -517,21 +563,24 @@ pub async fn install_mod_loader(
         }
     }
 
-    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-        id: task_id.clone(),
-        title: instance.name.clone(),
-        phase: "libraries".to_string(),
-        phase_label: "Configuring mods directories...".to_string(),
-        downloaded_bytes: 95,
-        total_bytes: Some(100),
-        speed_bytes_per_sec: 0,
-        progress: 95.0,
-        status: "extracting".to_string(),
-        error: None,
-        order: 0,
-        instance_name: Some(instance.name.clone()),
-        instance_icon: instance.icon.clone(),
-    });
+    crate::downloads::update_download_progress(
+        app,
+        crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: instance.name.clone(),
+            phase: "libraries".to_string(),
+            phase_label: "Configuring mods directories...".to_string(),
+            downloaded_bytes: 95,
+            total_bytes: Some(100),
+            speed_bytes_per_sec: 0,
+            progress: 95.0,
+            status: "extracting".to_string(),
+            error: None,
+            order: 0,
+            instance_name: Some(instance.name.clone()),
+            instance_icon: instance.icon.clone(),
+        },
+    );
 
     // 3. Ensure mods folder exists inside the instance minecraft directory
     let mc_mods = mc_dir.join("mods");
@@ -551,9 +600,16 @@ pub async fn install_mod_loader(
 
     // Rename instance identifier (directory on disk) to reflect the loader if it was a default vanilla identifier,
     // leaving instance.name intact as requested.
-    let old_default_id = format!("vanilla-{}", crate::instances::slugify(&instance.mc_version));
+    let old_default_id = format!(
+        "vanilla-{}",
+        crate::instances::slugify(&instance.mc_version)
+    );
     if instance.id == old_default_id || instance.id.starts_with("vanilla-") {
-        let desired_id = format!("{}-{}", crate::instances::slugify(loader), crate::instances::slugify(&instance.mc_version));
+        let desired_id = format!(
+            "{}-{}",
+            crate::instances::slugify(loader),
+            crate::instances::slugify(&instance.mc_version)
+        );
         let base = crate::paths::instances_dir(app)?;
         let mut new_id = desired_id.clone();
         let mut counter = 1;
@@ -577,21 +633,24 @@ pub async fn install_mod_loader(
         .map_err(|e| format!("Failed to write instance.json: {}", e))?;
 
     // 5. Complete download item
-    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-        id: task_id.clone(),
-        title: instance.name.clone(),
-        phase: "libraries".to_string(),
-        phase_label: format!("{} installed successfully", ldr_title),
-        downloaded_bytes: 100,
-        total_bytes: Some(100),
-        speed_bytes_per_sec: 0,
-        progress: 100.0,
-        status: "completed".to_string(),
-        error: None,
-        order: 0,
-        instance_name: Some(instance.name.clone()),
-        instance_icon: instance.icon.clone(),
-    });
+    crate::downloads::update_download_progress(
+        app,
+        crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: instance.name.clone(),
+            phase: "libraries".to_string(),
+            phase_label: format!("{} installed successfully", ldr_title),
+            downloaded_bytes: 100,
+            total_bytes: Some(100),
+            speed_bytes_per_sec: 0,
+            progress: 100.0,
+            status: "completed".to_string(),
+            error: None,
+            order: 0,
+            instance_name: Some(instance.name.clone()),
+            instance_icon: instance.icon.clone(),
+        },
+    );
 
     crate::downloads::finish_download(app, &task_id);
 

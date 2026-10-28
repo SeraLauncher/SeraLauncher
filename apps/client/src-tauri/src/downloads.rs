@@ -1,7 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -14,8 +14,8 @@ pub struct DownloadItem {
     pub downloaded_bytes: u64,
     pub total_bytes: Option<u64>,
     pub speed_bytes_per_sec: u64,
-    pub progress: f64,       // 0.0 .. 100.0
-    pub status: String,      // "downloading" | "paused" | "stopped" | "extracting" | "completed" | "failed"
+    pub progress: f64,  // 0.0 .. 100.0
+    pub status: String, // "downloading" | "paused" | "stopped" | "extracting" | "completed" | "failed"
     pub error: Option<String>,
     pub order: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -134,7 +134,9 @@ pub fn update_download_progress(app: &tauri::AppHandle, mut item: DownloadItem) 
                 item.speed_bytes_per_sec = 0;
             }
             // Prevent progress or downloaded_bytes from jumping backwards
-            if (existing.status == "downloading" || existing.status == "paused") && (item.status == "downloading" || item.status == "paused") {
+            if (existing.status == "downloading" || existing.status == "paused")
+                && (item.status == "downloading" || item.status == "paused")
+            {
                 if item.progress < existing.progress {
                     item.progress = existing.progress;
                 }

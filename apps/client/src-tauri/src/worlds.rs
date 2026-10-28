@@ -1,7 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,8 +57,16 @@ fn encode_png_base64_data_url(bytes: &[u8]) -> String {
     let mut encoded = String::with_capacity((bytes.len() + 2) / 3 * 4);
     for chunk in bytes.chunks(3) {
         let b0 = chunk[0] as usize;
-        let b1 = if chunk.len() > 1 { chunk[1] as usize } else { 0 };
-        let b2 = if chunk.len() > 2 { chunk[2] as usize } else { 0 };
+        let b1 = if chunk.len() > 1 {
+            chunk[1] as usize
+        } else {
+            0
+        };
+        let b2 = if chunk.len() > 2 {
+            chunk[2] as usize
+        } else {
+            0
+        };
 
         encoded.push(ALPHABET[(b0 >> 2) & 0x3F] as char);
         encoded.push(ALPHABET[((b0 << 4) | (b1 >> 4)) & 0x3F] as char);
@@ -144,13 +152,32 @@ fn parse_nbt_level_dat(data: &[u8]) -> ParsedLevelMeta {
 
     fn skip_payload(tag: u8, data: &[u8], cursor: &mut usize) -> bool {
         match tag {
-            1 => { *cursor += 1; true } // Byte
-            2 => { *cursor += 2; true } // Short
-            3 => { *cursor += 4; true } // Int
-            4 => { *cursor += 8; true } // Long
-            5 => { *cursor += 4; true } // Float
-            6 => { *cursor += 8; true } // Double
-            7 => { // Byte Array
+            1 => {
+                *cursor += 1;
+                true
+            } // Byte
+            2 => {
+                *cursor += 2;
+                true
+            } // Short
+            3 => {
+                *cursor += 4;
+                true
+            } // Int
+            4 => {
+                *cursor += 8;
+                true
+            } // Long
+            5 => {
+                *cursor += 4;
+                true
+            } // Float
+            6 => {
+                *cursor += 8;
+                true
+            } // Double
+            7 => {
+                // Byte Array
                 if let Some(len) = read_i32(data, cursor) {
                     *cursor += len.max(0) as usize;
                     true
@@ -158,7 +185,8 @@ fn parse_nbt_level_dat(data: &[u8]) -> ParsedLevelMeta {
                     false
                 }
             }
-            8 => { // String
+            8 => {
+                // String
                 if let Some(len) = read_i16(data, cursor) {
                     *cursor += len.max(0) as usize;
                     true
@@ -166,7 +194,8 @@ fn parse_nbt_level_dat(data: &[u8]) -> ParsedLevelMeta {
                     false
                 }
             }
-            9 => { // List
+            9 => {
+                // List
                 let elem_tag = match read_u8(data, cursor) {
                     Some(t) => t,
                     None => return false,
@@ -182,7 +211,8 @@ fn parse_nbt_level_dat(data: &[u8]) -> ParsedLevelMeta {
                 }
                 true
             }
-            10 => { // Compound
+            10 => {
+                // Compound
                 loop {
                     let sub_tag = match read_u8(data, cursor) {
                         Some(t) => t,
@@ -200,7 +230,8 @@ fn parse_nbt_level_dat(data: &[u8]) -> ParsedLevelMeta {
                 }
                 true
             }
-            11 => { // Int Array
+            11 => {
+                // Int Array
                 if let Some(len) = read_i32(data, cursor) {
                     *cursor += (len.max(0) as usize) * 4;
                     true
@@ -208,7 +239,8 @@ fn parse_nbt_level_dat(data: &[u8]) -> ParsedLevelMeta {
                     false
                 }
             }
-            12 => { // Long Array
+            12 => {
+                // Long Array
                 if let Some(len) = read_i32(data, cursor) {
                     *cursor += (len.max(0) as usize) * 8;
                     true
@@ -382,7 +414,10 @@ pub fn inspect_world_save(world_dir: &Path) -> Result<WorldItem, String> {
 }
 
 /// Returns a list of all singleplayer worlds in an instance
-pub fn list_instance_worlds(app: &tauri::AppHandle, instance_id: &str) -> Result<Vec<WorldItem>, String> {
+pub fn list_instance_worlds(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+) -> Result<Vec<WorldItem>, String> {
     let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
     let saves_dir = crate::instances::get_instance_game_dir(&inst_dir).join("saves");
 
@@ -432,8 +467,13 @@ pub fn create_world_backup(
     let backup_file_name = format!("{}_{}.zip", folder_name, now_secs);
     let backup_path = backups_dir.join(&backup_file_name);
 
-    let file = File::create(&backup_path)
-        .map_err(|e| format!("Failed to create backup archive {}: {}", backup_path.display(), e))?;
+    let file = File::create(&backup_path).map_err(|e| {
+        format!(
+            "Failed to create backup archive {}: {}",
+            backup_path.display(),
+            e
+        )
+    })?;
 
     let mut zip = zip::ZipWriter::new(file);
     let options = zip::write::SimpleFileOptions::default()
@@ -476,9 +516,12 @@ pub fn create_world_backup(
     }
 
     add_dir_to_zip(&mut zip, &world_dir, &world_dir, folder_name, options)?;
-    zip.finish().map_err(|e| format!("Failed to finalize backup archive: {}", e))?;
+    zip.finish()
+        .map_err(|e| format!("Failed to finalize backup archive: {}", e))?;
 
-    let size_bytes = std::fs::metadata(&backup_path).map(|m| m.len()).unwrap_or(0);
+    let size_bytes = std::fs::metadata(&backup_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
 
     Ok(WorldBackupItem {
         file_name: backup_file_name,
@@ -489,7 +532,10 @@ pub fn create_world_backup(
 }
 
 /// Lists all ZIP backups inside <instance>/minecraft/backups/
-pub fn list_world_backups(app: &tauri::AppHandle, instance_id: &str) -> Result<Vec<WorldBackupItem>, String> {
+pub fn list_world_backups(
+    app: &tauri::AppHandle,
+    instance_id: &str,
+) -> Result<Vec<WorldBackupItem>, String> {
     let inst_dir = crate::instances::get_instance_dir(app, instance_id)?;
     let backups_dir = crate::instances::get_instance_game_dir(&inst_dir).join("backups");
 
@@ -550,10 +596,10 @@ pub fn restore_world_backup(
         return Err(format!("Backup archive not found: {}", backup_file_name));
     }
 
-    let file = File::open(&backup_file)
-        .map_err(|e| format!("Failed to open backup archive: {}", e))?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| format!("Failed to read backup zip: {}", e))?;
+    let file =
+        File::open(&backup_file).map_err(|e| format!("Failed to open backup archive: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| format!("Failed to read backup zip: {}", e))?;
 
     let saves_dir = mc_dir.join("saves");
     let _ = std::fs::create_dir_all(&saves_dir);
@@ -654,8 +700,7 @@ pub fn clone_world_save(
     }
 
     let target_dir = saves_dir.join(&candidate_name);
-    copy_dir_all(&src_dir, &target_dir)
-        .map_err(|e| format!("Failed to clone world: {}", e))?;
+    copy_dir_all(&src_dir, &target_dir).map_err(|e| format!("Failed to clone world: {}", e))?;
 
     inspect_world_save(&target_dir)
 }

@@ -54,7 +54,8 @@ pub fn update_resource_packs_content(existing_content: &str, active_packs: &[Str
         }
     }
 
-    let json_array = serde_json::to_string(&pack_entries).unwrap_or_else(|_| "[\"vanilla\"]".to_string());
+    let json_array =
+        serde_json::to_string(&pack_entries).unwrap_or_else(|_| "[\"vanilla\"]".to_string());
     let new_line = format!("resourcePacks:{}", json_array);
 
     let mut lines = Vec::new();
@@ -90,8 +91,8 @@ pub fn get_active_resource_packs(
         return Ok(Vec::new());
     }
 
-    let content = std::fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read options.txt: {}", e))?;
+    let content =
+        std::fs::read_to_string(&path).map_err(|e| format!("Failed to read options.txt: {}", e))?;
     Ok(parse_active_resource_packs_content(&content))
 }
 
@@ -131,7 +132,10 @@ pub fn get_active_shader_pack(
         let trimmed = line.trim();
         if trimmed.starts_with("shaderPack=") {
             let val = trimmed.trim_start_matches("shaderPack=").trim();
-            if val.is_empty() || val.eq_ignore_ascii_case("off") || val.eq_ignore_ascii_case("(internal)") {
+            if val.is_empty()
+                || val.eq_ignore_ascii_case("off")
+                || val.eq_ignore_ascii_case("(internal)")
+            {
                 return Ok(None);
             } else {
                 return Ok(Some(val.to_string()));
@@ -213,7 +217,8 @@ mod tests {
         assert!(updated.contains("version:3465"));
         assert!(updated.contains("guiScale:2"));
         assert!(updated.contains("fullscreen:true"));
-        assert!(updated.contains("resourcePacks:[\"vanilla\",\"file/NewPack.zip\",\"file/Bare Bones.zip\"]"));
+        assert!(updated
+            .contains("resourcePacks:[\"vanilla\",\"file/NewPack.zip\",\"file/Bare Bones.zip\"]"));
         assert!(!updated.contains("file/Old.zip"));
     }
 }

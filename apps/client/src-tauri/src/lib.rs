@@ -5,22 +5,23 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 mod auth;
+mod discord;
+mod discovery;
 mod downloader;
 mod downloads;
-mod fonts;
-mod instances;
-mod loaders;
-mod discovery;
-mod java;
-mod minecraft;
-mod paths;
-mod modpack;
-mod worlds;
-mod visual_options;
 mod export;
+mod fonts;
+mod ingest;
+mod instances;
+mod java;
+mod loaders;
+mod minecraft;
+mod modpack;
+mod paths;
 mod safety;
 mod servers;
-mod ingest;
+mod visual_options;
+mod worlds;
 
 const DEFAULT_APPEARANCE: &str = "dark";
 const BUNDLED_FAMILY: &str = "Sunghyun Sans";
@@ -38,6 +39,9 @@ const DEFAULT_GC_PRESET: &str = "g1gc";
 const DEFAULT_JAVA_OPTIMIZE: bool = true;
 const DEFAULT_JVM_ARGS: &str = "";
 
+const DEFAULT_DISCORD_RPC: bool = true;
+const DEFAULT_DISCORD_DETAILED: bool = true;
+
 /// User preferences, persisted as json in the platform config dir. Unreadable or
 /// malformed data falls back to defaults rather than stopping the app.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,6 +57,8 @@ pub struct Settings {
     pub gc_preset: String,
     pub java_optimize: bool,
     pub jvm_args: String,
+    pub discord_rpc: bool,
+    pub discord_detailed: bool,
 }
 
 impl Default for Settings {
@@ -76,6 +82,8 @@ impl Settings {
             gc_preset: DEFAULT_GC_PRESET.into(),
             java_optimize: DEFAULT_JAVA_OPTIMIZE,
             jvm_args: DEFAULT_JVM_ARGS.into(),
+            discord_rpc: DEFAULT_DISCORD_RPC,
+            discord_detailed: DEFAULT_DISCORD_DETAILED,
         }
     }
 
@@ -104,7 +112,10 @@ impl Settings {
         self.min_memory = self.min_memory.clamp(512, 65536);
         self.max_memory = self.max_memory.clamp(self.min_memory, 65536);
 
-        if !matches!(self.gc_preset.to_lowercase().as_str(), "none" | "g1gc" | "zgc") {
+        if !matches!(
+            self.gc_preset.to_lowercase().as_str(),
+            "none" | "g1gc" | "zgc"
+        ) {
             self.gc_preset = DEFAULT_GC_PRESET.into();
         }
 
@@ -130,8 +141,11 @@ impl Settings {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|err| err.to_string())?;
         }
-        std::fs::write(path, serde_json::to_vec_pretty(self).map_err(|err| err.to_string())?)
-            .map_err(|err| err.to_string())
+        std::fs::write(
+            path,
+            serde_json::to_vec_pretty(self).map_err(|err| err.to_string())?,
+        )
+        .map_err(|err| err.to_string())
     }
 }
 
@@ -150,7 +164,14 @@ fn load_settings(app: tauri::AppHandle) -> Result<Settings, String> {
 #[tauri::command]
 fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
     let path = paths::settings_file_path(&app)?;
+    discord::set_config(settings.discord_rpc, settings.discord_detailed);
     settings.write(&path)
+}
+
+/// navigation labels the frontend reports for the idle presence; nil clears it.
+#[tauri::command]
+fn set_discord_navigation(status: Option<String>) {
+    discord::set_navigation(status);
 }
 
 /// Families the user can pick from, with the bundled face first so it stays the
@@ -172,12 +193,17 @@ fn list_java_runtimes(app: tauri::AppHandle) -> Vec<java::JavaRuntime> {
 }
 
 #[tauri::command]
-async fn install_java_runtime(app: tauri::AppHandle, major_version: u32) -> Result<java::JavaRuntime, String> {
+async fn install_java_runtime(
+    app: tauri::AppHandle,
+    major_version: u32,
+) -> Result<java::JavaRuntime, String> {
     downloader::install_adoptium_runtime(&app, major_version).await
 }
 
 #[tauri::command]
-fn get_managed_java_runtimes(app: tauri::AppHandle) -> Result<Vec<downloader::ManagedJavaRuntime>, String> {
+fn get_managed_java_runtimes(
+    app: tauri::AppHandle,
+) -> Result<Vec<downloader::ManagedJavaRuntime>, String> {
     downloader::get_managed_java_runtimes(&app)
 }
 
@@ -226,7 +252,16 @@ async fn create_instance(
     loader: Option<String>,
     loader_version: Option<String>,
 ) -> Result<instances::Instance, String> {
-    instances::create_instance(&app, name, mc_version, version_type, icon, loader, loader_version).await
+    instances::create_instance(
+        &app,
+        name,
+        mc_version,
+        version_type,
+        icon,
+        loader,
+        loader_version,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -240,7 +275,10 @@ async fn install_mod_loader(
 }
 
 #[tauri::command]
-async fn get_mod_loader_versions(mc_version: String, loader: String) -> Result<Vec<loaders::LoaderVersionInfo>, String> {
+async fn get_mod_loader_versions(
+    mc_version: String,
+    loader: String,
+) -> Result<Vec<loaders::LoaderVersionInfo>, String> {
     loaders::fetch_loader_versions(&mc_version, &loader).await
 }
 
@@ -266,7 +304,8 @@ async fn search_discovery(
         sort.as_deref(),
         offset.unwrap_or(0),
         limit.unwrap_or(20),
-    ).await
+    )
+    .await
 }
 
 #[tauri::command]
@@ -284,7 +323,13 @@ async fn get_discovery_project_versions(
     mc_version: Option<String>,
     loader: Option<String>,
 ) -> Result<Vec<discovery::DiscoveryVersion>, String> {
-    discovery::get_project_versions(&provider, &project_id, mc_version.as_deref(), loader.as_deref()).await
+    discovery::get_project_versions(
+        &provider,
+        &project_id,
+        mc_version.as_deref(),
+        loader.as_deref(),
+    )
+    .await
 }
 
 #[tauri::command]
@@ -359,7 +404,8 @@ async fn install_discovery_project(
         version_id.as_deref(),
         title.as_deref(),
         icon_url.as_deref(),
-    ).await
+    )
+    .await
 }
 
 #[tauri::command]
@@ -385,7 +431,10 @@ fn delete_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn update_instance(app: tauri::AppHandle, instance: instances::Instance) -> Result<instances::Instance, String> {
+fn update_instance(
+    app: tauri::AppHandle,
+    instance: instances::Instance,
+) -> Result<instances::Instance, String> {
     instances::update_instance(&app, instance)
 }
 
@@ -403,7 +452,8 @@ async fn install_modpack_from_file(
     custom_icon: Option<String>,
 ) -> Result<instances::Instance, String> {
     let resolved = modpack::resolve_archive_path(&file_path);
-    let bytes = std::fs::read(&resolved).map_err(|e| format!("Failed to read file {}: {}", resolved.display(), e))?;
+    let bytes = std::fs::read(&resolved)
+        .map_err(|e| format!("Failed to read file {}: {}", resolved.display(), e))?;
     modpack::install_modpack_bytes(&app, &bytes, custom_name, custom_icon).await
 }
 
@@ -453,7 +503,10 @@ async fn install_modpack_from_discovery(
 }
 
 #[tauri::command]
-fn get_instance_worlds(app: tauri::AppHandle, id: String) -> Result<Vec<worlds::WorldItem>, String> {
+fn get_instance_worlds(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<Vec<worlds::WorldItem>, String> {
     worlds::list_instance_worlds(&app, &id)
 }
 
@@ -493,11 +546,7 @@ fn delete_world_backup(
 }
 
 #[tauri::command]
-fn delete_world_save(
-    app: tauri::AppHandle,
-    id: String,
-    folder_name: String,
-) -> Result<(), String> {
+fn delete_world_save(app: tauri::AppHandle, id: String, folder_name: String) -> Result<(), String> {
     worlds::delete_world_save(&app, &id, &folder_name)
 }
 
@@ -511,10 +560,7 @@ fn import_world_zip(
 }
 
 #[tauri::command]
-fn get_active_resource_packs(
-    app: tauri::AppHandle,
-    id: String,
-) -> Result<Vec<String>, String> {
+fn get_active_resource_packs(app: tauri::AppHandle, id: String) -> Result<Vec<String>, String> {
     visual_options::get_active_resource_packs(&app, &id)
 }
 
@@ -528,10 +574,7 @@ fn set_active_resource_packs(
 }
 
 #[tauri::command]
-fn get_active_shader_pack(
-    app: tauri::AppHandle,
-    id: String,
-) -> Result<Option<String>, String> {
+fn get_active_shader_pack(app: tauri::AppHandle, id: String) -> Result<Option<String>, String> {
     visual_options::get_active_shader_pack(&app, &id)
 }
 
@@ -567,7 +610,6 @@ async fn resolve_instance_dependencies(
 ) -> Result<Vec<String>, String> {
     safety::resolve_missing_dependencies(&app, &id).await
 }
-
 
 #[tauri::command]
 fn get_active_account(app: tauri::AppHandle) -> Result<Option<auth::PublicAccountInfo>, String> {
@@ -640,8 +682,16 @@ fn encode_base64_data_url(bytes: &[u8]) -> String {
     let mut encoded = String::with_capacity((bytes.len() + 2) / 3 * 4);
     for chunk in bytes.chunks(3) {
         let b0 = chunk[0] as usize;
-        let b1 = if chunk.len() > 1 { chunk[1] as usize } else { 0 };
-        let b2 = if chunk.len() > 2 { chunk[2] as usize } else { 0 };
+        let b1 = if chunk.len() > 1 {
+            chunk[1] as usize
+        } else {
+            0
+        };
+        let b2 = if chunk.len() > 2 {
+            chunk[2] as usize
+        } else {
+            0
+        };
 
         encoded.push(ALPHABET[(b0 >> 2) & 0x3F] as char);
         encoded.push(ALPHABET[((b0 << 4) | (b1 >> 4)) & 0x3F] as char);
@@ -667,7 +717,11 @@ async fn fetch_skin_as_data_url(app: tauri::AppHandle, url: String) -> Result<St
     let skins_dir = paths::skins_dir(&app)?;
     let mut hasher = Sha1::new();
     hasher.update(url.as_bytes());
-    let hash: String = hasher.finalize().into_iter().map(|b| format!("{:02x}", b)).collect();
+    let hash: String = hasher
+        .finalize()
+        .into_iter()
+        .map(|b| format!("{:02x}", b))
+        .collect();
     let cached_path = skins_dir.join(format!("{}.png", hash));
 
     // Fast-path: return cached skin file immediately without network latency
@@ -684,9 +738,16 @@ async fn fetch_skin_as_data_url(app: tauri::AppHandle, url: String) -> Result<St
         .build()
         .map_err(|e| e.to_string())?;
 
-    let res = client.get(&url).send().await.map_err(|e| format!("Failed to fetch skin: {}", e))?;
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch skin: {}", e))?;
     if res.status().is_success() {
-        let bytes = res.bytes().await.map_err(|e| format!("Failed to read skin bytes: {}", e))?;
+        let bytes = res
+            .bytes()
+            .await
+            .map_err(|e| format!("Failed to read skin bytes: {}", e))?;
         let _ = std::fs::write(&cached_path, &bytes);
         return Ok(encode_base64_data_url(&bytes));
     }
@@ -703,7 +764,10 @@ fn get_running_instances() -> Vec<minecraft::RunningInstanceInfo> {
 fn kill_instance(app: tauri::AppHandle, id: String) -> Result<(), String> {
     use tauri::Emitter;
     minecraft::terminate_running_instance(&id)?;
-    let _ = app.emit("running_instances_changed", minecraft::list_running_instances());
+    let _ = app.emit(
+        "running_instances_changed",
+        minecraft::list_running_instances(),
+    );
     Ok(())
 }
 
@@ -777,7 +841,11 @@ fn get_instance_logs(app: tauri::AppHandle, id: String) -> Result<String, String
 }
 
 #[tauri::command]
-fn open_instance_folder(app: tauri::AppHandle, id: String, subfolder: Option<String>) -> Result<(), String> {
+fn open_instance_folder(
+    app: tauri::AppHandle,
+    id: String,
+    subfolder: Option<String>,
+) -> Result<(), String> {
     let dir = instances::get_instance_dir(&app, &id)?;
     let game_dir = instances::get_instance_game_dir(&dir);
 
@@ -993,6 +1061,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             load_settings,
             save_settings,
+            set_discord_navigation,
             list_fonts,
             fetch_minecraft_news,
             list_java_runtimes,
@@ -1066,8 +1135,17 @@ pub fn run() {
             ping_minecraft_server,
             ingest_dropped_files
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .setup(|app| {
+            discord::init(app.handle().clone());
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|_app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                discord::shutdown();
+            }
+        });
 }
 
 #[cfg(test)]
@@ -1081,7 +1159,9 @@ mod tests {
 
     #[test]
     fn roundtrips_through_a_file() {
-        let path = scratch("roundtrip").join("SeraLauncher").join("settings.json");
+        let path = scratch("roundtrip")
+            .join("SeraLauncher")
+            .join("settings.json");
         let saved = Settings {
             appearance: "light".into(),
             font: "Inter".into(),
@@ -1093,6 +1173,8 @@ mod tests {
             gc_preset: "zgc".into(),
             java_optimize: false,
             jvm_args: "-Dsun.misc.URLClassPath.disableJarChecking=true".into(),
+            discord_rpc: true,
+            discord_detailed: false,
         };
 
         saved.write(&path).unwrap();
@@ -1169,7 +1251,6 @@ mod tests {
         assert_eq!(Settings::read(&path).sanitized().zoom, MAX_ZOOM);
         std::fs::remove_dir_all(&dir).ok();
     }
-
 
     #[test]
     fn an_unknown_gc_preset_falls_back_to_g1gc() {

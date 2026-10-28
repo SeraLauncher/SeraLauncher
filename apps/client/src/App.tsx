@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   AccountModal,
@@ -16,6 +17,7 @@ import {
   SettingsPage,
   SettingsRailNav,
   InstanceRailNav,
+  type DiscoveryCategory,
   type InstanceManagementTab,
   DEFAULT_ZOOM,
   MAX_ZOOM,
@@ -38,6 +40,32 @@ const SETTINGS = NAV.length - 1;
 
 /** the open rail, wide enough for a wordmark beside the logo */
 const OPEN_WIDTH = 200;
+
+/** the page the user is browsing in discovery, mapped to a presence status */
+const DISCOVERY_STATUS: Record<DiscoveryCategory, string> = {
+  modpack: "Searching Modpacks",
+  mods: "Searching Mods",
+  resourcepack: "Searching Resource Packs",
+  shader: "Searching Shaders",
+};
+
+/** the instance management tab the user is browsing, mapped to a status fragment */
+const INSTANCE_TAB_STATUS: Record<InstanceManagementTab, string> = {
+  overview: "Overview",
+  mods: "Mods",
+  resourcepacks: "Resource Packs",
+  shaders: "Shaders",
+  worlds: "Worlds",
+  servers: "Servers",
+  screenshots: "Screenshots",
+  settings: "Settings",
+};
+
+/** the settings tab the user is browsing, mapped to a status fragment */
+const SETTINGS_TAB_STATUS: Record<SettingsTab, string> = {
+  appearance: "Appearance",
+  java: "Java",
+};
 
 export default function App() {
   const { settings, update, fonts, javaRuntimes, systemMemoryMb, refreshJavaRuntimes } =
@@ -111,7 +139,36 @@ export default function App() {
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
   const [managingInstanceId, setManagingInstanceId] = useState<string | null>(null);
   const [instanceTab, setInstanceTab] = useState<InstanceManagementTab>("overview");
+  const [discoveryCategory, setDiscoveryCategory] = useState<DiscoveryCategory>("modpack");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // the discord presence reflects launcher navigation; a running game always keeps
+  // precedence on the backend, so only pages 0/1/2/settings need reporting here
+  useEffect(() => {
+    let status: string | null = null;
+    if (settings.discordRpc && settings.discordDetailed) {
+      if (page === 1) {
+        status = managingInstanceId
+          ? `Looking at instance ${INSTANCE_TAB_STATUS[instanceTab]}`
+          : "Finding some instance";
+      } else if (page === 2) {
+        status = DISCOVERY_STATUS[discoveryCategory];
+      } else if (page === SETTINGS) {
+        status = `Looking at ${SETTINGS_TAB_STATUS[settingsTab]} settings`;
+      }
+    }
+    invoke("set_discord_navigation", { status }).catch((err) =>
+      console.warn("sera: could not report navigation:", err),
+    );
+  }, [
+    page,
+    settingsTab,
+    instanceTab,
+    managingInstanceId,
+    discoveryCategory,
+    settings.discordRpc,
+    settings.discordDetailed,
+  ]);
 
   // Global shortcuts listener for Command Palette (Ctrl+K) and UI Zoom (Ctrl+Shift+-/+)
   useEffect(() => {
@@ -353,6 +410,8 @@ export default function App() {
                     onJavaOptimize={(javaOptimize) => update({ javaOptimize })}
                     onJvmArgs={(jvmArgs) => update({ jvmArgs })}
                     onRefreshJava={refreshJavaRuntimes}
+                    onDiscordRpc={(discordRpc) => update({ discordRpc })}
+                    onDiscordDetailed={(discordDetailed) => update({ discordDetailed })}
                   />
                 ) : page === 0 ? (
                   <HomePage
@@ -453,7 +512,12 @@ export default function App() {
                     }}
                   />
                 ) : page === 2 ? (
-                  <DiscoveryPage theme={theme} instances={instances} versions={versions} />
+                  <DiscoveryPage
+                    theme={theme}
+                    instances={instances}
+                    versions={versions}
+                    onCategoryChange={setDiscoveryCategory}
+                  />
                 ) : (
                   <>
                     <h1>{NAV[page].label}</h1>

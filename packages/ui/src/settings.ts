@@ -29,6 +29,11 @@ export const DEFAULT_GC_PRESET: GcPreset = "g1gc";
 export const DEFAULT_JAVA_OPTIMIZE = true;
 export const DEFAULT_JVM_ARGS = "";
 
+/** Discord Rich Presence switches. Detailed gates navigation labels and the
+ *  in-game world/server description behind "Playing Sera". */
+export const DEFAULT_DISCORD_RPC = true;
+export const DEFAULT_DISCORD_DETAILED = true;
+
 /** Default memory and runtime flags for Minecraft execution. */
 export const MEMORY_PRESETS = [
   { label: "2 GB", value: 2048 },
@@ -71,6 +76,8 @@ export type Settings = {
   gcPreset: GcPreset;
   javaOptimize: boolean;
   jvmArgs: string;
+  discordRpc: boolean;
+  discordDetailed: boolean;
 };
 
 export type ResolvedJavaArgs = {

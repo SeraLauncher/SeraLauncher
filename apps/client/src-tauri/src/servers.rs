@@ -1,7 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -118,12 +118,30 @@ fn parse_servers_nbt(data: &[u8]) -> Result<Vec<ServerEntry>, String> {
 
     fn skip_payload(tag: u8, data: &[u8], cursor: &mut usize) -> bool {
         match tag {
-            1 => { *cursor += 1; true }
-            2 => { *cursor += 2; true }
-            3 => { *cursor += 4; true }
-            4 => { *cursor += 8; true }
-            5 => { *cursor += 4; true }
-            6 => { *cursor += 8; true }
+            1 => {
+                *cursor += 1;
+                true
+            }
+            2 => {
+                *cursor += 2;
+                true
+            }
+            3 => {
+                *cursor += 4;
+                true
+            }
+            4 => {
+                *cursor += 8;
+                true
+            }
+            5 => {
+                *cursor += 4;
+                true
+            }
+            6 => {
+                *cursor += 8;
+                true
+            }
             7 => {
                 if let Some(len) = read_i32(data, cursor) {
                     *cursor += len.max(0) as usize;
@@ -424,21 +442,27 @@ pub async fn ping_server(address: &str) -> Result<ServerPingResult, String> {
     // 1. Send Handshake packet (Packet ID: 0x00, Protocol: -1, Host, Port, Next State: 1)
     let mut handshake_data = Vec::new();
     write_varint(&mut handshake_data, 0x00); // Packet ID
-    write_varint(&mut handshake_data, -1);   // Protocol version
+    write_varint(&mut handshake_data, -1); // Protocol version
     write_varint(&mut handshake_data, host.len() as i32);
     handshake_data.extend_from_slice(host.as_bytes());
     handshake_data.extend_from_slice(&port.to_be_bytes());
-    write_varint(&mut handshake_data, 1);    // Next state: 1 (status)
+    write_varint(&mut handshake_data, 1); // Next state: 1 (status)
 
     let mut handshake_packet = Vec::new();
     write_varint(&mut handshake_packet, handshake_data.len() as i32);
     handshake_packet.extend_from_slice(&handshake_data);
 
-    stream.write_all(&handshake_packet).await.map_err(|e| e.to_string())?;
+    stream
+        .write_all(&handshake_packet)
+        .await
+        .map_err(|e| e.to_string())?;
 
     // 2. Send Status Request packet (Packet ID: 0x00)
     let request_packet = [0x01, 0x00];
-    stream.write_all(&request_packet).await.map_err(|e| e.to_string())?;
+    stream
+        .write_all(&request_packet)
+        .await
+        .map_err(|e| e.to_string())?;
 
     // 3. Read Status Response
     let packet_len = read_varint(&mut stream).await?;
@@ -505,8 +529,16 @@ pub async fn ping_server(address: &str) -> Result<ServerPingResult, String> {
 
     Ok(ServerPingResult {
         motd,
-        version_name: parsed.version.as_ref().and_then(|v| v.name.clone()).unwrap_or_else(|| "Unknown".to_string()),
-        protocol: parsed.version.as_ref().and_then(|v| v.protocol).unwrap_or(0),
+        version_name: parsed
+            .version
+            .as_ref()
+            .and_then(|v| v.name.clone())
+            .unwrap_or_else(|| "Unknown".to_string()),
+        protocol: parsed
+            .version
+            .as_ref()
+            .and_then(|v| v.protocol)
+            .unwrap_or(0),
         players_online: parsed.players.as_ref().and_then(|p| p.online).unwrap_or(0),
         players_max: parsed.players.as_ref().and_then(|p| p.max).unwrap_or(0),
         ping_ms,
@@ -520,15 +552,13 @@ mod tests {
 
     #[test]
     fn roundtrips_servers_nbt() {
-        let entries = vec![
-            ServerEntry {
-                id: "nomad.aak.bar".to_string(),
-                name: "Nomad Survival".to_string(),
-                ip: "nomad.aak.bar:25565".to_string(),
-                icon: None,
-                accept_textures: Some(1),
-            },
-        ];
+        let entries = vec![ServerEntry {
+            id: "nomad.aak.bar".to_string(),
+            name: "Nomad Survival".to_string(),
+            ip: "nomad.aak.bar:25565".to_string(),
+            icon: None,
+            accept_textures: Some(1),
+        }];
 
         let temp_dir = std::env::temp_dir().join(format!("servers-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);

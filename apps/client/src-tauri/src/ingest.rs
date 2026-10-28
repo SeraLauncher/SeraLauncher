@@ -1,7 +1,7 @@
-use std::fs::File;
-use std::io::Read;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use std::fs::File;
+use std::io::Read;
 
 use crate::discovery::{strip_minecraft_formatting, write_addon_index};
 
@@ -72,9 +72,16 @@ pub fn ingest_dropped_files(
                     let bytes = std::fs::read(&dest).unwrap_or_default();
                     let mut hasher = Sha1::new();
                     hasher.update(&bytes);
-                    let hash: String = hasher.finalize().into_iter().map(|b| format!("{:02x}", b)).collect();
+                    let hash: String = hasher
+                        .finalize()
+                        .into_iter()
+                        .map(|b| format!("{:02x}", b))
+                        .collect();
 
-                    let stem = dest.file_stem().and_then(|s| s.to_str()).unwrap_or(&file_name);
+                    let stem = dest
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or(&file_name);
                     let mut display_name = stem.to_string();
 
                     if let Ok(f) = File::open(&dest) {
@@ -140,20 +147,37 @@ pub fn ingest_dropped_files(
             match inspect_result {
                 Ok(mut archive) => {
                     let has_shaders = archive.by_name("shaders/").is_ok()
-                        || (0..archive.len()).any(|i| archive.by_index(i).map(|e| e.name().starts_with("shaders/")).unwrap_or(false));
+                        || (0..archive.len()).any(|i| {
+                            archive
+                                .by_index(i)
+                                .map(|e| e.name().starts_with("shaders/"))
+                                .unwrap_or(false)
+                        });
                     let has_mcmeta = archive.by_name("pack.mcmeta").is_ok();
                     let has_level_dat = archive.by_name("level.dat").is_ok()
-                        || (0..archive.len()).any(|i| archive.by_index(i).map(|e| e.name().ends_with("level.dat")).unwrap_or(false));
+                        || (0..archive.len()).any(|i| {
+                            archive
+                                .by_index(i)
+                                .map(|e| e.name().ends_with("level.dat"))
+                                .unwrap_or(false)
+                        });
 
                     if has_level_dat {
                         // World save zip
-                        match crate::worlds::import_world_zip(app, instance_id, &source_path.to_string_lossy()) {
+                        match crate::worlds::import_world_zip(
+                            app,
+                            instance_id,
+                            &source_path.to_string_lossy(),
+                        ) {
                             Ok(w) => {
                                 results.push(IngestedItem {
                                     file_name: file_name.clone(),
                                     display_name: w.name,
                                     category: "world".to_string(),
-                                    target_path: saves_dir.join(&w.folder_name).to_string_lossy().to_string(),
+                                    target_path: saves_dir
+                                        .join(&w.folder_name)
+                                        .to_string_lossy()
+                                        .to_string(),
                                     success: true,
                                     error: None,
                                 });
@@ -177,8 +201,15 @@ pub fn ingest_dropped_files(
                                 let bytes = std::fs::read(&dest).unwrap_or_default();
                                 let mut hasher = Sha1::new();
                                 hasher.update(&bytes);
-                                let hash: String = hasher.finalize().into_iter().map(|b| format!("{:02x}", b)).collect();
-                                let stem = dest.file_stem().and_then(|s| s.to_str()).unwrap_or(&file_name);
+                                let hash: String = hasher
+                                    .finalize()
+                                    .into_iter()
+                                    .map(|b| format!("{:02x}", b))
+                                    .collect();
+                                let stem = dest
+                                    .file_stem()
+                                    .and_then(|s| s.to_str())
+                                    .unwrap_or(&file_name);
                                 let display_name = strip_minecraft_formatting(stem);
 
                                 write_addon_index(
@@ -223,8 +254,15 @@ pub fn ingest_dropped_files(
                                 let bytes = std::fs::read(&dest).unwrap_or_default();
                                 let mut hasher = Sha1::new();
                                 hasher.update(&bytes);
-                                let hash: String = hasher.finalize().into_iter().map(|b| format!("{:02x}", b)).collect();
-                                let stem = dest.file_stem().and_then(|s| s.to_str()).unwrap_or(&file_name);
+                                let hash: String = hasher
+                                    .finalize()
+                                    .into_iter()
+                                    .map(|b| format!("{:02x}", b))
+                                    .collect();
+                                let stem = dest
+                                    .file_stem()
+                                    .and_then(|s| s.to_str())
+                                    .unwrap_or(&file_name);
                                 let display_name = strip_minecraft_formatting(stem);
 
                                 write_addon_index(

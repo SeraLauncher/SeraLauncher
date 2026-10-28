@@ -1811,6 +1811,8 @@ function InstanceManagementView({
       gcPreset: "g1gc",
       javaOptimize: true,
       jvmArgs,
+      discordRpc: true,
+      discordDetailed: true,
     };
   }, [customJava, minMemory, maxMemory, jvmArgs]);
 

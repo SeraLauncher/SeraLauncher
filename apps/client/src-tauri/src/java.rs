@@ -263,7 +263,9 @@ fn candidate_paths() -> Vec<PathBuf> {
         }
 
         if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-            let adoptium = PathBuf::from(local_app_data).join("Programs").join("Eclipse Adoptium");
+            let adoptium = PathBuf::from(local_app_data)
+                .join("Programs")
+                .join("Eclipse Adoptium");
             if let Ok(entries) = std::fs::read_dir(adoptium) {
                 for entry in entries.flatten() {
                     candidates.push(entry.path().join("bin").join("javaw.exe"));
@@ -297,7 +299,9 @@ pub fn discover_java_runtimes_with_extra(extra_roots: &[PathBuf]) -> Vec<JavaRun
                                 candidates.push(sp.join("bin").join("java"));
                                 candidates.push(sp.join("bin").join("javaw.exe"));
                                 candidates.push(sp.join("bin").join("java.exe"));
-                                candidates.push(sp.join("Contents").join("Home").join("bin").join("java"));
+                                candidates.push(
+                                    sp.join("Contents").join("Home").join("bin").join("java"),
+                                );
                             }
                         }
                     }
@@ -453,13 +457,19 @@ OpenJDK 64-Bit Server VM (build 21.0.2+13, mixed mode, sharing)"#;
     fn discovers_at_least_one_system_java_on_host() {
         let runtimes = discover_java_runtimes();
         // this machine has java 17 and java 22 installed
-        assert!(!runtimes.is_empty(), "expected host java runtimes to be discovered");
+        assert!(
+            !runtimes.is_empty(),
+            "expected host java runtimes to be discovered"
+        );
         assert!(runtimes[0].major_version >= 17);
     }
 
     #[test]
     fn reports_positive_system_memory() {
         let mem = system_total_memory_mb();
-        assert!(mem >= 1024, "expected at least 1GB total memory, got {mem} MB");
+        assert!(
+            mem >= 1024,
+            "expected at least 1GB total memory, got {mem} MB"
+        );
     }
 }
