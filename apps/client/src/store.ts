@@ -3,14 +3,19 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   BUNDLED_FAMILY,
+  DEFAULT_DISCORD_DETAILED,
+  DEFAULT_DISCORD_RPC,
   DEFAULT_FONT_SIZE,
   DEFAULT_GC_PRESET,
   DEFAULT_JAVA_OPTIMIZE,
   DEFAULT_JVM_ARGS,
   DEFAULT_MAX_MEMORY,
   DEFAULT_MIN_MEMORY,
+  DEFAULT_ZOOM,
   MAX_FONT_SIZE,
+  MAX_ZOOM,
   MIN_FONT_SIZE,
+  MIN_ZOOM,
   type FontChoice,
   type GcPreset,
   type JavaRuntime,
@@ -29,12 +34,15 @@ const DEFAULTS: Settings = {
   appearance: "dark",
   font: BUNDLED_FAMILY,
   fontSize: DEFAULT_FONT_SIZE,
+  zoom: DEFAULT_ZOOM,
   javaPath: null,
   minMemory: DEFAULT_MIN_MEMORY,
   maxMemory: DEFAULT_MAX_MEMORY,
   gcPreset: DEFAULT_GC_PRESET,
   javaOptimize: DEFAULT_JAVA_OPTIMIZE,
   jvmArgs: DEFAULT_JVM_ARGS,
+  discordRpc: DEFAULT_DISCORD_RPC,
+  discordDetailed: DEFAULT_DISCORD_DETAILED,
 };
 
 /** Anything the ui does not recognise is replaced, so a hand-edited or older settings
@@ -58,6 +66,7 @@ function usable(loaded: Partial<Settings>): Settings {
       MAX_FONT_SIZE,
       Math.max(MIN_FONT_SIZE, Math.round(Number(loaded.fontSize) || DEFAULTS.fontSize)),
     ),
+    zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(Number(loaded.zoom) || DEFAULTS.zoom))),
     javaPath: loaded.javaPath?.trim() ? loaded.javaPath : null,
     minMemory: clampedMin,
     maxMemory: clampedMax,
@@ -65,6 +74,11 @@ function usable(loaded: Partial<Settings>): Settings {
     javaOptimize:
       typeof loaded.javaOptimize === "boolean" ? loaded.javaOptimize : DEFAULTS.javaOptimize,
     jvmArgs: typeof loaded.jvmArgs === "string" ? loaded.jvmArgs : DEFAULTS.jvmArgs,
+    discordRpc: typeof loaded.discordRpc === "boolean" ? loaded.discordRpc : DEFAULTS.discordRpc,
+    discordDetailed:
+      typeof loaded.discordDetailed === "boolean"
+        ? loaded.discordDetailed
+        : DEFAULTS.discordDetailed,
   };
 }
 

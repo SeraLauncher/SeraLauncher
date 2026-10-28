@@ -14,6 +14,9 @@ import {
   DEFAULT_JVM_ARGS,
   DEFAULT_MAX_MEMORY,
   DEFAULT_MIN_MEMORY,
+  DEFAULT_ZOOM,
+  MAX_ZOOM,
+  MIN_ZOOM,
   type Appearance,
   type FontChoice,
   type GcPreset,
@@ -49,6 +52,7 @@ export function SettingsPage({
   javaRuntimes = [],
   systemMemoryMb = 8192,
   onFont,
+  onZoom,
   onAppearance,
   onJavaPath,
   onMemory,
@@ -56,6 +60,8 @@ export function SettingsPage({
   onJavaOptimize,
   onJvmArgs,
   onRefreshJava,
+  onDiscordRpc,
+  onDiscordDetailed,
 }: {
   activeTab?: SettingsTab;
   settings: Settings;
@@ -65,6 +71,7 @@ export function SettingsPage({
   systemMemoryMb?: number;
   onFont: (font: FontChoice) => void;
   onFontSize?: (size: number) => void;
+  onZoom?: (zoom: number) => void;
   onAppearance: (appearance: Appearance) => void;
   onJavaPath?: (javaPath: string | null) => void;
   onMemory?: (minMemory: number, maxMemory: number) => void;
@@ -72,6 +79,8 @@ export function SettingsPage({
   onJavaOptimize?: (javaOptimize: boolean) => void;
   onJvmArgs?: (jvmArgs: string) => void;
   onRefreshJava?: () => void;
+  onDiscordRpc?: (enabled: boolean) => void;
+  onDiscordDetailed?: (detailed: boolean) => void;
 }) {
   const [customPathMode, setCustomPathMode] = useState(
     () => Boolean(settings.javaPath) && !javaRuntimes.some((r) => r.path === settings.javaPath),
@@ -693,6 +702,150 @@ export function SettingsPage({
               }}
             >
               <Icon name="reset" size={16} color="currentColor" />
+            </button>
+          }
+        />
+      </Group>
+
+      {/* Interface Scale / Zoom Section */}
+      <Group title="Interface scale" theme={theme}>
+        <Row
+          label="Zoom level"
+          hint="Scales the launcher interface for higher or lower resolution displays. Shortcut: Ctrl + Shift + - / +"
+          theme={theme}
+          control={
+            <div className="flex flex-col gap-2 py-1 w-full min-w-[240px]">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span style={{ color: theme.mutedForeground }}>Current scale:</span>
+                <strong style={{ color: theme.foreground }}>{settings.zoom}%</strong>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onZoom?.(Math.max(MIN_ZOOM, settings.zoom - 5))}
+                  disabled={settings.zoom <= MIN_ZOOM}
+                  title="Zoom out"
+                  aria-label="Zoom out"
+                  className="flex items-center justify-center size-7 rounded-lg border border-border bg-secondary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  style={{ color: theme.foreground }}
+                >
+                  <Icon name="minus" size={14} color="currentColor" />
+                </button>
+                <input
+                  type="range"
+                  className="settings-slider flex-1 h-1.5 rounded-full bg-secondary outline-none cursor-pointer appearance-none"
+                  min={MIN_ZOOM}
+                  max={MAX_ZOOM}
+                  step={5}
+                  value={settings.zoom}
+                  style={{
+                    background: `linear-gradient(to right, ${theme.primary} 0%, ${theme.primary} ${((settings.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100}%, ${theme.secondary} ${((settings.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100}%, ${theme.secondary} 100%)`,
+                  }}
+                  onChange={(e) => onZoom?.(Number(e.target.value))}
+                />
+                <button
+                  type="button"
+                  onClick={() => onZoom?.(Math.min(MAX_ZOOM, settings.zoom + 5))}
+                  disabled={settings.zoom >= MAX_ZOOM}
+                  title="Zoom in"
+                  aria-label="Zoom in"
+                  className="flex items-center justify-center size-7 rounded-lg border border-border bg-secondary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  style={{ color: theme.foreground }}
+                >
+                  <Icon name="plus" size={14} color="currentColor" />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {[75, 90, 100, 110, 125, 150].map((preset) => {
+                  const isActive = settings.zoom === preset;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      className="px-2 py-0.5 rounded-md text-xs font-medium cursor-pointer border border-border transition-colors"
+                      style={{
+                        background: isActive ? theme.primary : theme.secondary,
+                        color: isActive ? theme.primaryForeground : theme.foreground,
+                      }}
+                      onClick={() => onZoom?.(preset)}
+                    >
+                      {preset}%
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          }
+          action={
+            <button
+              type="button"
+              onClick={() => onZoom?.(DEFAULT_ZOOM)}
+              disabled={settings.zoom === DEFAULT_ZOOM}
+              title="Reset zoom to 100%"
+              aria-label="Reset zoom to 100%"
+              className="transition-colors disabled:opacity-30 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:opacity-80"
+              style={{
+                color: settings.zoom === DEFAULT_ZOOM ? theme.mutedForeground : theme.primary,
+              }}
+            >
+              <Icon name="reset" size={16} color="currentColor" />
+            </button>
+          }
+        />
+      </Group>
+
+      {/* Discord Rich Presence Section */}
+      <Group title="Discord Rich Presence" theme={theme}>
+        <Row
+          label="Rich Presence"
+          hint="Share your Sera activity on your Discord profile"
+          theme={theme}
+          control={
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.discordRpc}
+              aria-label="Toggle Discord rich presence"
+              className="relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out outline-none"
+              style={{
+                background: settings.discordRpc ? theme.primary : theme.secondary,
+              }}
+              onClick={() => onDiscordRpc?.(!settings.discordRpc)}
+            >
+              <span
+                className="pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform duration-150 ease-in-out"
+                style={{
+                  background: settings.discordRpc ? theme.card : theme.mutedForeground,
+                  transform: settings.discordRpc ? "translateX(22px)" : "translateX(2px)",
+                }}
+              />
+            </button>
+          }
+        />
+        <Row
+          label="Detailed information"
+          hint={`While discovering or in settings, disclose your current page; while in a world,${"\n"}disclose whether you are surviving or on a server`}
+          theme={theme}
+          control={
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.discordDetailed}
+              disabled={!settings.discordRpc}
+              aria-label="Toggle detailed presence information"
+              className={`relative inline-flex items-center h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out outline-none ${settings.discordRpc ? "cursor-pointer" : "cursor-not-allowed opacity-40"}`}
+              style={{
+                background: settings.discordDetailed ? theme.primary : theme.secondary,
+              }}
+              onClick={() => onDiscordDetailed?.(!settings.discordDetailed)}
+            >
+              <span
+                className="pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform duration-150 ease-in-out"
+                style={{
+                  background: settings.discordDetailed ? theme.card : theme.mutedForeground,
+                  transform: settings.discordDetailed ? "translateX(22px)" : "translateX(2px)",
+                }}
+              />
             </button>
           }
         />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
   AccountModal,
@@ -16,7 +17,11 @@ import {
   SettingsPage,
   SettingsRailNav,
   InstanceRailNav,
+  type DiscoveryCategory,
   type InstanceManagementTab,
+  DEFAULT_ZOOM,
+  MAX_ZOOM,
+  MIN_ZOOM,
   fade,
   fontFamily,
   pageFade,
@@ -37,7 +42,31 @@ const SETTINGS = NAV.length - 1;
 /** the open rail, wide enough for a wordmark beside the logo */
 const OPEN_WIDTH = 200;
 
-const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
+/** the page the user is browsing in discovery, mapped to a presence status */
+const DISCOVERY_STATUS: Record<DiscoveryCategory, string> = {
+  modpack: "Searching Modpacks",
+  mods: "Searching Mods",
+  resourcepack: "Searching Resource Packs",
+  shader: "Searching Shaders",
+};
+
+/** the instance management tab the user is browsing, mapped to a status fragment */
+const INSTANCE_TAB_STATUS: Record<InstanceManagementTab, string> = {
+  overview: "Overview",
+  mods: "Mods",
+  resourcepacks: "Resource Packs",
+  shaders: "Shaders",
+  worlds: "Worlds",
+  servers: "Servers",
+  screenshots: "Screenshots",
+  settings: "Settings",
+};
+
+/** the settings tab the user is browsing, mapped to a status fragment */
+const SETTINGS_TAB_STATUS: Record<SettingsTab, string> = {
+  appearance: "Appearance",
+  java: "Java",
+};
 
 export default function App() {
   const { settings, update, fonts, javaRuntimes, systemMemoryMb, refreshJavaRuntimes } =
@@ -111,19 +140,86 @@ export default function App() {
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
   const [managingInstanceId, setManagingInstanceId] = useState<string | null>(null);
   const [instanceTab, setInstanceTab] = useState<InstanceManagementTab>("overview");
+  const [discoveryCategory, setDiscoveryCategory] = useState<DiscoveryCategory>("modpack");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-  // Global Ctrl+K / Cmd+K shortcut listener to toggle Command Palette
+  // the discord presence reflects launcher navigation; a running game always keeps
+  // precedence on the backend, so only pages 0/1/2/settings need reporting here
+  useEffect(() => {
+    let status: string | null = null;
+    if (settings.discordRpc && settings.discordDetailed) {
+      if (page === 1) {
+        status = managingInstanceId
+          ? `Looking at instance ${INSTANCE_TAB_STATUS[instanceTab]}`
+          : "Finding some instance";
+      } else if (page === 2) {
+        status = DISCOVERY_STATUS[discoveryCategory];
+      } else if (page === SETTINGS) {
+        status = `Looking at ${SETTINGS_TAB_STATUS[settingsTab]} settings`;
+      }
+    }
+    invoke("set_discord_navigation", { status }).catch((err) =>
+      console.warn("sera: could not report navigation:", err),
+    );
+  }, [
+    page,
+    settingsTab,
+    instanceTab,
+    managingInstanceId,
+    discoveryCategory,
+    settings.discordRpc,
+    settings.discordDetailed,
+  ]);
+
+  // Global shortcuts listener for Command Palette (Ctrl+K) and UI Zoom (Ctrl+Shift+-/+)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      const modifier = e.metaKey || e.ctrlKey;
+      if (!modifier) return;
+
+      if (e.key.toLowerCase() === "k") {
         e.preventDefault();
         setCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // Zoom in shortcut: Ctrl/Cmd + Shift + Plus / Equal / NumpadAdd
+      const isZoomIn =
+        (e.shiftKey && (e.key === "+" || e.key === "=" || e.code === "Equal")) ||
+        e.key === "+" ||
+        e.code === "NumpadAdd";
+
+      // Zoom out shortcut: Ctrl/Cmd + Shift + Minus / Underscore / NumpadSubtract
+      const isZoomOut =
+        (e.shiftKey && (e.key === "_" || e.key === "-" || e.code === "Minus")) ||
+        e.key === "-" ||
+        e.code === "NumpadSubtract";
+
+      // Zoom reset shortcut: Ctrl/Cmd + 0 or Ctrl/Cmd + Shift + 0
+      const isZoomReset =
+        (e.shiftKey && (e.key === ")" || e.key === "0" || e.code === "Digit0")) ||
+        e.key === "0" ||
+        e.code === "Numpad0";
+
+      if (isZoomIn) {
+        e.preventDefault();
+        update({ zoom: Math.min(MAX_ZOOM, settings.zoom + 5) });
+      } else if (isZoomOut) {
+        e.preventDefault();
+        update({ zoom: Math.max(MIN_ZOOM, settings.zoom - 5) });
+      } else if (isZoomReset) {
+        e.preventDefault();
+        update({ zoom: DEFAULT_ZOOM });
       }
     };
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, []);
+  }, [settings.zoom, update]);
+
+  // Sync zoom setting to document element for proportional application scaling
+  useEffect(() => {
+    document.documentElement.style.zoom = `${settings.zoom}%`;
+  }, [settings.zoom]);
 
   // Ensure frameless window on Windows/Linux
   useEffect(() => {
@@ -340,6 +436,7 @@ export default function App() {
                     javaRuntimes={javaRuntimes}
                     systemMemoryMb={systemMemoryMb}
                     onFont={(font) => update({ font })}
+                    onZoom={(zoom) => update({ zoom })}
                     onAppearance={(appearance: Appearance) => update({ appearance })}
                     onJavaPath={(javaPath) => update({ javaPath })}
                     onMemory={(minMemory, maxMemory) => update({ minMemory, maxMemory })}
@@ -347,6 +444,8 @@ export default function App() {
                     onJavaOptimize={(javaOptimize) => update({ javaOptimize })}
                     onJvmArgs={(jvmArgs) => update({ jvmArgs })}
                     onRefreshJava={refreshJavaRuntimes}
+                    onDiscordRpc={(discordRpc) => update({ discordRpc })}
+                    onDiscordDetailed={(discordDetailed) => update({ discordDetailed })}
                   />
                 ) : page === 0 ? (
                   <HomePage
@@ -447,7 +546,12 @@ export default function App() {
                     }}
                   />
                 ) : page === 2 ? (
-                  <DiscoveryPage theme={theme} instances={instances} versions={versions} />
+                  <DiscoveryPage
+                    theme={theme}
+                    instances={instances}
+                    versions={versions}
+                    onCategoryChange={setDiscoveryCategory}
+                  />
                 ) : (
                   <>
                     <h1>{NAV[page].label}</h1>

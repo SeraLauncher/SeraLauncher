@@ -43,7 +43,7 @@ import type {
 } from "../instance";
 import { formatPlayTime } from "../instance";
 import type { JavaRuntime, Settings } from "../settings";
-import { DEFAULT_MIN_MEMORY, DEFAULT_MAX_MEMORY, MEMORY_PRESETS } from "../settings";
+import { DEFAULT_MIN_MEMORY, DEFAULT_MAX_MEMORY, DEFAULT_ZOOM, MEMORY_PRESETS } from "../settings";
 import { Dropdown } from "./Dropdown";
 import { EffectiveJavaArgsModal } from "./EffectiveJavaArgsModal";
 import { InstanceAddonsTab } from "./InstanceAddonsTab";
@@ -1805,12 +1805,15 @@ function InstanceManagementView({
       appearance: "dark",
       font: "Sunghyun Sans",
       fontSize: 16,
+      zoom: DEFAULT_ZOOM,
       javaPath: customJava || null,
       minMemory,
       maxMemory,
       gcPreset: "g1gc",
       javaOptimize: true,
       jvmArgs,
+      discordRpc: true,
+      discordDetailed: true,
     };
   }, [customJava, minMemory, maxMemory, jvmArgs]);
 

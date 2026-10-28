@@ -1,7 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
 
 use crate::instances::Instance;
 
@@ -30,7 +30,13 @@ pub struct ExportResult {
 fn sanitize_filename(name: &str) -> String {
     let clean: String = name
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == ' ' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' || c == ' ' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     let trimmed = clean.trim();
     if trimmed.is_empty() {
@@ -176,8 +182,13 @@ pub fn export_instance(
     let downloads_dir = resolve_downloads_dir();
     let output_path = downloads_dir.join(&file_name);
 
-    let file = File::create(&output_path)
-        .map_err(|e| format!("Failed to create export file {}: {}", output_path.display(), e))?;
+    let file = File::create(&output_path).map_err(|e| {
+        format!(
+            "Failed to create export file {}: {}",
+            output_path.display(),
+            e
+        )
+    })?;
 
     let mut zip = zip::ZipWriter::new(file);
     let zip_opts = zip::write::SimpleFileOptions::default()
@@ -219,15 +230,24 @@ pub fn export_instance(
                                 let trimmed = line.trim();
                                 if trimmed.starts_with("filename =") {
                                     if let Some(val) = trimmed.split('=').nth(1) {
-                                        fname = val.trim().trim_matches(|c| c == '"' || c == '\'').to_string();
+                                        fname = val
+                                            .trim()
+                                            .trim_matches(|c| c == '"' || c == '\'')
+                                            .to_string();
                                     }
                                 } else if trimmed.starts_with("url =") {
                                     if let Some(val) = trimmed.split('=').nth(1) {
-                                        url = val.trim().trim_matches(|c| c == '"' || c == '\'').to_string();
+                                        url = val
+                                            .trim()
+                                            .trim_matches(|c| c == '"' || c == '\'')
+                                            .to_string();
                                     }
                                 } else if trimmed.starts_with("hash =") {
                                     if let Some(val) = trimmed.split('=').nth(1) {
-                                        sha1_hash = val.trim().trim_matches(|c| c == '"' || c == '\'').to_string();
+                                        sha1_hash = val
+                                            .trim()
+                                            .trim_matches(|c| c == '"' || c == '\'')
+                                            .to_string();
                                     }
                                 } else if trimmed.starts_with("size_bytes =") {
                                     if let Some(val) = trimmed.split('=').nth(1) {
@@ -280,7 +300,12 @@ pub fn export_instance(
             }
             let options_shaders = mc_dir.join("optionsshaders.txt");
             if options_shaders.is_file() {
-                add_path_to_zip(&mut zip, &options_shaders, "overrides/optionsshaders.txt", zip_opts)?;
+                add_path_to_zip(
+                    &mut zip,
+                    &options_shaders,
+                    "overrides/optionsshaders.txt",
+                    zip_opts,
+                )?;
             }
         }
 
@@ -336,7 +361,12 @@ pub fn export_instance(
             }
             let options_shaders = mc_dir.join("optionsshaders.txt");
             if options_shaders.is_file() {
-                add_path_to_zip(&mut zip, &options_shaders, "minecraft/optionsshaders.txt", zip_opts)?;
+                add_path_to_zip(
+                    &mut zip,
+                    &options_shaders,
+                    "minecraft/optionsshaders.txt",
+                    zip_opts,
+                )?;
             }
         }
 
@@ -362,9 +392,12 @@ pub fn export_instance(
         }
     }
 
-    zip.finish().map_err(|e| format!("Failed to finalize export archive: {}", e))?;
+    zip.finish()
+        .map_err(|e| format!("Failed to finalize export archive: {}", e))?;
 
-    let size_bytes = std::fs::metadata(&output_path).map(|m| m.len()).unwrap_or(0);
+    let size_bytes = std::fs::metadata(&output_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
 
     Ok(ExportResult {
         output_path: output_path.to_string_lossy().to_string(),

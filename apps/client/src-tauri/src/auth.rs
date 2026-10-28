@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use md5::{Digest, Md5};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::paths::accounts_file_path;
@@ -60,7 +60,6 @@ pub struct PublicAccountInfo {
     pub skin_url: Option<String>,
     pub is_active: bool,
 }
-
 
 /// Standardises a 32-hex character Yggdrasil UUID into standard 8-4-4-4-12 hyphenated format.
 pub fn format_uuid_with_dashes(raw: &str) -> String {
@@ -147,7 +146,10 @@ pub fn add_offline_account(
     if username.len() > 16 {
         return Err("Player name must be 16 characters or fewer.".to_string());
     }
-    if !username.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+    if !username
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '_')
+    {
         return Err("Player name can only contain letters, numbers, and underscores.".to_string());
     }
 
@@ -197,10 +199,15 @@ pub fn save_account_database(app: &tauri::AppHandle, db: &AccountDatabase) -> Re
         let _ = std::fs::create_dir_all(parent);
     }
     let json = serde_json::to_string_pretty(db).map_err(|e| e.to_string())?;
-    std::fs::write(&path, json).map_err(|e| e.to_string())
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    // the small presence badge shows the active account name; refresh it live
+    crate::discord::refresh();
+    Ok(())
 }
 
-pub fn get_active_account_info(app: &tauri::AppHandle) -> Result<Option<PublicAccountInfo>, String> {
+pub fn get_active_account_info(
+    app: &tauri::AppHandle,
+) -> Result<Option<PublicAccountInfo>, String> {
     let db = load_account_database(app);
     if let Some(active_id) = &db.active_account_id {
         if let Some(acc) = db.accounts.iter().find(|a| &a.id == active_id) {
@@ -261,7 +268,10 @@ pub async fn start_device_code_flow() -> Result<DeviceCodeResponse, String> {
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
 
-    let body_str = format!("client_id={}&scope=XboxLive.signin%20offline_access", MS_CLIENT_ID);
+    let body_str = format!(
+        "client_id={}&scope=XboxLive.signin%20offline_access",
+        MS_CLIENT_ID
+    );
 
     let res = client
         .post("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode")
@@ -384,8 +394,12 @@ pub async fn poll_device_code(
         return Err(format!("Microsoft authorization error: {}", desc));
     }
 
-    let ms_access = token_res.access_token.ok_or("No Microsoft access token returned")?;
-    let ms_refresh = token_res.refresh_token.ok_or("No Microsoft refresh token returned")?;
+    let ms_access = token_res
+        .access_token
+        .ok_or("No Microsoft access token returned")?;
+    let ms_refresh = token_res
+        .refresh_token
+        .ok_or("No Microsoft refresh token returned")?;
 
     // Complete the full chain to Minecraft profile
     let account = authenticate_minecraft_chain(&client, &ms_access, &ms_refresh).await?;
@@ -452,10 +466,7 @@ async fn authenticate_minecraft_chain(
     // 2. XSTS Token Authentication
     let mut xsts_req_props = HashMap::new();
     xsts_req_props.insert("SandboxId", serde_json::json!("RETAIL"));
-    xsts_req_props.insert(
-        "UserTokens",
-        serde_json::json!(vec![xbl_token.as_str()]),
-    );
+    xsts_req_props.insert("UserTokens", serde_json::json!(vec![xbl_token.as_str()]));
 
     let mut xsts_body = HashMap::new();
     xsts_body.insert("Properties", serde_json::json!(xsts_req_props));
@@ -473,7 +484,10 @@ async fn authenticate_minecraft_chain(
         .map_err(|e| format!("XSTS authorization request failed: {}", e))?;
 
     let xsts_status = xsts_res.status();
-    let xsts_raw = xsts_res.text().await.map_err(|e| format!("Failed to read XSTS response: {}", e))?;
+    let xsts_raw = xsts_res
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read XSTS response: {}", e))?;
 
     if !xsts_status.is_success() {
         #[derive(Deserialize)]
@@ -504,7 +518,10 @@ async fn authenticate_minecraft_chain(
                 }
             }
         }
-        return Err("Failed to obtain XSTS token from Xbox Live. Please check your Xbox account status.".into());
+        return Err(
+            "Failed to obtain XSTS token from Xbox Live. Please check your Xbox account status."
+                .into(),
+        );
     }
 
     let xsts_data: XboxLiveAuthResponse = serde_json::from_str(&xsts_raw)
@@ -524,7 +541,10 @@ async fn authenticate_minecraft_chain(
         .map_err(|e| format!("Minecraft login request failed: {}", e))?;
 
     let mc_status = mc_login_res.status();
-    let mc_text = mc_login_res.text().await.map_err(|e| format!("Failed to read Minecraft login response: {}", e))?;
+    let mc_text = mc_login_res
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read Minecraft login response: {}", e))?;
 
     if !mc_status.is_success() {
         #[derive(Deserialize)]
@@ -538,7 +558,10 @@ async fn authenticate_minecraft_chain(
                 return Err(format!("Minecraft Services error: {}", msg));
             }
         }
-        return Err(format!("Failed to authenticate with Minecraft services (HTTP {}): {}", mc_status, mc_text));
+        return Err(format!(
+            "Failed to authenticate with Minecraft services (HTTP {}): {}",
+            mc_status, mc_text
+        ));
     }
 
     let mc_login: McLoginResponse = serde_json::from_str(&mc_text)
@@ -565,15 +588,13 @@ async fn authenticate_minecraft_chain(
         .await
         .map_err(|e| format!("Failed to parse Minecraft profile: {}", e))?;
 
-    let skin_url = profile
-        .skins
-        .and_then(|skins| {
-            skins
-                .iter()
-                .find(|s| s.state.as_deref() == Some("ACTIVE"))
-                .or_else(|| skins.first())
-                .map(|s| s.url.clone())
-        });
+    let skin_url = profile.skins.and_then(|skins| {
+        skins
+            .iter()
+            .find(|s| s.state.as_deref() == Some("ACTIVE"))
+            .or_else(|| skins.first())
+            .map(|s| s.url.clone())
+    });
 
     let now_epoch = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -762,7 +783,6 @@ struct YggdrasilErrorResponse {
     error_message: Option<String>,
 }
 
-
 fn base64_decode(input: &str) -> Option<Vec<u8>> {
     let mut out = Vec::new();
     let mut buf: u32 = 0;
@@ -788,7 +808,10 @@ fn base64_decode(input: &str) -> Option<Vec<u8>> {
 }
 
 /// Resolves real 64x64 skin texture from a Yggdrasil profile's textures property
-async fn fetch_yggdrasil_skin_texture(client: &reqwest::Client, profile_url: &str) -> Option<String> {
+async fn fetch_yggdrasil_skin_texture(
+    client: &reqwest::Client,
+    profile_url: &str,
+) -> Option<String> {
     #[derive(Deserialize)]
     struct ProfileProperty {
         name: String,
@@ -890,7 +913,10 @@ pub async fn login_elyby(
         .map_err(|e| format!("Failed to connect to Ely.by auth server: {}", e))?;
 
     let status = res.status();
-    let body_text = res.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+    let body_text = res
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
 
     if !status.is_success() {
         return Err(parse_yggdrasil_error(status, &body_text));
@@ -943,7 +969,9 @@ pub async fn login_elyby(
 
 /// Automatically refreshes skin URLs for all stored online accounts (Ely.by, LittleSkin, Microsoft).
 /// Queries provider public session profile endpoints and extracts the latest skin texture.
-pub async fn refresh_account_skins(app: &tauri::AppHandle) -> Result<Option<PublicAccountInfo>, String> {
+pub async fn refresh_account_skins(
+    app: &tauri::AppHandle,
+) -> Result<Option<PublicAccountInfo>, String> {
     let mut db = load_account_database(app);
     if db.accounts.is_empty() {
         return Ok(None);
@@ -960,9 +988,18 @@ pub async fn refresh_account_skins(app: &tauri::AppHandle) -> Result<Option<Publ
     for account in &mut db.accounts {
         let raw_uuid = account.uuid.replace('-', "");
         let profile_url = match account.account_type.as_str() {
-            "elyby" => Some(format!("https://authserver.ely.by/session/profile/{}", raw_uuid)),
-            "littleskin" => Some(format!("https://littleskin.cn/api/yggdrasil/sessionserver/session/minecraft/profile/{}", raw_uuid)),
-            "microsoft" => Some(format!("https://sessionserver.mojang.com/session/minecraft/profile/{}", raw_uuid)),
+            "elyby" => Some(format!(
+                "https://authserver.ely.by/session/profile/{}",
+                raw_uuid
+            )),
+            "littleskin" => Some(format!(
+                "https://littleskin.cn/api/yggdrasil/sessionserver/session/minecraft/profile/{}",
+                raw_uuid
+            )),
+            "microsoft" => Some(format!(
+                "https://sessionserver.mojang.com/session/minecraft/profile/{}",
+                raw_uuid
+            )),
             _ => None,
         };
 
@@ -981,7 +1018,10 @@ pub async fn refresh_account_skins(app: &tauri::AppHandle) -> Result<Option<Publ
     }
 
     let active_id = db.active_account_id.as_deref();
-    let active_info = db.accounts.iter().find(|a| Some(a.id.as_str()) == active_id || active_id.is_none())
+    let active_info = db
+        .accounts
+        .iter()
+        .find(|a| Some(a.id.as_str()) == active_id || active_id.is_none())
         .map(|a| a.to_public(true));
 
     Ok(active_info)
@@ -1027,7 +1067,10 @@ pub async fn login_littleskin(
         .map_err(|e| format!("Failed to connect to LittleSkin auth server: {}", e))?;
 
     let status = res.status();
-    let body_text = res.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+    let body_text = res
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
 
     if !status.is_success() {
         return Err(parse_yggdrasil_error(status, &body_text));
@@ -1044,7 +1087,10 @@ pub async fn login_littleskin(
     let formatted_uuid = format_uuid_with_dashes(&profile.id);
     let account_id = format!("littleskin-{}", formatted_uuid);
     let raw_uuid = profile.id.replace('-', "");
-    let profile_url = format!("https://littleskin.cn/api/yggdrasil/sessionserver/session/minecraft/profile/{}", raw_uuid);
+    let profile_url = format!(
+        "https://littleskin.cn/api/yggdrasil/sessionserver/session/minecraft/profile/{}",
+        raw_uuid
+    );
     let skin_url = fetch_yggdrasil_skin_texture(&client, &profile_url).await;
 
     let now_epoch = SystemTime::now()
@@ -1101,7 +1147,11 @@ async fn validate_and_refresh_yggdrasil(
     // 1. Check validity first
     let val_body = YggdrasilValidateRequest {
         access_token: &access_token,
-        client_token: if client_token.is_empty() { None } else { Some(&client_token) },
+        client_token: if client_token.is_empty() {
+            None
+        } else {
+            Some(&client_token)
+        },
     };
 
     let val_res = client.post(validate_url).json(&val_body).send().await;
@@ -1127,10 +1177,16 @@ async fn validate_and_refresh_yggdrasil(
         .map_err(|e| format!("Failed to refresh session: {}", e))?;
 
     let status = ref_res.status();
-    let body = ref_res.text().await.map_err(|e| format!("Failed to read refresh response: {}", e))?;
+    let body = ref_res
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read refresh response: {}", e))?;
 
     if !status.is_success() {
-        return Err(format!("Session expired: {}", parse_yggdrasil_error(status, &body)));
+        return Err(format!(
+            "Session expired: {}",
+            parse_yggdrasil_error(status, &body)
+        ));
     }
 
     let auth_data: YggdrasilAuthResponse = serde_json::from_str(&body)
@@ -1165,7 +1221,8 @@ mod tests {
 
     #[test]
     fn parses_yggdrasil_error_cleanly() {
-        let err_json = r#"{"error":"ForbiddenOperationException","errorMessage":"Invalid credentials."}"#;
+        let err_json =
+            r#"{"error":"ForbiddenOperationException","errorMessage":"Invalid credentials."}"#;
         let msg = parse_yggdrasil_error(reqwest::StatusCode::FORBIDDEN, err_json);
         assert_eq!(msg, "Invalid credentials.");
     }

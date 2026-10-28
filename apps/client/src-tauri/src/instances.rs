@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 use crate::java::{discover_java_runtimes_with_extra, required_java_version};
 use crate::paths::{instances_dir, runtimes_dir};
@@ -67,11 +67,23 @@ pub fn list_instances(app: &tauri::AppHandle) -> Result<Vec<Instance>, String> {
 pub fn slugify(name: &str) -> String {
     let slug: String = name
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect();
     let cleaned = slug.trim_matches('-').to_lowercase();
     if cleaned.is_empty() {
-        format!("instance-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs())
+        format!(
+            "instance-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs()
+        )
     } else {
         cleaned
     }
@@ -165,7 +177,9 @@ pub async fn create_instance(
             req_java,
             Some(&instance.name),
             instance.icon.as_deref(),
-        ).await {
+        )
+        .await
+        {
             Ok(installed) => Ok(installed.path),
             Err(e) => {
                 let _ = std::fs::remove_dir_all(&candidate_dir);
@@ -189,7 +203,9 @@ pub async fn create_instance(
         &candidate_dir,
         Some(&instance.name),
         instance.icon.as_deref(),
-    ).await {
+    )
+    .await
+    {
         let _ = std::fs::remove_dir_all(&candidate_dir);
         let _ = app.emit("instances_changed", ());
         return Err(e);
@@ -202,16 +218,19 @@ pub async fn create_instance(
             let ldr_ver = match instance.loader_version.clone() {
                 Some(v) if !v.trim().is_empty() => v,
                 _ => {
-                    let available = crate::loaders::fetch_loader_versions(&instance.mc_version, &ldr)
-                        .await
-                        .unwrap_or_default();
+                    let available =
+                        crate::loaders::fetch_loader_versions(&instance.mc_version, &ldr)
+                            .await
+                            .unwrap_or_default();
                     available
                         .first()
                         .map(|v| v.version.clone())
                         .unwrap_or_else(|| "latest".to_string())
                 }
             };
-            if let Ok(updated_inst) = crate::loaders::install_mod_loader(app, &instance.id, &ldr, &ldr_ver).await {
+            if let Ok(updated_inst) =
+                crate::loaders::install_mod_loader(app, &instance.id, &ldr, &ldr_ver).await
+            {
                 instance = updated_inst;
                 let _ = app.emit("instances_changed", ());
             }
@@ -258,8 +277,12 @@ pub fn update_instance(app: &tauri::AppHandle, mut instance: Instance) -> Result
 
         if new_id != old_id {
             let new_target = base.join(&new_id);
-            std::fs::rename(&old_target, &new_target)
-                .map_err(|err| format!("Failed to rename instance directory from {} to {}: {}", old_id, new_id, err))?;
+            std::fs::rename(&old_target, &new_target).map_err(|err| {
+                format!(
+                    "Failed to rename instance directory from {} to {}: {}",
+                    old_id, new_id, err
+                )
+            })?;
             instance.id = new_id;
             final_target = new_target;
         }
@@ -334,7 +357,6 @@ mod tests {
     }
 }
 
-
 pub fn get_instance(app: &tauri::AppHandle, id: &str) -> Result<Instance, String> {
     let dir = get_instance_dir(app, id)?;
     let inst_data = std::fs::read_to_string(instance_file(&dir))
@@ -350,7 +372,6 @@ pub fn get_instance_name(app: &tauri::AppHandle, id: &str) -> Result<String, Str
     let instance: Instance = serde_json::from_str(&inst_data).map_err(|e| e.to_string())?;
     Ok(instance.name)
 }
-
 
 fn base64_encode(bytes: &[u8]) -> String {
     const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -406,7 +427,11 @@ pub fn get_instance_screenshots(
             }
 
             let name = entry.file_name().to_string_lossy().to_string();
-            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+            let ext = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("")
+                .to_lowercase();
             if ext != "png" && ext != "jpg" && ext != "jpeg" && ext != "webp" {
                 continue;
             }
@@ -456,7 +481,9 @@ pub fn delete_instance_screenshot(
     file_name: &str,
 ) -> Result<(), String> {
     let inst_dir = get_instance_dir(app, id)?;
-    let screenshot_path = get_instance_game_dir(&inst_dir).join("screenshots").join(file_name);
+    let screenshot_path = get_instance_game_dir(&inst_dir)
+        .join("screenshots")
+        .join(file_name);
 
     if screenshot_path.exists() {
         std::fs::remove_file(&screenshot_path).map_err(|e| e.to_string())?;

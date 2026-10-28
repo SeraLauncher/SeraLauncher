@@ -1,11 +1,13 @@
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use serde::{Deserialize, Serialize};
 
-use crate::discovery::{get_project_versions, install_project_with_dependencies, scan_installed_mods};
+use crate::discovery::{
+    get_project_versions, install_project_with_dependencies, scan_installed_mods,
+};
 use crate::instances::Instance;
 use crate::java::{inspect_java_binary, required_java_version};
 
@@ -184,7 +186,8 @@ pub fn validate_instance_safety(
             } else if req_java >= 21 {
                 is_java_compatible = configured_java >= 21;
             } else if req_java >= 17 {
-                is_java_compatible = configured_java == 16 || configured_java == 17 || configured_java >= 17;
+                is_java_compatible =
+                    configured_java == 16 || configured_java == 17 || configured_java >= 17;
             } else {
                 is_java_compatible = configured_java >= 8;
             }
@@ -230,9 +233,7 @@ pub fn validate_instance_safety(
         .and_then(|st| st.duration_since(std::time::UNIX_EPOCH).ok())
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let dir_entries_count = std::fs::read_dir(&mods_dir)
-        .map(|e| e.count())
-        .unwrap_or(0);
+    let dir_entries_count = std::fs::read_dir(&mods_dir).map(|e| e.count()).unwrap_or(0);
 
     if let Ok(guard) = SAFETY_CACHE.lock() {
         if let Some(ref cache) = *guard {
@@ -290,33 +291,86 @@ pub fn validate_instance_safety(
                                             available_ids.insert(stem.replace('_', "-"));
 
                                             // Deep inspect inner jar for its real mod ID and provides
-                                            if let Ok(mut inner_entry) = archive.by_name(&file_path) {
-                                                if inner_entry.size() > 0 && inner_entry.size() < 10_000_000 {
-                                                    let mut inner_bytes = Vec::with_capacity(inner_entry.size() as usize);
-                                                    if inner_entry.read_to_end(&mut inner_bytes).is_ok() {
-                                                        let cursor = std::io::Cursor::new(inner_bytes);
-                                                        if let Ok(mut inner_archive) = zip::ZipArchive::new(cursor) {
-                                                            if let Ok(mut inner_json) = inner_archive.by_name("fabric.mod.json") {
+                                            if let Ok(mut inner_entry) = archive.by_name(&file_path)
+                                            {
+                                                if inner_entry.size() > 0
+                                                    && inner_entry.size() < 10_000_000
+                                                {
+                                                    let mut inner_bytes = Vec::with_capacity(
+                                                        inner_entry.size() as usize,
+                                                    );
+                                                    if inner_entry
+                                                        .read_to_end(&mut inner_bytes)
+                                                        .is_ok()
+                                                    {
+                                                        let cursor =
+                                                            std::io::Cursor::new(inner_bytes);
+                                                        if let Ok(mut inner_archive) =
+                                                            zip::ZipArchive::new(cursor)
+                                                        {
+                                                            if let Ok(mut inner_json) =
+                                                                inner_archive
+                                                                    .by_name("fabric.mod.json")
+                                                            {
                                                                 let mut inner_buf = String::new();
-                                                                if inner_json.read_to_string(&mut inner_buf).is_ok() {
+                                                                if inner_json
+                                                                    .read_to_string(&mut inner_buf)
+                                                                    .is_ok()
+                                                                {
                                                                     #[derive(Deserialize)]
                                                                     struct InnerModMeta {
                                                                         id: Option<String>,
-                                                                        provides: Option<Vec<String>>,
+                                                                        provides:
+                                                                            Option<Vec<String>>,
                                                                     }
-                                                                    if let Some(inner_meta) = parse_json_lenient::<InnerModMeta>(&inner_buf) {
-                                                                        if let Some(iid) = inner_meta.id {
-                                                                            let low = iid.to_lowercase();
-                                                                            available_ids.insert(low.clone());
-                                                                            available_ids.insert(low.replace('-', "_"));
-                                                                            available_ids.insert(low.replace('_', "-"));
+                                                                    if let Some(inner_meta) =
+                                                                        parse_json_lenient::<
+                                                                            InnerModMeta,
+                                                                        >(
+                                                                            &inner_buf
+                                                                        )
+                                                                    {
+                                                                        if let Some(iid) =
+                                                                            inner_meta.id
+                                                                        {
+                                                                            let low =
+                                                                                iid.to_lowercase();
+                                                                            available_ids.insert(
+                                                                                low.clone(),
+                                                                            );
+                                                                            available_ids.insert(
+                                                                                low.replace(
+                                                                                    '-', "_",
+                                                                                ),
+                                                                            );
+                                                                            available_ids.insert(
+                                                                                low.replace(
+                                                                                    '_', "-",
+                                                                                ),
+                                                                            );
                                                                         }
-                                                                        if let Some(provides) = inner_meta.provides {
+                                                                        if let Some(provides) =
+                                                                            inner_meta.provides
+                                                                        {
                                                                             for pr in provides {
-                                                                                let low = pr.to_lowercase();
-                                                                                available_ids.insert(low.clone());
-                                                                                available_ids.insert(low.replace('-', "_"));
-                                                                                available_ids.insert(low.replace('_', "-"));
+                                                                                let low = pr
+                                                                                    .to_lowercase();
+                                                                                available_ids
+                                                                                    .insert(
+                                                                                        low.clone(),
+                                                                                    );
+                                                                                available_ids
+                                                                                    .insert(
+                                                                                    low.replace(
+                                                                                        '-', "_",
+                                                                                    ),
+                                                                                );
+                                                                                available_ids
+                                                                                    .insert(
+                                                                                    low.replace(
+                                                                                        '_', "-",
+                                                                                    ),
+                                                                                );
                                                                             }
                                                                         }
                                                                     }
@@ -360,7 +414,10 @@ pub fn validate_instance_safety(
                         let trimmed = line.trim();
                         if trimmed.starts_with("project_id =") || trimmed.starts_with("name =") {
                             if let Some(val) = trimmed.split('=').nth(1) {
-                                let c = val.trim().trim_matches(|ch| ch == '"' || ch == '\'').to_lowercase();
+                                let c = val
+                                    .trim()
+                                    .trim_matches(|ch| ch == '"' || ch == '\'')
+                                    .to_lowercase();
                                 if !c.is_empty() {
                                     available_ids.insert(c);
                                 }
@@ -396,9 +453,10 @@ pub fn validate_instance_safety(
                         let mut content = String::new();
                         if fabric_json.read_to_string(&mut content).is_ok() {
                             if let Some(parsed) = parse_json_lenient::<FabricModMeta>(&content) {
-                                let mod_title = parsed.name.as_deref().unwrap_or(
-                                    parsed.id.as_deref().unwrap_or(fname)
-                                );
+                                let mod_title = parsed
+                                    .name
+                                    .as_deref()
+                                    .unwrap_or(parsed.id.as_deref().unwrap_or(fname));
 
                                 if let Some(deps) = parsed.depends {
                                     for (req_id, req_val) in deps {
@@ -408,21 +466,31 @@ pub fn validate_instance_safety(
                                         }
 
                                         // If Fabric API is installed, it provides all fabric-* submodules
-                                        if has_fabric_api && (req_lower.starts_with("fabric-") || req_lower.starts_with("fabric_")) {
+                                        if has_fabric_api
+                                            && (req_lower.starts_with("fabric-")
+                                                || req_lower.starts_with("fabric_"))
+                                        {
                                             continue;
                                         }
 
                                         // If Quilt API is installed, it provides all quilt_* and qsl_* modules
-                                        if has_quilt_api && (req_lower.starts_with("quilt_") || req_lower.starts_with("qsl_") || req_lower.starts_with("fabric-")) {
+                                        if has_quilt_api
+                                            && (req_lower.starts_with("quilt_")
+                                                || req_lower.starts_with("qsl_")
+                                                || req_lower.starts_with("fabric-"))
+                                        {
                                             continue;
                                         }
 
-                                        if !available_ids.contains(&req_lower) && !installed_map.contains_key(&req_lower) {
+                                        if !available_ids.contains(&req_lower)
+                                            && !installed_map.contains_key(&req_lower)
+                                        {
                                             let ver_str = match req_val {
                                                 serde_json::Value::String(s) => Some(s),
-                                                serde_json::Value::Array(arr) => {
-                                                    arr.first().and_then(|v| v.as_str()).map(|s| s.to_string())
-                                                }
+                                                serde_json::Value::Array(arr) => arr
+                                                    .first()
+                                                    .and_then(|v| v.as_str())
+                                                    .map(|s| s.to_string()),
                                                 _ => None,
                                             };
 
@@ -447,8 +515,10 @@ pub fn validate_instance_safety(
                                 if let Some(breaks) = parsed.breaks {
                                     for (conflict_id, constraint_val) in breaks {
                                         let conf_lower = conflict_id.to_lowercase();
-                                        if let Some((inst_ver, _)) = installed_map.get(&conf_lower) {
-                                            let constraint_str = constraint_val.as_str().unwrap_or("*");
+                                        if let Some((inst_ver, _)) = installed_map.get(&conf_lower)
+                                        {
+                                            let constraint_str =
+                                                constraint_val.as_str().unwrap_or("*");
                                             if breaks_condition_met(inst_ver, constraint_str) {
                                                 issues.push(SafetyIssue {
                                                     issue_type: "mod_conflict".to_string(),
@@ -483,7 +553,13 @@ pub fn validate_instance_safety(
                                         .unwrap_or_else(|| fname.to_string());
 
                                     if let Some(deps_val) = loader_part.depends {
-                                        extract_quilt_dependencies(&mod_title, &deps_val, &available_ids, &installed_map, &mut issues);
+                                        extract_quilt_dependencies(
+                                            &mod_title,
+                                            &deps_val,
+                                            &available_ids,
+                                            &installed_map,
+                                            &mut issues,
+                                        );
                                     }
                                 }
                             }
@@ -494,7 +570,13 @@ pub fn validate_instance_safety(
                     if let Ok(mut toml_file) = archive.by_name("META-INF/mods.toml") {
                         let mut content = String::new();
                         if toml_file.read_to_string(&mut content).is_ok() {
-                            extract_forge_dependencies(&content, fname, &available_ids, &installed_map, &mut issues);
+                            extract_forge_dependencies(
+                                &content,
+                                fname,
+                                &available_ids,
+                                &installed_map,
+                                &mut issues,
+                            );
                         }
                     }
                 }
@@ -519,7 +601,10 @@ pub fn validate_instance_safety(
 
     if let Ok(mut guard) = SAFETY_CACHE.lock() {
         let cache = guard.get_or_insert_with(HashMap::new);
-        cache.insert(instance_id.to_string(), (mods_mtime, dir_entries_count, report.clone()));
+        cache.insert(
+            instance_id.to_string(),
+            (mods_mtime, dir_entries_count, report.clone()),
+        );
     }
 
     Ok(report)
@@ -566,8 +651,13 @@ fn extract_quilt_dependencies(
                     if is_system_dependency(&req_lower) {
                         continue;
                     }
-                    if !available_ids.contains(&req_lower) && !installed_map.contains_key(&req_lower) {
-                        let ver_str = obj.get("versions").and_then(|v| v.as_str()).map(|s| s.to_string());
+                    if !available_ids.contains(&req_lower)
+                        && !installed_map.contains_key(&req_lower)
+                    {
+                        let ver_str = obj
+                            .get("versions")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
                         issues.push(SafetyIssue {
                             issue_type: "missing_dependency".to_string(),
                             severity: "blocking".to_string(),
@@ -620,7 +710,10 @@ fn extract_forge_dependencies(
                             "Mod '{}' requires mandatory library '{}'{}, but it is not installed.",
                             fname,
                             curr_mod_id,
-                            version_range.as_ref().map(|v| format!(" ({})", v)).unwrap_or_default()
+                            version_range
+                                .as_ref()
+                                .map(|v| format!(" ({})", v))
+                                .unwrap_or_default()
                         ),
                         auto_resolvable: true,
                     });
@@ -633,13 +726,17 @@ fn extract_forge_dependencies(
         } else if in_dep {
             if trimmed.starts_with("modId =") || trimmed.starts_with("modId=") {
                 if let Some(val) = trimmed.split('=').nth(1) {
-                    curr_mod_id = val.trim().trim_matches(|c| c == '"' || c == '\'').to_string();
+                    curr_mod_id = val
+                        .trim()
+                        .trim_matches(|c| c == '"' || c == '\'')
+                        .to_string();
                 }
             } else if trimmed.starts_with("mandatory =") || trimmed.starts_with("mandatory=") {
                 if let Some(val) = trimmed.split('=').nth(1) {
                     mandatory = val.trim().eq_ignore_ascii_case("true");
                 }
-            } else if trimmed.starts_with("versionRange =") || trimmed.starts_with("versionRange=") {
+            } else if trimmed.starts_with("versionRange =") || trimmed.starts_with("versionRange=")
+            {
                 if let Some(val) = trimmed.split('=').nth(1) {
                     let v = val.trim().trim_matches(|c| c == '"' || c == '\'');
                     if !v.is_empty() {
@@ -666,7 +763,9 @@ fn extract_forge_dependencies(
                     "Mod '{}' requires mandatory library '{}'{}, but it is not installed.",
                     fname,
                     curr_mod_id,
-                    version_range.map(|v| format!(" ({})", v)).unwrap_or_default()
+                    version_range
+                        .map(|v| format!(" ({})", v))
+                        .unwrap_or_default()
                 ),
                 auto_resolvable: true,
             });
@@ -693,7 +792,8 @@ pub async fn resolve_missing_dependencies(
     // 1. Resolve incompatible Java runtime if flagged
     if !report.is_java_compatible {
         let req_java = report.required_java_version;
-        if let Ok(installed_java) = crate::downloader::install_adoptium_runtime(app, req_java).await {
+        if let Ok(installed_java) = crate::downloader::install_adoptium_runtime(app, req_java).await
+        {
             let mut updated_instance = instance.clone();
             updated_instance.custom_java_path = Some(installed_java.path);
             let _ = crate::instances::update_instance(app, updated_instance);
@@ -731,9 +831,20 @@ pub async fn resolve_missing_dependencies(
         };
 
         // Search Modrinth with a 6-second timeout per mod
-        let query_future = get_project_versions("modrinth", modrinth_slug, Some(&instance.mc_version), Some(loader));
-        if let Ok(Ok(versions)) = tokio::time::timeout(std::time::Duration::from_secs(6), query_future).await {
-            if let Some(best_ver) = versions.iter().find(|v| v.version_type.eq_ignore_ascii_case("release")).or_else(|| versions.first()) {
+        let query_future = get_project_versions(
+            "modrinth",
+            &target_slug,
+            Some(&instance.mc_version),
+            Some(loader),
+        );
+        if let Ok(Ok(versions)) =
+            tokio::time::timeout(std::time::Duration::from_secs(6), query_future).await
+        {
+            if let Some(best_ver) = versions
+                .iter()
+                .find(|v| v.version_type.eq_ignore_ascii_case("release"))
+                .or_else(|| versions.first())
+            {
                 if let Ok(_) = install_project_with_dependencies(
                     app,
                     instance_id,
@@ -745,7 +856,9 @@ pub async fn resolve_missing_dependencies(
                     Some(&best_ver.id),
                     Some(&best_ver.name),
                     None,
-                ).await {
+                )
+                .await
+                {
                     resolved.push(best_ver.file_name.clone());
                 }
             }

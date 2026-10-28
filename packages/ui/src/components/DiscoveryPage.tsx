@@ -29,6 +29,8 @@ interface DiscoveryPageProps {
   theme: Theme;
   instances: Instance[];
   versions: MinecraftVersion[];
+  /** category changes bubble up so the launcher presence can follow along */
+  onCategoryChange?: (category: DiscoveryCategory) => void;
 }
 
 // In-memory cache to make provider and filter switches instantaneous
@@ -38,7 +40,12 @@ const discoveryClientCache = new Map<
 >();
 const CLIENT_CACHE_TTL_MS = 180000; // 3 minutes
 
-export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps) {
+export function DiscoveryPage({
+  theme,
+  instances,
+  versions,
+  onCategoryChange,
+}: DiscoveryPageProps) {
   const [provider, setProvider] = useState<DiscoveryProvider>("modrinth");
   const [category, setCategory] = useState<DiscoveryCategory>("modpack");
   const [search, setSearch] = useState("");
@@ -46,6 +53,10 @@ export function DiscoveryPage({ theme, instances, versions }: DiscoveryPageProps
   const [selectedLoader, setSelectedLoader] = useState<string>("all");
   const [environment, setEnvironment] = useState<EnvironmentFilter>("all");
   const [sort, setSort] = useState<string>("relevance");
+
+  useEffect(() => {
+    onCategoryChange?.(category);
+  }, [category, onCategoryChange]);
 
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<DiscoveryProject[]>([]);

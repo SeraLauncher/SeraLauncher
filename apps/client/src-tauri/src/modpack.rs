@@ -1,9 +1,9 @@
+use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 use std::fs::File;
 use std::io::{Cursor, Read, Seek};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-use sha1::{Digest, Sha1};
 use tauri::Emitter;
 use tokio::sync::Semaphore;
 
@@ -132,7 +132,9 @@ struct CurseForgeFileHash {
 }
 
 /// Parses a Modrinth .mrpack index from an open zip archive
-pub fn parse_mrpack<R: Read + Seek>(archive: &mut zip::ZipArchive<R>) -> Result<ModpackManifest, String> {
+pub fn parse_mrpack<R: Read + Seek>(
+    archive: &mut zip::ZipArchive<R>,
+) -> Result<ModpackManifest, String> {
     let mut index_file = archive
         .by_name("modrinth.index.json")
         .map_err(|e| format!("Missing modrinth.index.json in mrpack: {}", e))?;
@@ -258,7 +260,10 @@ pub async fn parse_curseforge<R: Read + Seek>(
         let file_id = cf_file.file_id;
 
         // Fetch direct file metadata from CurseForge API
-        let url = format!("https://api.curseforge.com/v1/mods/{}/files/{}", project_id, file_id);
+        let url = format!(
+            "https://api.curseforge.com/v1/mods/{}/files/{}",
+            project_id, file_id
+        );
         let resp = client
             .get(&url)
             .header("x-api-key", DEFAULT_CURSEFORGE_KEY)
@@ -403,7 +408,8 @@ pub fn parse_prism<R: Read + Seek>(
         }
     }
 
-    let mc_ver = mc_version.ok_or_else(|| "Could not find Minecraft version in mmc-pack.json".to_string())?;
+    let mc_ver = mc_version
+        .ok_or_else(|| "Could not find Minecraft version in mmc-pack.json".to_string())?;
 
     // Parse instance name from instance.cfg if available
     let mut name = fallback_name.to_string();
@@ -464,14 +470,19 @@ pub async fn inspect_modpack_file(file_path: &Path) -> Result<ModpackInspection,
 
     let is_mrpack = archive.by_name("modrinth.index.json").is_ok();
     let is_curseforge = archive.by_name("manifest.json").is_ok();
-    let is_prism = archive.by_name("mmc-pack.json").is_ok() || archive.by_name("instance.cfg").is_ok();
+    let is_prism =
+        archive.by_name("mmc-pack.json").is_ok() || archive.by_name("instance.cfg").is_ok();
     let is_sera = archive.by_name("instance.json").is_ok();
 
     if is_sera {
         let mut content = String::new();
         {
-            let mut inst_file = archive.by_name("instance.json").map_err(|e| e.to_string())?;
-            inst_file.read_to_string(&mut content).map_err(|e| e.to_string())?;
+            let mut inst_file = archive
+                .by_name("instance.json")
+                .map_err(|e| e.to_string())?;
+            inst_file
+                .read_to_string(&mut content)
+                .map_err(|e| e.to_string())?;
         }
         let parsed: Instance = serde_json::from_str(&content).map_err(|e| e.to_string())?;
         let mod_count = archive.len();
@@ -503,8 +514,8 @@ pub async fn inspect_modpack_file(file_path: &Path) -> Result<ModpackInspection,
         manifest_file
             .read_to_string(&mut content)
             .map_err(|e| format!("Failed to read manifest.json: {}", e))?;
-        let parsed: CurseForgeManifest = serde_json::from_str(&content)
-            .map_err(|e| format!("Invalid manifest.json: {}", e))?;
+        let parsed: CurseForgeManifest =
+            serde_json::from_str(&content).map_err(|e| format!("Invalid manifest.json: {}", e))?;
 
         let mut loader = None;
         let mut loader_version = None;
@@ -562,18 +573,23 @@ pub async fn install_modpack_bytes(
         .map_err(|e| e.to_string())?;
 
     let cursor = Cursor::new(archive_bytes);
-    let mut archive = zip::ZipArchive::new(cursor)
-        .map_err(|e| format!("Invalid zip archive: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(cursor).map_err(|e| format!("Invalid zip archive: {}", e))?;
 
     let is_mrpack = archive.by_name("modrinth.index.json").is_ok();
     let is_curseforge = archive.by_name("manifest.json").is_ok();
-    let is_prism = archive.by_name("mmc-pack.json").is_ok() || archive.by_name("instance.cfg").is_ok();
+    let is_prism =
+        archive.by_name("mmc-pack.json").is_ok() || archive.by_name("instance.cfg").is_ok();
     let is_sera = archive.by_name("instance.json").is_ok();
 
     let manifest = if is_sera {
-        let mut inst_file = archive.by_name("instance.json").map_err(|e| e.to_string())?;
+        let mut inst_file = archive
+            .by_name("instance.json")
+            .map_err(|e| e.to_string())?;
         let mut content = String::new();
-        inst_file.read_to_string(&mut content).map_err(|e| e.to_string())?;
+        inst_file
+            .read_to_string(&mut content)
+            .map_err(|e| e.to_string())?;
         let parsed: Instance = serde_json::from_str(&content).map_err(|e| e.to_string())?;
         ModpackManifest {
             name: parsed.name,
@@ -610,7 +626,8 @@ pub async fn install_modpack_bytes(
     )
     .await?;
 
-    let inst_game_dir = get_instance_game_dir(&crate::paths::instances_dir(app)?.join(&instance.id));
+    let inst_game_dir =
+        get_instance_game_dir(&crate::paths::instances_dir(app)?.join(&instance.id));
 
     // 2. Register download task in launcher downloads drawer
     let task_id = format!("modpack-{}", instance.id);
@@ -625,7 +642,11 @@ pub async fn install_modpack_bytes(
         phase: "modpack".to_string(),
         phase_label: format!("Downloading mods (0/{})", total_files),
         downloaded_bytes: 0,
-        total_bytes: if total_bytes > 0 { Some(total_bytes) } else { None },
+        total_bytes: if total_bytes > 0 {
+            Some(total_bytes)
+        } else {
+            None
+        },
         speed_bytes_per_sec: 0,
         progress: 0.0,
         status: "downloading".to_string(),
@@ -671,9 +692,17 @@ pub async fn install_modpack_bytes(
                 let _ = std::fs::create_dir_all(parent);
             }
 
-            let resp = cli.get(&file.download_url).send().await.map_err(|e| e.to_string())?;
+            let resp = cli
+                .get(&file.download_url)
+                .send()
+                .await
+                .map_err(|e| e.to_string())?;
             if !resp.status().is_success() {
-                return Err(format!("HTTP {} fetching {}", resp.status(), file.file_name));
+                return Err(format!(
+                    "HTTP {} fetching {}",
+                    resp.status(),
+                    file.file_name
+                ));
             }
 
             let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
@@ -682,9 +711,16 @@ pub async fn install_modpack_bytes(
             if let Some(expected_sha1) = &file.sha1 {
                 let mut hasher = Sha1::new();
                 hasher.update(&bytes);
-                let computed: String = hasher.finalize().into_iter().map(|b| format!("{:02x}", b)).collect();
+                let computed: String = hasher
+                    .finalize()
+                    .into_iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect();
                 if !computed.eq_ignore_ascii_case(expected_sha1) {
-                    return Err(format!("SHA1 mismatch for {}: expected {}, got {}", file.file_name, expected_sha1, computed));
+                    return Err(format!(
+                        "SHA1 mismatch for {}: expected {}, got {}",
+                        file.file_name, expected_sha1, computed
+                    ));
                 }
             }
 
@@ -694,7 +730,11 @@ pub async fn install_modpack_bytes(
             if let Some(parent) = target_path.parent() {
                 let mut hasher = Sha1::new();
                 hasher.update(&bytes);
-                let hex_sha1: String = hasher.finalize().into_iter().map(|b| format!("{:02x}", b)).collect();
+                let hex_sha1: String = hasher
+                    .finalize()
+                    .into_iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect();
                 write_addon_index(
                     parent,
                     &file.file_name,
@@ -711,14 +751,17 @@ pub async fn install_modpack_bytes(
             }
 
             let curr_count = count_clone.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
-            let curr_bytes = bytes_clone.fetch_add(bytes.len() as u64, std::sync::atomic::Ordering::Relaxed) + bytes.len() as u64;
+            let curr_bytes = bytes_clone
+                .fetch_add(bytes.len() as u64, std::sync::atomic::Ordering::Relaxed)
+                + bytes.len() as u64;
 
             // Emit progress
             if let Ok(mut guard) = crate::downloads::ACTIVE_DOWNLOADS.lock() {
                 if let Some(list) = guard.as_mut() {
                     if let Some(item) = list.iter_mut().find(|d| d.id == task_id_clone) {
                         item.downloaded_bytes = curr_bytes;
-                        item.phase_label = format!("Downloading mods ({}/{})", curr_count, tot_files);
+                        item.phase_label =
+                            format!("Downloading mods ({}/{})", curr_count, tot_files);
                         let prog = if total_b > 0 {
                             ((curr_bytes as f64 / total_b as f64) * 90.0).min(90.0)
                         } else {
@@ -923,8 +966,16 @@ mod tests {
         }"#;
 
         let parsed: MmcPackJson = serde_json::from_str(mmc_pack_json).unwrap();
-        let mc = parsed.components.iter().find(|c| c.uid == "net.minecraft").unwrap();
-        let loader = parsed.components.iter().find(|c| c.uid == "net.fabricmc.fabric-loader").unwrap();
+        let mc = parsed
+            .components
+            .iter()
+            .find(|c| c.uid == "net.minecraft")
+            .unwrap();
+        let loader = parsed
+            .components
+            .iter()
+            .find(|c| c.uid == "net.fabricmc.fabric-loader")
+            .unwrap();
         assert_eq!(mc.version.as_deref().unwrap(), "26.2");
         assert_eq!(loader.version.as_deref().unwrap(), "0.19.5");
     }

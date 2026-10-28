@@ -44,7 +44,11 @@ pub fn find_java_binary(root: &Path) -> Option<PathBuf> {
     }
 
     // macOS structure: root/Contents/Home/bin/java
-    let mac_bin = root.join("Contents").join("Home").join("bin").join(binary_name);
+    let mac_bin = root
+        .join("Contents")
+        .join("Home")
+        .join("bin")
+        .join(binary_name);
     if mac_bin.is_file() {
         return Some(mac_bin);
     }
@@ -58,7 +62,11 @@ pub fn find_java_binary(root: &Path) -> Option<PathBuf> {
                 if sub_bin.is_file() {
                     return Some(sub_bin);
                 }
-                let sub_mac = path.join("Contents").join("Home").join("bin").join(binary_name);
+                let sub_mac = path
+                    .join("Contents")
+                    .join("Home")
+                    .join("bin")
+                    .join(binary_name);
                 if sub_mac.is_file() {
                     return Some(sub_mac);
                 }
@@ -82,8 +90,8 @@ fn unpack_tar_gz(archive_bytes: &[u8], target_dir: &Path) -> Result<(), String> 
 /// Unpack a .zip archive into `target_dir`.
 fn unpack_zip(archive_bytes: &[u8], target_dir: &Path) -> Result<(), String> {
     let cursor = std::io::Cursor::new(archive_bytes);
-    let mut archive =
-        zip::ZipArchive::new(cursor).map_err(|err| format!("Failed to open zip archive: {}", err))?;
+    let mut archive = zip::ZipArchive::new(cursor)
+        .map_err(|err| format!("Failed to open zip archive: {}", err))?;
 
     for i in 0..archive.len() {
         let mut file = archive
@@ -102,8 +110,13 @@ fn unpack_zip(archive_bytes: &[u8], target_dir: &Path) -> Result<(), String> {
                     let _ = std::fs::create_dir_all(p);
                 }
             }
-            let mut outfile = File::create(&outpath)
-                .map_err(|err| format!("Failed to create extracted file {}: {}", outpath.display(), err))?;
+            let mut outfile = File::create(&outpath).map_err(|err| {
+                format!(
+                    "Failed to create extracted file {}: {}",
+                    outpath.display(),
+                    err
+                )
+            })?;
             std::io::copy(&mut file, &mut outfile)
                 .map_err(|err| format!("Failed to extract file {}: {}", outpath.display(), err))?;
         }
@@ -174,11 +187,12 @@ pub async fn install_adoptium_runtime_with_instance(
         .build()
         .map_err(|err| format!("Failed to create HTTP client: {}", err))?;
 
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|err| format!("Failed to request Java {} runtime from Adoptium: {}", major_version, err))?;
+    let response = client.get(&url).send().await.map_err(|err| {
+        format!(
+            "Failed to request Java {} runtime from Adoptium: {}",
+            major_version, err
+        )
+    })?;
 
     if !response.status().is_success() {
         return Err(format!(
@@ -193,21 +207,26 @@ pub async fn install_adoptium_runtime_with_instance(
     let task_id = format!("java-{}", major_version);
     let total_size = response.content_length();
 
-    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-        id: task_id.clone(),
-        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Java {} Runtime", major_version)),
-        phase: "java".to_string(),
-        phase_label: format!("Downloading Java {} Runtime", major_version),
-        downloaded_bytes: 0,
-        total_bytes: total_size,
-        speed_bytes_per_sec: 0,
-        progress: 0.0,
-        status: "downloading".to_string(),
-        error: None,
-        order: 0,
-        instance_name: instance_name.map(|n| n.to_string()),
-        instance_icon: instance_icon.map(|i| i.to_string()),
-    });
+    crate::downloads::update_download_progress(
+        app,
+        crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: instance_name
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("Java {} Runtime", major_version)),
+            phase: "java".to_string(),
+            phase_label: format!("Downloading Java {} Runtime", major_version),
+            downloaded_bytes: 0,
+            total_bytes: total_size,
+            speed_bytes_per_sec: 0,
+            progress: 0.0,
+            status: "downloading".to_string(),
+            error: None,
+            order: 0,
+            instance_name: instance_name.map(|n| n.to_string()),
+            instance_icon: instance_icon.map(|i| i.to_string()),
+        },
+    );
 
     let mut response = response;
     let mut downloaded: u64 = 0;
@@ -247,44 +266,58 @@ pub async fn install_adoptium_runtime_with_instance(
             last_emit = std::time::Instant::now();
 
             let progress = if let Some(tot) = total_size {
-                if tot > 0 { ((downloaded as f64 / tot as f64) * 100.0).min(98.0) } else { 0.0 }
+                if tot > 0 {
+                    ((downloaded as f64 / tot as f64) * 100.0).min(98.0)
+                } else {
+                    0.0
+                }
             } else {
                 0.0
             };
 
-            crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-                id: task_id.clone(),
-                title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Java {} Runtime", major_version)),
-                phase: "java".to_string(),
-                phase_label: format!("Downloading Java {} Runtime", major_version),
-                downloaded_bytes: downloaded,
-                total_bytes: total_size,
-                speed_bytes_per_sec: current_speed,
-                progress,
-                status: "downloading".to_string(),
-                error: None,
-                order: 0,
-                instance_name: instance_name.map(|n| n.to_string()),
-                instance_icon: instance_icon.map(|i| i.to_string()),
-            });
+            crate::downloads::update_download_progress(
+                app,
+                crate::downloads::DownloadItem {
+                    id: task_id.clone(),
+                    title: instance_name
+                        .map(|n| n.to_string())
+                        .unwrap_or_else(|| format!("Java {} Runtime", major_version)),
+                    phase: "java".to_string(),
+                    phase_label: format!("Downloading Java {} Runtime", major_version),
+                    downloaded_bytes: downloaded,
+                    total_bytes: total_size,
+                    speed_bytes_per_sec: current_speed,
+                    progress,
+                    status: "downloading".to_string(),
+                    error: None,
+                    order: 0,
+                    instance_name: instance_name.map(|n| n.to_string()),
+                    instance_icon: instance_icon.map(|i| i.to_string()),
+                },
+            );
         }
     }
 
-    crate::downloads::update_download_progress(app, crate::downloads::DownloadItem {
-        id: task_id.clone(),
-        title: instance_name.map(|n| n.to_string()).unwrap_or_else(|| format!("Java {} Runtime", major_version)),
-        phase: "java".to_string(),
-        phase_label: format!("Extracting Java {} Runtime", major_version),
-        downloaded_bytes: downloaded,
-        total_bytes: total_size,
-        speed_bytes_per_sec: 0,
-        progress: 99.0,
-        status: "extracting".to_string(),
-        error: None,
-        order: 0,
-        instance_name: instance_name.map(|n| n.to_string()),
-        instance_icon: instance_icon.map(|i| i.to_string()),
-    });
+    crate::downloads::update_download_progress(
+        app,
+        crate::downloads::DownloadItem {
+            id: task_id.clone(),
+            title: instance_name
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("Java {} Runtime", major_version)),
+            phase: "java".to_string(),
+            phase_label: format!("Extracting Java {} Runtime", major_version),
+            downloaded_bytes: downloaded,
+            total_bytes: total_size,
+            speed_bytes_per_sec: 0,
+            progress: 99.0,
+            status: "extracting".to_string(),
+            error: None,
+            order: 0,
+            instance_name: instance_name.map(|n| n.to_string()),
+            instance_icon: instance_icon.map(|i| i.to_string()),
+        },
+    );
 
     let temp_extract_dir = base_dir.join(format!("java-{}-download-tmp", major_version));
     if temp_extract_dir.exists() {
@@ -309,13 +342,21 @@ pub async fn install_adoptium_runtime_with_instance(
         )
     })?;
 
-    let binary = find_java_binary(&target_dir)
-        .ok_or_else(|| format!("Could not find java executable inside extracted runtime at {}", target_dir.display()))?;
+    let binary = find_java_binary(&target_dir).ok_or_else(|| {
+        format!(
+            "Could not find java executable inside extracted runtime at {}",
+            target_dir.display()
+        )
+    })?;
 
     set_executable_permissions(&binary);
 
-    let res = inspect_java_binary(&binary)
-        .ok_or_else(|| format!("Extracted Java runtime at {} failed validation", binary.display()));
+    let res = inspect_java_binary(&binary).ok_or_else(|| {
+        format!(
+            "Extracted Java runtime at {} failed validation",
+            binary.display()
+        )
+    });
 
     match &res {
         Ok(_) => crate::downloads::finish_download(app, &task_id),
@@ -356,7 +397,8 @@ pub async fn ensure_authlib_injector(app: &tauri::AppHandle) -> Result<PathBuf, 
     if let Ok(res) = meta_res {
         if res.status().is_success() {
             if let Ok(info) = res.json::<ArtifactInfo>().await {
-                let marker_file = lib_dir.join(format!("authlib-injector-{}.version", info.build_number));
+                let marker_file =
+                    lib_dir.join(format!("authlib-injector-{}.version", info.build_number));
                 if is_valid && marker_file.exists() {
                     return Ok(target_jar);
                 }
@@ -415,13 +457,19 @@ fn calculate_dir_size(dir: &Path) -> u64 {
 }
 
 /// Returns the status of all standard managed Java runtimes (Java 8, 17, 21, and 25).
-pub fn get_managed_java_runtimes(app: &tauri::AppHandle) -> Result<Vec<ManagedJavaRuntime>, String> {
+pub fn get_managed_java_runtimes(
+    app: &tauri::AppHandle,
+) -> Result<Vec<ManagedJavaRuntime>, String> {
     let base_dir = runtimes_dir(app)?;
     let targets = [
         (8, "Java 8", "Legacy (Minecraft 1.16.5 and older)"),
         (17, "Java 17", "Standard (Minecraft 1.17 to 1.20.4)"),
         (21, "Java 21", "LTS (Minecraft 1.20.5 and newer)"),
-        (25, "Java 25", "Next-Gen (Minecraft 25.x, 26.x, and snapshots)"),
+        (
+            25,
+            "Java 25",
+            "Next-Gen (Minecraft 25.x, 26.x, and snapshots)",
+        ),
     ];
 
     let mut list = Vec::new();
@@ -451,7 +499,10 @@ pub fn get_managed_java_runtimes(app: &tauri::AppHandle) -> Result<Vec<ManagedJa
 }
 
 /// Uninstalls and frees disk space for a managed Adoptium JDK.
-pub fn uninstall_managed_java_runtime(app: &tauri::AppHandle, major_version: u32) -> Result<(), String> {
+pub fn uninstall_managed_java_runtime(
+    app: &tauri::AppHandle,
+    major_version: u32,
+) -> Result<(), String> {
     let base_dir = runtimes_dir(app)?;
     let dir = base_dir.join(format!("java-{}", major_version));
     if dir.exists() {
