@@ -36,6 +36,9 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useSettings, useInstances, useAccounts, useDownloads, useDownloadHistory } from "./store";
 
+/** detects mac for the inset traffic lights, same check AppHeader uses */
+const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
+
 /** the settings item is last in NAV, so its index is the settings page */
 const SETTINGS = NAV.length - 1;
 

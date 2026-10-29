@@ -4,5 +4,6 @@
   "env": { "browser": true, "es2024": true },
   "rules": {
     "react/react-in-jsx-scope": "off"
-  }
+  },
+  "ignorePatterns": ["**/target/**", "**/dist/**"]
 }
