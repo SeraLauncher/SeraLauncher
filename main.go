@@ -1,0 +1,47 @@
+package main
+
+import (
+	"log"
+
+	"github.com/egoist/mygo"
+	"serago/internal/api"
+)
+
+func main() {
+	mygo.Bind(
+		api.SettingsService{},
+		api.SystemService{},
+		api.DiscordService{},
+		api.JavaService{},
+		api.AuthService{},
+		api.InstanceService{},
+		api.MinecraftService{},
+		api.LoaderService{},
+		api.DiscoveryService{},
+		api.WorldService{},
+		api.ServerService{},
+		api.VisualService{},
+		api.ModpackService{},
+		api.DownloadService{},
+		api.SafetyService{},
+		api.ExportService{},
+		api.IngestService{},
+	)
+
+	mygo.App.WhenReady(func() {
+		mygo.NewWindow(mygo.WindowOptions{
+			Title:           "Sera",
+			Width:           1080,
+			Height:          700,
+			MinWidth:        900,
+			MinHeight:       600,
+			BackgroundColor: "#161413",
+			StateKey:        "main",
+			URL:             "/",
+		})
+	})
+
+	if err := mygo.App.Run(); err != nil {
+		log.Fatal(err)
+	}
+}
