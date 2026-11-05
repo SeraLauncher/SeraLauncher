@@ -48,6 +48,41 @@ func AppDataRoot() (string, error) {
 	return root, nil
 }
 
+// MigrateLegacyDataDir moves webview data from lowercase seralauncher to SeraLauncher
+func MigrateLegacyDataDir() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+	base := os.Getenv("XDG_DATA_HOME")
+	if base == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return
+		}
+		base = filepath.Join(home, ".local", "share")
+	}
+
+	legacyDir := filepath.Join(base, "seralauncher")
+	targetDir := filepath.Join(base, "SeraLauncher")
+
+	entries, err := os.ReadDir(legacyDir)
+	if err != nil {
+		return
+	}
+
+	_ = os.MkdirAll(targetDir, 0755)
+	for _, entry := range entries {
+		oldPath := filepath.Join(legacyDir, entry.Name())
+		newPath := filepath.Join(targetDir, entry.Name())
+		if _, err := os.Stat(newPath); os.IsNotExist(err) {
+			_ = os.Rename(oldPath, newPath)
+		}
+	}
+
+	// Remove remaining empty legacy dir if all entries were moved
+	_ = os.RemoveAll(legacyDir)
+}
+
 func ensureDir(parent string, name string) (string, error) {
 	dir := filepath.Join(parent, name)
 	if err := os.MkdirAll(dir, 0755); err != nil {

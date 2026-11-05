@@ -11,59 +11,8 @@ SeraGo is a modern Minecraft launcher desktop application built with:
 - **Backend**: Go 1.27+ with pure Go libraries.
 - **Frontend**: React 19, TypeScript, Vite 8, Tailwind CSS v4, and Motion.
 - **Package Management**: Bun workspaces within a monorepo.
-- **Original Reference**: A Tauri v2 (Rust) project located in `example_projects/SeraLauncher/`.
 
----
-
-## 2. Monorepo Structure
-
-```
-SeraGo/
-├── apps/
-│   └── client/               # Main React launcher UI
-│       ├── src/              # Application layout, pages, and store hooks
-│       ├── package.json
-│       └── vite.config.ts
-├── packages/
-│   ├── ui/                   # Reusable UI component library and styles
-│   │   ├── src/assets/       # Bundled fonts, block textures, and logos
-│   │   └── package.json
-│   └── player-model/         # Three.js 3D player skin and head viewer
-│       ├── src/
-│       └── package.json
-├── internal/                 # Go backend business logic and services
-│   ├── api/                  # MyGo-bound service adapters
-│   ├── auth/                 # Microsoft, Ely.by, LittleSkin, offline auth
-│   ├── discord/              # Discord Rich Presence IPC
-│   ├── discovery/            # Modrinth & CurseForge API integration
-│   ├── downloader/           # Concurrent download manager
-│   ├── fonts/                # System font enumeration
-│   ├── instances/            # Instance CRUD and screenshots
-│   ├── java/                 # Java detection and Adoptium installer
-│   ├── loaders/              # Fabric, Quilt, Forge, NeoForge installers
-│   ├── minecraft/            # Version manifest, classpath, process runner
-│   ├── modpack/              # Modrinth (.mrpack) and CurseForge (.zip)
-│   ├── nbt/                  # Minecraft NBT parser
-│   ├── paths/                # Operating system path resolution
-│   ├── safety/               # Addon validation and dependency resolution
-│   ├── servers/              # Server List Ping (SLP) & servers.dat
-│   ├── settings/             # User settings persistence
-│   └── worlds/               # World discovery, backup zip, restore
-├── docs/                     # Project documentation
-│   ├── PRD.md                # Product requirements
-│   ├── PLAN.md               # Architecture and migration plan
-│   └── TASKS.md              # Porting tasks and progress tracker
-├── resources/                # App icons and build resources
-├── mygo.config.ts            # MyGo app configuration
-├── main.go                   # Go main entry point and window creation
-├── go.mod                    # Go module definition
-├── package.json              # Monorepo root scripts
-└── bun.lock                  # Bun lockfile
-```
-
----
-
-## 3. Essential Commands
+## 2. Essential Commands
 
 ### Development Setup
 ```bash
@@ -118,7 +67,7 @@ go test -v ./internal/settings/...
 
 ---
 
-## 4. Architecture & Coding Conventions
+## 3. Architecture & Coding Conventions
 
 ### Backend (Go)
 1. **Pure Go (Zero cgo)**: Never introduce cgo or packages that require external C compilers. Ensure pure Go compatibility across Linux, macOS, and Windows.
@@ -137,7 +86,7 @@ go test -v ./internal/settings/...
 
 ---
 
-## 5. Coding Agent Guidelines
+## 4. Coding Agent Guidelines
 
 1. **Simplicity First**: Implement the minimal, robust code needed. Avoid speculative abstractions and single-use interfaces.
 2. **Keep Monorepo Intact**: Maintain package separation between `@sera/ui`, `@sera/player-model`, and `@sera/client`.

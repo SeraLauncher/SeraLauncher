@@ -109,6 +109,18 @@ func ValidateInstanceSafety(instanceID string) (SafetyReport, error) {
 		return SafetyReport{IsSafe: true}, nil
 	}
 
+	// Horizon is a native Rust engine without Java or standard Fabric mod dependencies
+	if target.Loader != nil && strings.ToLower(*target.Loader) == "horizon" {
+		return SafetyReport{
+			IsSafe:                true,
+			Issues:                []SafetyIssue{},
+			InstalledModsCount:    0,
+			RequiredJavaVersion:   0,
+			ConfiguredJavaVersion: 0,
+			IsJavaCompatible:      true,
+		}, nil
+	}
+
 	reqJava := java.RequiredVersion(target.McVersion)
 	modsDir := filepath.Join(instDir, "minecraft", "mods")
 	entries, err := os.ReadDir(modsDir)

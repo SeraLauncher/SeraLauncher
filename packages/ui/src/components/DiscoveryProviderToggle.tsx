@@ -1,13 +1,15 @@
 import { SiCurseforge, SiModrinth } from "./Icon";
+import { Icon } from "./Icon";
 import type { Theme } from "../theme";
 
-export type DiscoveryProvider = "modrinth" | "curseforge";
+export type DiscoveryProvider = "modrinth" | "horizon" | "curseforge";
 
 interface DiscoveryProviderToggleProps {
   provider: DiscoveryProvider;
   onChange: (provider: DiscoveryProvider) => void;
   theme: Theme;
   className?: string;
+  showHorizon?: boolean;
 }
 
 export function DiscoveryProviderToggle({
@@ -15,6 +17,7 @@ export function DiscoveryProviderToggle({
   onChange,
   theme,
   className = "",
+  showHorizon = true,
 }: DiscoveryProviderToggleProps) {
   return (
     <div
@@ -36,6 +39,25 @@ export function DiscoveryProviderToggle({
         <SiModrinth size={14} color="currentColor" />
         <span>Modrinth</span>
       </button>
+
+      {showHorizon && (
+        <button
+          type="button"
+          onClick={() => onChange("horizon")}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer select-none"
+          style={{
+            background: provider === "horizon" ? theme.primary : "transparent",
+            color: provider === "horizon" ? theme.primaryForeground : theme.mutedForeground,
+            fontWeight: provider === "horizon" ? 600 : 500,
+            fontSize: "0.82rem",
+            lineHeight: 1.2,
+          }}
+        >
+          <Icon name="wand" size={14} color="currentColor" />
+          <span>Horizon</span>
+        </button>
+      )}
+
       <button
         type="button"
         onClick={() => onChange("curseforge")}

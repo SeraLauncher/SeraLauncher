@@ -545,7 +545,11 @@ export default function App() {
                         setShowAccountModal(true);
                         return;
                       }
-                      await launchInstance(inst.id);
+                      try {
+                        await launchInstance(inst.id);
+                      } catch (err) {
+                        toast.error(`Launch failed: ${String(err)}`);
+                      }
                     }}
                   />
                 ) : page === 2 ? (

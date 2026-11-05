@@ -470,8 +470,12 @@ export function DiscoveryDetailsPage({
           </button>
 
           <span className="text-xs font-medium" style={{ color: theme.mutedForeground }}>
-            {project.source === "modrinth" ? "Modrinth" : "CurseForge"} ·{" "}
-            {capitalizeFirst(project.projectType)}
+            {project.source === "modrinth"
+              ? "Modrinth"
+              : project.source === "horizon"
+                ? "Horizon"
+                : "CurseForge"}{" "}
+            · {capitalizeFirst(project.projectType)}
           </span>
         </div>
 
@@ -521,14 +525,16 @@ export function DiscoveryDetailsPage({
 
               {/* Metrics & Badges */}
               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                <div
-                  className="flex items-center gap-1 text-[11px] font-medium"
-                  style={{ color: theme.mutedForeground }}
-                  title="Total Downloads"
-                >
-                  <Icon name="download" size={12} color="currentColor" />
-                  <span>{dlCount}</span>
-                </div>
+                {(details?.downloads ?? project.downloads) > 0 && (
+                  <div
+                    className="flex items-center gap-1 text-[11px] font-medium"
+                    style={{ color: theme.mutedForeground }}
+                    title="Total Downloads"
+                  >
+                    <Icon name="download" size={12} color="currentColor" />
+                    <span>{dlCount}</span>
+                  </div>
+                )}
 
                 {followCount && (
                   <div
@@ -611,13 +617,24 @@ export function DiscoveryDetailsPage({
                     type="button"
                     onClick={() => {
                       setMenuOpen(false);
-                      handleOpenExternal(details?.webUrl);
+                      if (project.source === "horizon") {
+                        handleOpenExternal("https://playhorizon.dev/mods");
+                      } else {
+                        handleOpenExternal(details?.webUrl);
+                      }
                     }}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors hover:bg-secondary cursor-pointer text-left"
                     style={{ color: theme.foreground }}
                   >
                     <Icon name="externalLink" size={13} color={theme.mutedForeground} />
-                    <span>Open in {project.source === "modrinth" ? "Modrinth" : "CurseForge"}</span>
+                    <span>
+                      Open in{" "}
+                      {project.source === "modrinth"
+                        ? "Modrinth"
+                        : project.source === "horizon"
+                          ? "Horizon Registry"
+                          : "CurseForge"}
+                    </span>
                   </button>
 
                   <button

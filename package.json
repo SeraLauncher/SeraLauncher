@@ -1,5 +1,6 @@
 {
-  "name": "serago",
+  "name": "seralauncher",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -12,13 +13,16 @@
     "generate": "mygo generate",
     "dev:web": "bun --filter @sera/client dev",
     "build:web": "bun --filter @sera/client build",
-    "check": "bun --filter '*' check"
+    "check": "bun --filter '*' check",
+    "bump-version": "bun scripts/bump-version.ts"
   },
   "dependencies": {
     "mygo-runtime": "^0.7.4"
   },
   "devDependencies": {
     "mygo-cli": "^0.7.4",
+    "oxfmt": "^0.76.0",
+    "oxlint": "^1.91.0",
     "typescript": "^7",
     "vite": "^8"
   }

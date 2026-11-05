@@ -91,7 +91,7 @@ func CreateInstance(name string, mcVersion string, versionType, icon, loader, lo
 
 	// Create standard game directory and subfolders
 	gameDir := filepath.Join(instDir, "minecraft")
-	for _, sub := range []string{"mods", "resourcepacks", "shaderpacks", "screenshots", "saves"} {
+	for _, sub := range []string{"mods", "horizon-mods", "resourcepacks", "shaderpacks", "screenshots", "saves"} {
 		_ = os.MkdirAll(filepath.Join(gameDir, sub), 0755)
 	}
 
@@ -118,6 +118,36 @@ func CreateInstance(name string, mcVersion string, versionType, icon, loader, lo
 	}
 
 	return inst, nil
+}
+
+// AddPlayTime increments the instance's total playtime and updates lastPlayed timestamp.
+func AddPlayTime(id string, elapsedSecs uint64) error {
+	dir, err := paths.InstancesDir()
+	if err != nil {
+		return err
+	}
+
+	instPath := filepath.Join(dir, id, "instance.json")
+	data, err := os.ReadFile(instPath)
+	if err != nil {
+		return err
+	}
+
+	var inst Instance
+	if err := json.Unmarshal(data, &inst); err != nil {
+		return err
+	}
+
+	inst.PlayTimeSecs += elapsedSecs
+	nowStr := fmt.Sprintf("%d", time.Now().Unix())
+	inst.LastPlayed = &nowStr
+
+	updated, err := json.MarshalIndent(inst, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(instPath, updated, 0644)
 }
 
 // UpdateInstance updates metadata on an existing instance.
@@ -215,7 +245,20 @@ func OpenFolder(id string, subfolder *string) error {
 
 	target := instDir
 	if subfolder != nil && *subfolder != "" {
-		target = filepath.Join(instDir, "minecraft", *subfolder)
+		sub := *subfolder
+		// Map "mods" to "horizon-mods" if instance is a Horizon instance and horizon-mods exists
+		if sub == "mods" {
+			instPath := filepath.Join(instDir, "instance.json")
+			if data, err := os.ReadFile(instPath); err == nil {
+				var inst Instance
+				if err := json.Unmarshal(data, &inst); err == nil {
+					if inst.Loader != nil && strings.ToLower(*inst.Loader) == "horizon" {
+						sub = "horizon-mods"
+					}
+				}
+			}
+		}
+		target = filepath.Join(instDir, "minecraft", sub)
 		_ = os.MkdirAll(target, 0755)
 	}
 

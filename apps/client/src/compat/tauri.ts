@@ -59,6 +59,14 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
       args.quickPlayType,
       args.target,
     ),
+  build_horizon_native_mods: (args) =>
+    MyGo.MinecraftService.buildHorizonNativeMods(args.id),
+  get_horizon_native_build_status: (args) =>
+    MyGo.MinecraftService.getHorizonNativeBuildStatus(args.id),
+  get_horizon_engine_version: (args) =>
+    MyGo.MinecraftService.getHorizonEngineVersion(args.id ?? args.instanceId),
+  update_horizon_engine: (args) =>
+    MyGo.MinecraftService.updateHorizonEngine(args.id ?? args.instanceId),
   get_running_instances: () => MyGo.MinecraftService.getRunningInstances(),
   kill_instance: (args) => MyGo.MinecraftService.killInstance(args.id),
   get_instance_logs: (args) => MyGo.MinecraftService.getInstanceLogs(args.id),
@@ -76,48 +84,64 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
   search_discovery: (args) =>
     MyGo.DiscoveryService.searchDiscovery({
       provider: args.provider,
-      projectType: args.projectType,
+      projectType: args.projectType ?? args.project_type,
       query: args.query ?? null,
-      mcVersion: args.mcVersion ?? null,
+      mcVersion: args.mcVersion ?? args.mc_version ?? null,
       loader: args.loader ?? null,
       offset: args.offset ?? 0,
       limit: args.limit ?? 20,
     }),
   get_discovery_project_details: (args) =>
-    MyGo.DiscoveryService.getDiscoveryProjectDetails(args.provider, args.projectId),
+    MyGo.DiscoveryService.getDiscoveryProjectDetails(
+      args.provider,
+      args.projectId ?? args.project_id ?? args.id,
+    ),
   get_discovery_project_versions: (args) =>
     MyGo.DiscoveryService.getDiscoveryProjectVersions(
       args.provider,
-      args.projectId,
-      args.mcVersion ?? null,
+      args.projectId ?? args.project_id ?? args.id,
+      args.mcVersion ?? args.mc_version ?? null,
       args.loader ?? null,
     ),
   get_installed_addons_list: (args) =>
-    MyGo.DiscoveryService.getInstalledAddonsList(args.instanceId, args.projectType),
+    MyGo.DiscoveryService.getInstalledAddonsList(
+      args.instanceId ?? args.instance_id ?? args.id,
+      args.projectType ?? args.project_type,
+    ),
   get_installed_addon_ids: (args) =>
-    MyGo.DiscoveryService.getInstalledAddonIDs(args.instanceId, args.projectType),
+    MyGo.DiscoveryService.getInstalledAddonIDs(
+      args.instanceId ?? args.instance_id ?? args.id,
+      args.projectType ?? args.project_type,
+    ),
   toggle_addon_enabled: (args) =>
     MyGo.DiscoveryService.toggleAddonEnabled(
-      args.instanceId,
-      args.projectType,
-      args.fileName,
+      args.instanceId ?? args.instance_id,
+      args.projectType ?? args.project_type,
+      args.fileName ?? args.file_name,
       args.enabled,
     ),
   delete_addon: (args) =>
-    MyGo.DiscoveryService.deleteAddon(args.instanceId, args.projectType, args.fileName),
+    MyGo.DiscoveryService.deleteAddon(
+      args.instanceId ?? args.instance_id,
+      args.projectType ?? args.project_type,
+      args.fileName ?? args.file_name,
+    ),
   check_addon_updates: (args) =>
-    MyGo.DiscoveryService.checkAddonUpdates(args.instanceId, args.projectType),
+    MyGo.DiscoveryService.checkAddonUpdates(
+      args.instanceId ?? args.instance_id ?? args.id,
+      args.projectType ?? args.project_type,
+    ),
   install_discovery_project: (args) =>
     MyGo.DiscoveryService.installDiscoveryProject(
-      args.instanceId,
-      args.projectType,
-      args.downloadUrl,
-      args.fileName,
+      args.instanceId ?? args.instance_id,
+      args.projectType ?? args.project_type,
+      args.downloadUrl ?? args.download_url,
+      args.fileName ?? args.file_name,
       args.provider ?? null,
-      args.projectId ?? null,
-      args.versionId ?? null,
+      args.projectId ?? args.project_id ?? null,
+      args.versionId ?? args.version_id ?? null,
       args.title ?? null,
-      args.iconUrl ?? null,
+      args.iconUrl ?? args.icon_url ?? null,
     ),
 
   // Modpacks
@@ -201,6 +225,10 @@ export async function invoke<T = any>(command: string, args?: any): Promise<T> {
 
 type EventMap = Record<string, { on: (cb: (payload: any) => void) => () => void }>;
 
+function toCamelCase(str: string): string {
+  return str.replace(/_([a-z0-9])/g, (_, letter) => letter.toUpperCase());
+}
+
 /**
  * listen provides drop-in compatibility for Tauri event subscriptions,
  * routing them to MyGo event listeners.
@@ -210,7 +238,7 @@ export function listen<T = any>(
   handler: (event: { payload: T }) => void,
 ): Promise<() => void> {
   const events = (MyGo as Record<string, any>).events as EventMap | undefined;
-  const target = events?.[eventName];
+  const target = events?.[eventName] || events?.[toCamelCase(eventName)];
   if (target && typeof target.on === "function") {
     const unsub = target.on((data: T) => handler({ payload: data }));
     return Promise.resolve(unsub);

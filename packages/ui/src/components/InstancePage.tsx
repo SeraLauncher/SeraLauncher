@@ -1,10 +1,14 @@
 export function getLoaderDisplay(inst: {
   loader?: string | null;
+  loaderVersion?: string | null;
   versionType?: string | null;
   mcVersion: string;
 }): string {
   if (inst.loader) {
     const l = inst.loader.toLowerCase();
+    if (l === "horizon") {
+      return inst.loaderVersion ? `Horizon • ${inst.loaderVersion}` : "Horizon 26.3";
+    }
     if (l !== "vanilla" && l !== "none") {
       const prefix =
         l === "fabric"
@@ -588,7 +592,7 @@ function CreateInstanceModal({
     loaderVersion?: string,
   ) => Promise<void>;
 }) {
-  const [creationMode, setCreationMode] = useState<"vanilla" | "modpack">("vanilla");
+  const [creationMode, setCreationMode] = useState<"vanilla" | "horizon" | "modpack">("vanilla");
   const [importPath, setImportPath] = useState("");
   const [inspection, setInspection] = useState<ModpackInspection | null>(null);
   const [isInspecting, setIsInspecting] = useState(false);
@@ -611,6 +615,17 @@ function CreateInstanceModal({
     selectedVersion ? `${getPrefix("vanilla")} ${selectedVersion.id}` : "Vanilla Minecraft",
   );
   const [nameManuallyEdited, setNameManuallyEdited] = useState(false);
+
+  const handleModeChange = (mode: "vanilla" | "horizon" | "modpack") => {
+    setCreationMode(mode);
+    if (!nameManuallyEdited) {
+      if (mode === "horizon") {
+        setName("Horizon 26.3");
+      } else if (mode === "vanilla" && selectedVersion) {
+        setName(`${getPrefix(loader)} ${selectedVersion.id}`);
+      }
+    }
+  };
 
   // Icon state: selected block & selected pastel gradient background
   const [selectedBlock, setSelectedBlock] = useState<string>(() => getRandomBlockIconKey());
@@ -750,6 +765,22 @@ function CreateInstanceModal({
   };
 
   const handleCreate = () => {
+    if (creationMode === "horizon") {
+      if (!name.trim()) return;
+      const encodedIcon = encodeInstanceIcon(selectedBlock, selectedGradientName);
+      onClose();
+      onCreate(
+        name.trim(),
+        "26.3",
+        "release",
+        encodedIcon,
+        "horizon",
+        "0.2.95",
+      ).catch((err: unknown) => {
+        console.error("Failed to create horizon instance:", err);
+      });
+      return;
+    }
     if (!selectedVersion || !name.trim()) return;
     const encodedIcon = encodeInstanceIcon(selectedBlock, selectedGradientName);
     const chosenLoader = loader === "vanilla" ? undefined : loader;
@@ -774,7 +805,13 @@ function CreateInstanceModal({
       isOpen={true}
       onClose={onClose}
       theme={theme}
-      title={creationMode === "modpack" ? "Import Modpack" : "Create Instance"}
+      title={
+        creationMode === "modpack"
+          ? "Import Modpack"
+          : creationMode === "horizon"
+            ? "Create Horizon Instance"
+            : "Create Instance"
+      }
       maxWidth={540}
       footer={
         <>
@@ -802,7 +839,7 @@ function CreateInstanceModal({
               className="inline-flex items-center justify-center gap-1.5 h-7.5 px-3 rounded-md border-0 text-xs font-semibold cursor-pointer transition-[opacity,filter] duration-120 hover:brightness-108 disabled:opacity-50 disabled:cursor-not-allowed select-none"
               style={{ background: theme.primary, color: theme.primaryForeground }}
               onClick={handleCreate}
-              disabled={!selectedVersion || !name.trim()}
+              disabled={creationMode === "vanilla" && (!selectedVersion || !name.trim())}
             >
               Create Instance
             </button>
@@ -814,7 +851,7 @@ function CreateInstanceModal({
       <div className="flex items-center gap-1 p-1 rounded-lg border border-border bg-secondary mb-3">
         <button
           type="button"
-          onClick={() => setCreationMode("vanilla")}
+          onClick={() => handleModeChange("vanilla")}
           className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all text-center cursor-pointer ${
             creationMode === "vanilla"
               ? "bg-card text-foreground font-semibold shadow-xs"
@@ -825,14 +862,25 @@ function CreateInstanceModal({
         </button>
         <button
           type="button"
-          onClick={() => setCreationMode("modpack")}
+          onClick={() => handleModeChange("horizon")}
+          className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all text-center cursor-pointer ${
+            creationMode === "horizon"
+              ? "bg-card text-foreground font-semibold shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Horizon
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange("modpack")}
           className={`flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all text-center cursor-pointer ${
             creationMode === "modpack"
               ? "bg-card text-foreground font-semibold shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Import Modpack (.mrpack, .zip)
+          Import Modpack
         </button>
       </div>
       {/* Instance Icon & Name */}
@@ -1070,6 +1118,53 @@ function CreateInstanceModal({
             </div>
           )}
         </div>
+      ) : creationMode === "horizon" ? (
+        <>
+          {/* Version Selector for Horizon (Fixed to 26.3) */}
+          <div className="modal-field">
+            <div className="flex items-center justify-between mb-2">
+              <label className="modal-label" style={{ color: theme.foreground, marginBottom: 0 }}>
+                Minecraft Version
+              </label>
+            </div>
+
+            <div
+              className="max-h-[180px] overflow-y-auto rounded-lg border border-border flex flex-col p-1 gap-0.5"
+              style={{ background: theme.sidebarAccent, borderColor: theme.border }}
+            >
+              <button
+                type="button"
+                className="flex items-center justify-between w-full px-3 py-2 rounded-md border-0 text-xs text-left cursor-pointer transition-colors font-semibold"
+                style={{
+                  background: theme.primary,
+                  color: theme.primaryForeground,
+                }}
+              >
+                <span className="version-item-id font-medium">26.3</span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[11px]"
+                    style={{
+                      color: theme.primaryForeground,
+                      opacity: 0.85,
+                    }}
+                  >
+                    Oct 3, 2026
+                  </span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border border-border"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.2)",
+                      color: theme.primaryForeground,
+                    }}
+                  >
+                    release
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </>
       ) : (
         <>
           {/* Mod Loader Selector */}
@@ -1383,6 +1478,64 @@ function InstanceManagementView({
     }
   };
 
+  // Horizon engine version checker and updater state
+  interface HorizonEngineVersionInfo {
+    currentVersion: string;
+    latestVersion: string;
+    updateAvailable: boolean;
+    releaseTag: string;
+    downloadUrl: string;
+  }
+  const [horizonEngineInfo, setHorizonEngineInfo] = useState<HorizonEngineVersionInfo | null>(null);
+  const [checkingHorizonEngine, setCheckingHorizonEngine] = useState(false);
+  const [updatingHorizonEngine, setUpdatingHorizonEngine] = useState(false);
+
+  const checkHorizonEngineVersion = useCallback(async () => {
+    if (instance.loader !== "horizon") return;
+    setCheckingHorizonEngine(true);
+    try {
+      const info = await invoke<HorizonEngineVersionInfo>("get_horizon_engine_version", {
+        id: instance.id,
+      });
+      if (info) {
+        setHorizonEngineInfo(info);
+        if (info.currentVersion && info.currentVersion !== instance.loaderVersion) {
+          onUpdate({ ...instance, loaderVersion: info.currentVersion }).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to check Horizon engine version:", err);
+    } finally {
+      setCheckingHorizonEngine(false);
+    }
+  }, [instance.id, instance.loader, instance.loaderVersion, onUpdate]);
+
+  useEffect(() => {
+    checkHorizonEngineVersion();
+  }, [checkHorizonEngineVersion]);
+
+  const handleUpdateHorizonEngine = async () => {
+    if (!horizonEngineInfo || updatingHorizonEngine) return;
+    setUpdatingHorizonEngine(true);
+    toast.info(`Updating Horizon engine to ${horizonEngineInfo.latestVersion}...`, {
+      description: "Downloading and extracting official engine release from GitHub.",
+    });
+    try {
+      const updated = await invoke<HorizonEngineVersionInfo>("update_horizon_engine", {
+        id: instance.id,
+      });
+      setHorizonEngineInfo(updated);
+      await onUpdate({ ...instance, loaderVersion: updated.currentVersion });
+      toast.success(`Horizon engine updated to ${updated.currentVersion}!`, {
+        description: "Instance is now running the latest native engine release.",
+      });
+    } catch (err) {
+      toast.error(`Failed to update Horizon engine: ${String(err)}`);
+    } finally {
+      setUpdatingHorizonEngine(false);
+    }
+  };
+
   const handleLaunchQuickPlay = async (type: "singleplayer" | "multiplayer", target: string) => {
     try {
       const rep = await invoke<SafetyReport>("validate_instance_safety", { id: instance.id });
@@ -1485,17 +1638,35 @@ function InstanceManagementView({
 
   const handleLaunchWithSafetyCheck = async () => {
     try {
-      const rep = await invoke<SafetyReport>("validate_instance_safety", { id: instance.id });
-      if (rep && !rep.isSafe) {
-        setSafetyReport(rep);
-        setShowCompatibilityModal(true);
-        return;
+      if (instance.loader !== "horizon") {
+        const rep = await invoke<SafetyReport>("validate_instance_safety", { id: instance.id });
+        if (rep && !rep.isSafe) {
+          setSafetyReport(rep);
+          setShowCompatibilityModal(true);
+          return;
+        }
       }
     } catch {
       // If safety check fails, fallback to standard launch
     }
     setLogs("");
     onLaunch();
+
+    // Fallback poll to ensure initial lines render promptly
+    setTimeout(() => {
+      invoke<string>("get_instance_logs", { id: instance.id })
+        .then((l) => {
+          if (l && l.trim()) setLogs(l.trim());
+        })
+        .catch(() => {});
+    }, 400);
+    setTimeout(() => {
+      invoke<string>("get_instance_logs", { id: instance.id })
+        .then((l) => {
+          if (l && l.trim()) setLogs(l.trim());
+        })
+        .catch(() => {});
+    }, 1200);
   };
   const cachedScreenshots = getCachedScreenshots(instance.id);
   const [screenshots, setScreenshots] = useState<ScreenshotItem[]>(() => cachedScreenshots ?? []);
@@ -2411,12 +2582,56 @@ function InstanceManagementView({
                 </div>
 
                 <div className="flex flex-col justify-center gap-1.5 min-w-0">
-                  <h2 className="text-xl font-bold truncate leading-tight">{instance.name}</h2>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+                    <h2 className="text-xl font-bold truncate leading-tight">{instance.name}</h2>
+                    {instance.loader === "horizon" && horizonEngineInfo?.updateAvailable && (
+                      <button
+                        type="button"
+                        onClick={handleUpdateHorizonEngine}
+                        disabled={updatingHorizonEngine}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all border border-primary/40 bg-primary/15 text-primary hover:brightness-110 active:scale-95 cursor-pointer select-none shadow-xs shrink-0"
+                        title={`Click to download and install Horizon engine ${horizonEngineInfo.latestVersion}`}
+                      >
+                        <Icon
+                          name="download"
+                          size={11}
+                          className={updatingHorizonEngine ? "animate-bounce" : ""}
+                          color="currentColor"
+                        />
+                        <span>
+                          {updatingHorizonEngine
+                            ? "Updating engine..."
+                            : `Update available (${horizonEngineInfo.latestVersion})`}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                     <span className="inline-flex items-center gap-1.5 font-medium">
                       <Icon name="cubes" size={13} color="currentColor" />
-                      <span>{loaderLabel}</span>
+                      <span>
+                        {instance.loader === "horizon" && horizonEngineInfo?.currentVersion
+                          ? `Horizon • ${horizonEngineInfo.currentVersion}`
+                          : loaderLabel}
+                      </span>
+                      {instance.loader === "horizon" && (
+                        <button
+                          type="button"
+                          onClick={checkHorizonEngineVersion}
+                          disabled={checkingHorizonEngine || updatingHorizonEngine}
+                          className="p-1 rounded hover:bg-secondary cursor-pointer text-muted-foreground hover:text-foreground transition-colors ml-0.5"
+                          title="Check for Horizon engine update"
+                        >
+                          <Icon
+                            name="refresh"
+                            size={12}
+                            className={checkingHorizonEngine ? "animate-spin" : ""}
+                            color="currentColor"
+                          />
+                        </button>
+                      )}
                     </span>
+
                     <span className="opacity-40">•</span>
                     <span className="inline-flex items-center gap-1.5 font-medium">
                       <Icon name="clock" size={13} color="currentColor" />
