@@ -4,6 +4,7 @@ export * from "./settings";
 export * from "./lib/utils";
 export * from "./components/Icon";
 export * from "./components/Dropdown";
+export * from "./components/CheckboxDropdown";
 export * from "./components/Appearance";
 export * from "./components/Sidebar";
 export * from "./components/AppLoadingScreen";

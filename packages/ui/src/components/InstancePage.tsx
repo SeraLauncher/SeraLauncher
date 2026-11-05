@@ -1980,6 +1980,13 @@ function InstanceManagementView({
       jvmArgs,
       discordRpc: true,
       discordDetailed: true,
+      enabledAnimations: [
+        "dynamic_idle",
+        "walking",
+        "levitation_float",
+        "elytra_soar",
+        "sleepy_nod_off",
+      ],
     };
   }, [customJava, minMemory, maxMemory, jvmArgs]);
 

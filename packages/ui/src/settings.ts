@@ -1,3 +1,5 @@
+import type { PlayerAnimationId } from "@sera/player-model";
+
 /** Current Sera application version. */
 export const APP_VERSION = "0.2.2";
 
@@ -33,6 +35,25 @@ export const DEFAULT_JVM_ARGS = "";
  *  in-game world/server description behind "Playing Sera". */
 export const DEFAULT_DISCORD_RPC = true;
 export const DEFAULT_DISCORD_DETAILED = true;
+
+/** Available player model animations that can be selected or enabled. */
+export const DEFAULT_ANIMATIONS = [
+  "dynamic_idle",
+  "walking",
+  "levitation_float",
+  "elytra_soar",
+  "sleepy_nod_off",
+] as const;
+
+export type { PlayerAnimationId };
+
+export const ANIMATION_LABELS: Record<PlayerAnimationId, string> = {
+  dynamic_idle: "Dynamic Idle",
+  walking: "Walking",
+  levitation_float: "Levitation Float",
+  elytra_soar: "Elytra Soar",
+  sleepy_nod_off: "Sleepy Nod Off",
+};
 
 /** Default memory and runtime flags for Minecraft execution. */
 export const MEMORY_PRESETS = [
@@ -78,6 +99,7 @@ export type Settings = {
   jvmArgs: string;
   discordRpc: boolean;
   discordDetailed: boolean;
+  enabledAnimations: string[];
 };
 
 export type ResolvedJavaArgs = {

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { Dropdown } from "./Dropdown";
+import { CheckboxDropdown } from "./CheckboxDropdown";
 import { AppearancePicker } from "./Appearance";
 import { Icon } from "./Icon";
 import { Badge } from "./ui/badge";
@@ -15,6 +16,8 @@ import {
   DEFAULT_MAX_MEMORY,
   DEFAULT_MIN_MEMORY,
   DEFAULT_ZOOM,
+  DEFAULT_ANIMATIONS,
+  ANIMATION_LABELS,
   MAX_ZOOM,
   MIN_ZOOM,
   type Appearance,
@@ -62,6 +65,7 @@ export function SettingsPage({
   onRefreshJava,
   onDiscordRpc,
   onDiscordDetailed,
+  onEnabledAnimations,
 }: {
   activeTab?: SettingsTab;
   settings: Settings;
@@ -81,11 +85,22 @@ export function SettingsPage({
   onRefreshJava?: () => void;
   onDiscordRpc?: (enabled: boolean) => void;
   onDiscordDetailed?: (detailed: boolean) => void;
+  onEnabledAnimations?: (animations: string[]) => void;
 }) {
   const [customPathMode, setCustomPathMode] = useState(
     () => Boolean(settings.javaPath) && !javaRuntimes.some((r) => r.path === settings.javaPath),
   );
   const [showArgsModal, setShowArgsModal] = useState(false);
+
+  const enabledAnimations = useMemo(() => {
+    return Array.isArray(settings.enabledAnimations) && settings.enabledAnimations.length > 0
+      ? settings.enabledAnimations
+      : [...DEFAULT_ANIMATIONS];
+  }, [settings.enabledAnimations]);
+
+  const isAllAnimationsEnabled =
+    DEFAULT_ANIMATIONS.every((a) => enabledAnimations.includes(a)) &&
+    enabledAnimations.length === DEFAULT_ANIMATIONS.length;
 
   // Managed Adoptium Temurin runtimes state
   const [managedRuntimes, setManagedRuntimes] = useState<ManagedJavaRuntime[]>([]);
@@ -198,6 +213,76 @@ export function SettingsPage({
     100,
     Math.max(0, ((settings.minMemory - minRamMin) / minRamRange) * 100),
   );
+
+  if (activeTab === "discord") {
+    return (
+      <main className="flex flex-col items-center gap-7 px-6 py-9">
+        <h1
+          className="w-full max-w-[620px] m-0 text-2xl font-bold tracking-[-0.01em] text-left"
+          style={{ color: theme.foreground }}
+        >
+          Discord
+        </h1>
+
+        {/* Discord Rich Presence Section */}
+        <Group title="Discord Rich Presence" theme={theme}>
+          <Row
+            label="Rich Presence"
+            hint="Share your Sera activity on your Discord profile"
+            theme={theme}
+            control={
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.discordRpc}
+                aria-label="Toggle Discord rich presence"
+                className="relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out outline-none"
+                style={{
+                  background: settings.discordRpc ? theme.primary : theme.secondary,
+                }}
+                onClick={() => onDiscordRpc?.(!settings.discordRpc)}
+              >
+                <span
+                  className="pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform duration-150 ease-in-out"
+                  style={{
+                    background: settings.discordRpc ? theme.card : theme.mutedForeground,
+                    transform: settings.discordRpc ? "translateX(22px)" : "translateX(2px)",
+                  }}
+                />
+              </button>
+            }
+          />
+          <Row
+            label="Detailed information"
+            hint={`While discovering or in settings, disclose your current page; while in a world,${"\n"}disclose whether you are surviving or on a server`}
+            theme={theme}
+            control={
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.discordDetailed}
+                disabled={!settings.discordRpc}
+                aria-label="Toggle detailed presence information"
+                className={`relative inline-flex items-center h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out outline-none ${settings.discordRpc ? "cursor-pointer" : "cursor-not-allowed opacity-40"}`}
+                style={{
+                  background: settings.discordDetailed ? theme.primary : theme.secondary,
+                }}
+                onClick={() => onDiscordDetailed?.(!settings.discordDetailed)}
+              >
+                <span
+                  className="pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform duration-150 ease-in-out"
+                  style={{
+                    background: settings.discordDetailed ? theme.card : theme.mutedForeground,
+                    transform: settings.discordDetailed ? "translateX(22px)" : "translateX(2px)",
+                  }}
+                />
+              </button>
+            }
+          />
+        </Group>
+      </main>
+    );
+  }
 
   if (activeTab === "java") {
     return (
@@ -794,62 +879,40 @@ export function SettingsPage({
         />
       </Group>
 
-      {/* Discord Rich Presence Section */}
-      <Group title="Discord Rich Presence" theme={theme}>
+      {/* Player Model Animations Section */}
+      <Group title="Animations" theme={theme}>
         <Row
-          label="Rich Presence"
-          hint="Share your Sera activity on your Discord profile"
+          label="Player model animations"
+          hint="Select which animations can be chosen when the launcher starts up"
           theme={theme}
           control={
-            <button
-              type="button"
-              role="switch"
-              aria-checked={settings.discordRpc}
-              aria-label="Toggle Discord rich presence"
-              className="relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out outline-none"
-              style={{
-                background: settings.discordRpc ? theme.primary : theme.secondary,
-              }}
-              onClick={() => onDiscordRpc?.(!settings.discordRpc)}
-            >
-              <span
-                className="pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform duration-150 ease-in-out"
-                style={{
-                  background: settings.discordRpc ? theme.card : theme.mutedForeground,
-                  transform: settings.discordRpc ? "translateX(22px)" : "translateX(2px)",
-                }}
-              />
-            </button>
+            <CheckboxDropdown
+              className="min-w-[200px]"
+              values={enabledAnimations}
+              options={DEFAULT_ANIMATIONS}
+              render={(animId) => (ANIMATION_LABELS as Record<string, string>)[animId] ?? animId}
+              onChange={(next) => onEnabledAnimations?.(next)}
+              theme={theme}
+            />
           }
-        />
-        <Row
-          label="Detailed information"
-          hint={`While discovering or in settings, disclose your current page; while in a world,${"\n"}disclose whether you are surviving or on a server`}
-          theme={theme}
-          control={
+          action={
             <button
               type="button"
-              role="switch"
-              aria-checked={settings.discordDetailed}
-              disabled={!settings.discordRpc}
-              aria-label="Toggle detailed presence information"
-              className={`relative inline-flex items-center h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-150 ease-in-out outline-none ${settings.discordRpc ? "cursor-pointer" : "cursor-not-allowed opacity-40"}`}
+              onClick={() => onEnabledAnimations?.([...DEFAULT_ANIMATIONS])}
+              disabled={isAllAnimationsEnabled}
+              title="Reset animations to all enabled"
+              aria-label="Reset animations to all enabled"
+              className="transition-colors disabled:opacity-30 disabled:cursor-not-allowed enabled:cursor-pointer enabled:hover:opacity-80"
               style={{
-                background: settings.discordDetailed ? theme.primary : theme.secondary,
+                color: isAllAnimationsEnabled ? theme.mutedForeground : theme.primary,
               }}
-              onClick={() => onDiscordDetailed?.(!settings.discordDetailed)}
             >
-              <span
-                className="pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform duration-150 ease-in-out"
-                style={{
-                  background: settings.discordDetailed ? theme.card : theme.mutedForeground,
-                  transform: settings.discordDetailed ? "translateX(22px)" : "translateX(2px)",
-                }}
-              />
+              <Icon name="reset" size={16} color="currentColor" />
             </button>
           }
         />
       </Group>
+
       <EffectiveJavaArgsModal
         isOpen={showArgsModal}
         onClose={() => setShowArgsModal(false)}

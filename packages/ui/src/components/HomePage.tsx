@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Icon } from "./Icon";
-import { PlayerModelView } from "@sera/player-model";
+import { PlayerModelView, type PlayerAnimationId } from "@sera/player-model";
+import { DEFAULT_ANIMATIONS, ANIMATION_LABELS } from "../settings";
 import type { Theme } from "../theme";
 import { snappy } from "../motion";
 import homeBg from "../assets/images/home-bg.png";
@@ -137,6 +138,9 @@ export function HomePage({
   instances = [],
   skinUrl,
   username,
+  animation = "dynamic_idle",
+  enabledAnimations,
+  onRandomizeAnimation,
   onNavigateToInstances,
   onLaunch,
 }: {
@@ -144,6 +148,9 @@ export function HomePage({
   instances?: string[];
   skinUrl?: string;
   username?: string;
+  animation?: PlayerAnimationId;
+  enabledAnimations?: readonly string[];
+  onRandomizeAnimation?: () => void;
   onNavigateToInstances?: () => void;
   onLaunch?: (instanceName: string) => void;
 }) {
@@ -154,6 +161,41 @@ export function HomePage({
   const [showInstanceMenu, setShowInstanceMenu] = useState(false);
   const [query, setQuery] = useState("");
   const [launching, setLaunching] = useState(false);
+  const [activeAnimation, setActiveAnimation] = useState<PlayerAnimationId>(animation);
+
+  // Sync with prop when parent updates active animation (such as when settings change)
+  useEffect(() => {
+    setActiveAnimation(animation);
+  }, [animation]);
+
+  // Ensure active animation stays within the enabled pool
+  useEffect(() => {
+    const pool = (
+      enabledAnimations && enabledAnimations.length > 0 ? enabledAnimations : DEFAULT_ANIMATIONS
+    ) as PlayerAnimationId[];
+
+    if (!pool.includes(activeAnimation)) {
+      const picked = pool[Math.floor(Math.random() * pool.length)] || "dynamic_idle";
+      setActiveAnimation(picked);
+    }
+  }, [enabledAnimations, activeAnimation]);
+
+  const handleModelDoubleClick = () => {
+    if (onRandomizeAnimation) {
+      onRandomizeAnimation();
+      return;
+    }
+    const pool = (
+      enabledAnimations && enabledAnimations.length > 0 ? enabledAnimations : DEFAULT_ANIMATIONS
+    ) as PlayerAnimationId[];
+
+    const candidates = pool.filter((id) => id !== activeAnimation);
+    const targetPool = candidates.length > 0 ? candidates : pool;
+    const picked = targetPool[Math.floor(Math.random() * targetPool.length)];
+    if (picked) {
+      setActiveAnimation(picked);
+    }
+  };
 
   // Derived active selected instance
   const selectedInstance =
@@ -289,13 +331,18 @@ export function HomePage({
 
         {/* docked play action block overlapping the bottom edge */}
         <div className="absolute top-[calc(100%-24px)] left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
-          <div className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[200px] h-[280px] flex items-center justify-center z-[3] pointer-events-none select-none">
+          <div
+            className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 w-[200px] h-[280px] flex items-center justify-center z-[3] pointer-events-auto select-none cursor-pointer"
+            onDoubleClick={handleModelDoubleClick}
+            title={`Current: ${ANIMATION_LABELS[activeAnimation]} · Double-click to randomize`}
+          >
             <PlayerModelView
               skinUrl={skinUrl}
               username={username}
               width={200}
               height={280}
               animated={true}
+              animation={activeAnimation}
               interactive={false}
             />
           </div>

@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   BUNDLED_FAMILY,
+  DEFAULT_ANIMATIONS,
   DEFAULT_DISCORD_DETAILED,
   DEFAULT_DISCORD_RPC,
   DEFAULT_FONT_SIZE,
@@ -43,6 +44,7 @@ const DEFAULTS: Settings = {
   jvmArgs: DEFAULT_JVM_ARGS,
   discordRpc: DEFAULT_DISCORD_RPC,
   discordDetailed: DEFAULT_DISCORD_DETAILED,
+  enabledAnimations: [...DEFAULT_ANIMATIONS],
 };
 
 /** Anything the ui does not recognise is replaced, so a hand-edited or older settings
@@ -79,6 +81,10 @@ function usable(loaded: Partial<Settings>): Settings {
       typeof loaded.discordDetailed === "boolean"
         ? loaded.discordDetailed
         : DEFAULTS.discordDetailed,
+    enabledAnimations:
+      Array.isArray(loaded.enabledAnimations) && loaded.enabledAnimations.length > 0
+        ? loaded.enabledAnimations
+        : [...DEFAULT_ANIMATIONS],
   };
 }
 

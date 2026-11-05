@@ -322,6 +322,7 @@ export interface Settings {
   jvmArgs: string;
   discordRpc: boolean;
   discordDetailed: boolean;
+  enabledAnimations: string[];
 }
 
 export interface WorldBackupItem {
