@@ -10,6 +10,9 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
   list_fonts: () => MyGo.SystemService.listFonts(),
   get_system_memory: () => MyGo.SystemService.getSystemMemory(),
   set_discord_navigation: (args) => MyGo.DiscordService.setDiscordNavigation(args?.status ?? null),
+  get_discord_status: () => MyGo.DiscordService.getDiscordStatus(),
+  reconnect_discord: () => MyGo.DiscordService.reconnectDiscord(),
+  disconnect_discord: () => MyGo.DiscordService.disconnectDiscord(),
 
   // Java Runtimes
   list_java_runtimes: () => MyGo.JavaService.listRuntimes(),

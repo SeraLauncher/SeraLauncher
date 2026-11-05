@@ -107,6 +107,61 @@ export function SettingsPage({
   const [loadingManagedRuntimes, setLoadingManagedRuntimes] = useState(false);
   const [busyVersion, setBusyVersion] = useState<number | null>(null);
 
+  // Discord connection status state
+  const [discordStatus, setDiscordStatus] = useState<"connected" | "not_connected" | "stopped">(
+    () => (settings.discordRpc ? "not_connected" : "stopped"),
+  );
+  const [busyDiscord, setBusyDiscord] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== "discord") return;
+    let active = true;
+
+    const queryStatus = () => {
+      invoke<string>("get_discord_status")
+        .then((s) => {
+          if (active && s) {
+            setDiscordStatus(s as "connected" | "not_connected" | "stopped");
+          }
+        })
+        .catch(() => {});
+    };
+
+    queryStatus();
+    const interval = setInterval(queryStatus, 2500);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [activeTab]);
+
+  const handleDiscordStatusClick = async () => {
+    if (busyDiscord) return;
+    setBusyDiscord(true);
+    try {
+      if (discordStatus === "connected") {
+        const next = await invoke<string>("disconnect_discord");
+        setDiscordStatus((next as any) || "stopped");
+        onDiscordRpc?.(false);
+        toast.info("Discord Rich Presence stopped");
+      } else {
+        toast.info("Connecting to Discord...");
+        const next = await invoke<string>("reconnect_discord");
+        setDiscordStatus((next as any) || "connected");
+        onDiscordRpc?.(true);
+        if (next === "connected") {
+          toast.success("Connected to Discord");
+        } else {
+          toast.warning("Could not reach Discord client");
+        }
+      }
+    } catch (err) {
+      toast.error(`Discord action failed: ${err}`);
+    } finally {
+      setBusyDiscord(false);
+    }
+  };
+
   const refreshManagedRuntimes = () => {
     setLoadingManagedRuntimes(true);
     invoke<ManagedJavaRuntime[]>("get_managed_java_runtimes")
@@ -225,7 +280,50 @@ export function SettingsPage({
         </h1>
 
         {/* Discord Rich Presence Section */}
-        <Group title="Discord Rich Presence" theme={theme}>
+        <Group
+          title="Discord Rich Presence"
+          theme={theme}
+          headerRight={
+            <button
+              type="button"
+              onClick={handleDiscordStatusClick}
+              disabled={busyDiscord}
+              title={
+                discordStatus === "connected"
+                  ? "Connected · Click to stop"
+                  : discordStatus === "not_connected"
+                    ? "Not Connected · Click to reconnect"
+                    : "Stopped · Click to connect"
+              }
+              className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full border text-[11px] font-semibold cursor-pointer select-none transition-colors disabled:opacity-50 ${
+                discordStatus === "connected"
+                  ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20"
+                  : discordStatus === "not_connected"
+                    ? "border-amber-500/40 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+                    : "border-border text-muted-foreground bg-secondary hover:bg-card"
+              }`}
+            >
+              <span
+                className={`size-1.5 rounded-full ${
+                  discordStatus === "connected"
+                    ? "bg-emerald-400 animate-pulse"
+                    : discordStatus === "not_connected"
+                      ? "bg-amber-400"
+                      : "bg-muted-foreground"
+                }`}
+              />
+              <span>
+                {busyDiscord
+                  ? "Connecting..."
+                  : discordStatus === "connected"
+                    ? "Connected"
+                    : discordStatus === "not_connected"
+                      ? "Not Connected"
+                      : "Stopped"}
+              </span>
+            </button>
+          }
+        >
           <Row
             label="Rich Presence"
             hint="Share your Sera activity on your Discord profile"
@@ -925,16 +1023,23 @@ export function SettingsPage({
 
 function Group({
   title,
+  headerRight,
   theme,
   children,
 }: {
   title: string;
+  headerRight?: React.ReactNode;
   theme: Theme;
   children: React.ReactNode;
 }) {
   return (
-    <section className="w-full max-w-[620px] [&>h2]:m-0 [&>h2]:mb-2 [&>h2]:ml-0.5 [&>h2]:text-[0.8rem] [&>h2]:font-semibold">
-      <h2 style={{ color: theme.mutedForeground }}>{title}</h2>
+    <section className="w-full max-w-[620px] [&>div.group-header]:m-0 [&>div.group-header]:mb-2 [&>div.group-header]:ml-0.5">
+      <div className="group-header flex items-center justify-between mb-2 ml-0.5">
+        <h2 className="text-[0.8rem] font-semibold m-0" style={{ color: theme.mutedForeground }}>
+          {title}
+        </h2>
+        {headerRight}
+      </div>
       <div className="px-[18px] py-1 bg-card rounded-xl">{children}</div>
     </section>
   );

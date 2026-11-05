@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/egoist/mygo"
+	"serago/internal/discord"
 	"serago/internal/downloader"
 	"serago/internal/instances"
 	"serago/internal/minecraft"
@@ -23,13 +24,19 @@ var (
 
 func init() {
 	minecraft.OnLogLine(func(id, line string) {
+		discord.NoteSessionLogLine(id, line)
 		_ = InstanceLogLine.Broadcast(InstanceLogPayload{
 			ID:   id,
 			Line: line,
 		})
 	})
 
+	minecraft.OnProcessStart(func(info minecraft.RunningInstanceInfo) {
+		discord.SessionStart(info.ID, info.Name, info.McVersion, info.StartedAt)
+	})
+
 	minecraft.OnProcessExit(func(id string, elapsedSecs uint64) {
+		discord.SessionExit(id)
 		_ = instances.AddPlayTime(id, elapsedSecs)
 		_ = RunningInstancesChanged.Broadcast(minecraft.ListRunningInstances())
 		_ = InstancesChanged.Broadcast("changed")

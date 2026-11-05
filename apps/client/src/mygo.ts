@@ -363,6 +363,15 @@ export const SystemService = {
 
 /** DiscordService handles navigation presence reporting. */
 export const DiscordService = {
+  disconnectDiscord(): Promise<string> {
+    return call("DiscordService.DisconnectDiscord");
+  },
+  getDiscordStatus(): Promise<string> {
+    return call("DiscordService.GetDiscordStatus");
+  },
+  reconnectDiscord(): Promise<string> {
+    return call("DiscordService.ReconnectDiscord");
+  },
   setDiscordNavigation(status: string | null): Promise<void> {
     return call("DiscordService.SetDiscordNavigation", status);
   },
