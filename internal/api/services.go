@@ -152,7 +152,7 @@ func (InstanceService) CreateInstance(args CreateInstanceArgs) (instances.Instan
 		args.LoaderVersion,
 	)
 	if err == nil {
-		_ = InstancesChanged.Emit(nil, nil)
+		_ = InstancesChanged.Broadcast("changed")
 	}
 	return inst, err
 }
@@ -160,7 +160,7 @@ func (InstanceService) CreateInstance(args CreateInstanceArgs) (instances.Instan
 func (InstanceService) UpdateInstance(inst instances.Instance) (instances.Instance, error) {
 	updated, err := instances.UpdateInstance(inst)
 	if err == nil {
-		_ = InstancesChanged.Emit(nil, nil)
+		_ = InstancesChanged.Broadcast("changed")
 	}
 	return updated, err
 }
@@ -168,7 +168,7 @@ func (InstanceService) UpdateInstance(inst instances.Instance) (instances.Instan
 func (InstanceService) DeleteInstance(id string) error {
 	err := instances.DeleteInstance(id)
 	if err == nil {
-		_ = InstancesChanged.Emit(nil, nil)
+		_ = InstancesChanged.Broadcast("changed")
 	}
 	return err
 }
@@ -203,7 +203,7 @@ func (MinecraftService) FetchMinecraftNews(pageSize uint32) (minecraft.NewsRespo
 func (MinecraftService) LaunchInstance(id string) error {
 	err := minecraft.LaunchInstance(id, nil, nil)
 	if err == nil {
-		_ = RunningInstancesChanged.Emit(nil, minecraft.ListRunningInstances())
+		_ = RunningInstancesChanged.Broadcast(minecraft.ListRunningInstances())
 	}
 	return err
 }
@@ -217,7 +217,7 @@ func (MinecraftService) LaunchInstanceQuickPlay(id string, quickPlayType string,
 	}
 	err := minecraft.LaunchInstance(id, sp, mp)
 	if err == nil {
-		_ = RunningInstancesChanged.Emit(nil, minecraft.ListRunningInstances())
+		_ = RunningInstancesChanged.Broadcast(minecraft.ListRunningInstances())
 	}
 	return err
 }
@@ -228,12 +228,32 @@ func (MinecraftService) GetRunningInstances() []minecraft.RunningInstanceInfo {
 
 func (MinecraftService) KillInstance(id string) error {
 	err := minecraft.KillInstance(id)
-	_ = RunningInstancesChanged.Emit(nil, minecraft.ListRunningInstances())
+	_ = RunningInstancesChanged.Broadcast(minecraft.ListRunningInstances())
 	return err
 }
 
 func (MinecraftService) GetInstanceLogs(id string) string {
 	return minecraft.GetSessionLogs(id)
+}
+
+func (MinecraftService) BuildHorizonNativeMods(id string) error {
+	return minecraft.BuildHorizonNativeMods(id)
+}
+
+func (MinecraftService) GetHorizonNativeBuildStatus(id string) (minecraft.NativeBuildStatus, error) {
+	return minecraft.GetHorizonNativeBuildStatus(id)
+}
+
+func (MinecraftService) GetHorizonEngineVersion(id string) (minecraft.HorizonEngineVersionInfo, error) {
+	return minecraft.GetHorizonEngineVersion(id)
+}
+
+func (MinecraftService) UpdateHorizonEngine(id string) (minecraft.HorizonEngineVersionInfo, error) {
+	info, err := minecraft.UpdateHorizonEngine(id)
+	if err == nil {
+		_ = InstancesChanged.Broadcast("changed")
+	}
+	return info, err
 }
 
 // LoaderService handles Fabric, Quilt, and Forge version resolution and installation.
@@ -407,17 +427,17 @@ func (DownloadService) GetActiveDownloads() []downloader.DownloadItem {
 
 func (DownloadService) PauseDownload(id string) {
 	downloader.PauseDownload(id)
-	_ = DownloadsChanged.Emit(nil, downloader.ListDownloads())
+	_ = DownloadsChanged.Broadcast(downloader.ListDownloads())
 }
 
 func (DownloadService) ResumeDownload(id string) {
 	downloader.ResumeDownload(id)
-	_ = DownloadsChanged.Emit(nil, downloader.ListDownloads())
+	_ = DownloadsChanged.Broadcast(downloader.ListDownloads())
 }
 
 func (DownloadService) StopDownload(id string) {
 	downloader.StopDownload(id)
-	_ = DownloadsChanged.Emit(nil, downloader.ListDownloads())
+	_ = DownloadsChanged.Broadcast(downloader.ListDownloads())
 }
 
 // SafetyService handles dependency validation and conflict resolution.

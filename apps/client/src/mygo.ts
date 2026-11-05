@@ -120,6 +120,14 @@ export interface ExportResult {
   sizeBytes: number;
 }
 
+export interface HorizonEngineVersionInfo {
+  currentVersion: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  releaseTag: string;
+  downloadUrl: string;
+}
+
 export interface IngestedItem {
   fileName: string;
   displayName: string;
@@ -155,6 +163,12 @@ export interface Instance {
   createdAt: string;
   lastPlayed: string | null;
   playTimeSecs: number;
+}
+
+/** InstanceLogPayload describes a streamed log line. */
+export interface InstanceLogPayload {
+  id: string;
+  line: string;
 }
 
 export interface JavaRuntime {
@@ -201,6 +215,12 @@ export interface ModpackInspection {
   loaderVersion: string | null;
   fileCount: number;
   format: string;
+}
+
+export interface NativeBuildStatus {
+  hasNativeMods: boolean;
+  isBuilt: boolean;
+  modCount: number;
 }
 
 export interface NewsEntry {
@@ -436,8 +456,17 @@ export const InstanceService = {
 
 /** MinecraftService handles game versions, process execution, and session logs. */
 export const MinecraftService = {
+  buildHorizonNativeMods(id: string): Promise<void> {
+    return call("MinecraftService.BuildHorizonNativeMods", id);
+  },
   fetchMinecraftNews(pageSize: number): Promise<NewsResponse> {
     return call("MinecraftService.FetchMinecraftNews", pageSize);
+  },
+  getHorizonEngineVersion(id: string): Promise<HorizonEngineVersionInfo> {
+    return call("MinecraftService.GetHorizonEngineVersion", id);
+  },
+  getHorizonNativeBuildStatus(id: string): Promise<NativeBuildStatus> {
+    return call("MinecraftService.GetHorizonNativeBuildStatus", id);
   },
   getInstanceLogs(id: string): Promise<string> {
     return call("MinecraftService.GetInstanceLogs", id);
@@ -456,6 +485,9 @@ export const MinecraftService = {
   },
   launchInstanceQuickPlay(id: string, quickPlayType: string, target: string): Promise<void> {
     return call("MinecraftService.LaunchInstanceQuickPlay", id, quickPlayType, target);
+  },
+  updateHorizonEngine(id: string): Promise<HorizonEngineVersionInfo> {
+    return call("MinecraftService.UpdateHorizonEngine", id);
   },
 } as const;
 
@@ -617,7 +649,8 @@ export const IngestService = {
 
 /** Events sent by the Go side. Subscribe with `events.name.on(listener)`. */
 export const events = {
-  instancesChanged: event<unknown>("instances_changed"),
-  runningInstancesChanged: event<unknown>("running_instances_changed"),
-  downloadsChanged: event<unknown>("downloads_changed"),
+  instancesChanged: event<string>("instances_changed"),
+  runningInstancesChanged: event<RunningInstanceInfo[]>("running_instances_changed"),
+  downloadsChanged: event<DownloadItem[]>("downloads_changed"),
+  instanceLogLine: event<InstanceLogPayload>("instance_log_line"),
 } as const;

@@ -5,9 +5,14 @@ import (
 
 	"github.com/egoist/mygo"
 	"serago/internal/api"
+	"serago/internal/paths"
 )
 
 func main() {
+	initPlatformPrgname("SeraLauncher")
+	mygo.App.SetName("SeraLauncher")
+	paths.MigrateLegacyDataDir()
+
 	mygo.Bind(
 		api.SettingsService{},
 		api.SystemService{},

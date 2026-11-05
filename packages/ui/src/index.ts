@@ -38,6 +38,7 @@ export * from "./components/InstanceAddonsTab";
 export * from "./components/InstanceWorldsTab";
 export * from "./components/InstanceServersTab";
 export * from "./components/ExportInstanceModal";
+export * from "./components/HorizonNativeBuildModal";
 
 export { Toaster, toast } from "sonner";
 

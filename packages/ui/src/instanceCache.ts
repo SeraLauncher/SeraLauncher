@@ -6,7 +6,7 @@ export interface AddonTabNavState {
   page: number;
   search: string;
   installedSearch: string;
-  provider: "modrinth" | "curseforge";
+  provider: "modrinth" | "horizon" | "curseforge";
 }
 
 export interface InstanceDataCache {

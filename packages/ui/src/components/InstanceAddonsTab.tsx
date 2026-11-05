@@ -215,6 +215,7 @@ import { DiscoveryPagination } from "./DiscoveryPagination";
 import { DiscoveryProjectCard } from "./DiscoveryProjectCard";
 import { Modal } from "./ui/modal";
 import { SelectVersionModal } from "./SelectVersionModal";
+import { HorizonNativeBuildModal } from "./HorizonNativeBuildModal";
 import { Badge } from "./ui/badge";
 import { recordDownloadHistory } from "../downloads";
 import { fade, pageFade } from "../motion";
@@ -285,7 +286,7 @@ export function InstanceAddonsTab({
   const cachedNav = getCachedAddonTabState(instance.id, category);
   const [showInstallLoaderModal, setShowInstallLoaderModal] = useState(false);
   const [provider, setProvider] = useState<DiscoveryProvider>(
-    () => cachedNav?.provider ?? "modrinth",
+    () => cachedNav?.provider ?? (instance.loader === "horizon" ? "horizon" : "modrinth"),
   );
   const [search, setSearch] = useState(() => cachedNav?.search ?? "");
 
@@ -354,6 +355,40 @@ export function InstanceAddonsTab({
   // Proactive safety report state
   const [safetyReport, setSafetyReport] = useState<SafetyReport | null>(null);
   const [resolvingDependencies, setResolvingDependencies] = useState(false);
+
+  // Horizon native mod build status state
+  interface NativeBuildStatus {
+    hasNativeMods: boolean;
+    isBuilt: boolean;
+    modCount: number;
+  }
+  const [nativeBuildStatus, setNativeBuildStatus] = useState<NativeBuildStatus | null>(null);
+  const [isBuildingNative, setIsBuildingNative] = useState(false);
+  const [showNativeBuildModal, setShowNativeBuildModal] = useState(false);
+
+  const checkNativeBuildStatus = useCallback(() => {
+    if (instance.loader !== "horizon" || category !== "mods") return;
+    invoke<NativeBuildStatus>("get_horizon_native_build_status", { id: instance.id })
+      .then((st) => setNativeBuildStatus(st || null))
+      .catch(() => setNativeBuildStatus(null));
+  }, [instance.id, instance.loader, category]);
+
+  useEffect(() => {
+    checkNativeBuildStatus();
+  }, [checkNativeBuildStatus, installedAddons.length]);
+
+  const handleBuildNativeMods = async () => {
+    setIsBuildingNative(true);
+    setShowNativeBuildModal(true);
+    try {
+      await invoke("build_horizon_native_mods", { id: instance.id });
+      checkNativeBuildStatus();
+    } catch (err) {
+      console.error("Failed to build native mods:", err);
+    } finally {
+      setIsBuildingNative(false);
+    }
+  };
 
   const checkSafety = useCallback(() => {
     if (category !== "mods") return;
@@ -638,7 +673,9 @@ export function InstanceAddonsTab({
 
   const folderButtonLabel =
     category === "mods"
-      ? "Open Mods Folder"
+      ? instance.loader === "horizon"
+        ? "Open Horizon Mods Folder"
+        : "Open Mods Folder"
       : category === "resourcepack"
         ? "Open Resource Packs Folder"
         : "Open Shaderpacks Folder";
@@ -814,8 +851,16 @@ export function InstanceAddonsTab({
       }
 
       if (!fileName) {
-        const ext = category === "mods" ? ".jar" : ".zip";
-        fileName = `${item.slug || category}${ext}`;
+        if (downloadUrl) {
+          const rawEnd = downloadUrl.split("/").pop()?.split("?")[0];
+          if (rawEnd && (rawEnd.endsWith(".hnmod") || rawEnd.endsWith(".hmod") || rawEnd.endsWith(".jar") || rawEnd.endsWith(".zip"))) {
+            fileName = rawEnd;
+          }
+        }
+        if (!fileName) {
+          const ext = category === "mods" ? (item.source === "horizon" ? ".hnmod" : ".jar") : ".zip";
+          fileName = `${item.slug || item.id || category}${ext}`;
+        }
       }
 
       toast.info(`Downloading ${item.title}...`, {
@@ -1042,6 +1087,53 @@ export function InstanceAddonsTab({
                   </button>
                 )}
               </div>
+
+              {/* Horizon Native Mods Build Status Banner */}
+              {instance.loader === "horizon" &&
+                category === "mods" &&
+                nativeBuildStatus?.hasNativeMods && (
+                  <div
+                    className={`w-full p-3 rounded-xl border flex items-center justify-between gap-3 flex-wrap transition-all ${
+                      nativeBuildStatus.isBuilt
+                        ? "border-emerald-500/30 bg-emerald-500/10"
+                        : "border-primary/40 bg-primary/10 shadow-xs"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 text-xs min-w-0">
+                      <Icon
+                        name={nativeBuildStatus.isBuilt ? "check" : "wand"}
+                        size={16}
+                        color={nativeBuildStatus.isBuilt ? "#10b981" : theme.primary}
+                      />
+                      <div className="flex flex-col gap-0.5">
+                        <span
+                          className="font-semibold text-xs leading-tight"
+                          style={{ color: theme.foreground }}
+                        >
+                          {nativeBuildStatus.isBuilt
+                            ? `Native mods are built into the client (${nativeBuildStatus.modCount} active)`
+                            : `${nativeBuildStatus.modCount} native mod${nativeBuildStatus.modCount > 1 ? "s" : ""} installed — compilation required`}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground leading-snug">
+                          {nativeBuildStatus.isBuilt
+                            ? "Horizon mixes these Rust mods into the game binary. They appear under Options > Mods."
+                            : "Compile your .hnmod bundles into the Horizon engine so they run in-game."}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleBuildNativeMods}
+                      disabled={isBuildingNative}
+                      className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg text-xs font-semibold cursor-pointer border-0 shadow-xs hover:brightness-110 disabled:opacity-50 select-none"
+                      style={{ background: theme.primary, color: theme.primaryForeground }}
+                    >
+                      <Icon name="wand" size={13} color="currentColor" />
+                      <span>{isBuildingNative ? "Compiling..." : nativeBuildStatus.isBuilt ? "Rebuild Mods" : "Build Native Mods"}</span>
+                    </button>
+                  </div>
+                )}
 
               {/* Proactive Missing Dependencies Warning Banner */}
               {safetyReport &&
@@ -1382,6 +1474,7 @@ export function InstanceAddonsTab({
                       setPage(1);
                     }}
                     theme={theme}
+                    showHorizon={instance.loader === "horizon" || provider === "horizon"}
                   />
                 </div>
 
@@ -1651,6 +1744,15 @@ export function InstanceAddonsTab({
             instance={instance}
             theme={theme}
             onInstalled={handleLoaderInstalled}
+          />
+
+          <HorizonNativeBuildModal
+            isOpen={showNativeBuildModal}
+            onClose={() => setShowNativeBuildModal(false)}
+            instance={instance}
+            theme={theme}
+            isBuilding={isBuildingNative}
+            onRebuild={handleBuildNativeMods}
           />
 
           {versionSelectProject && (
