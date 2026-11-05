@@ -18,7 +18,12 @@
       "@sera/player-model": ["./packages/player-model/src/index.ts"],
       "@sera/player-model/*": ["./packages/player-model/src/*"],
       "@sera/ui": ["./packages/ui/src/index.ts"],
-      "@sera/ui/*": ["./packages/ui/src/*"]
+      "@sera/ui/*": ["./packages/ui/src/*"],
+      "@tauri-apps/api/core": ["./apps/client/src/compat/tauri.ts"],
+      "@tauri-apps/api/event": ["./apps/client/src/compat/tauri.ts"],
+      "@tauri-apps/api/window": ["./apps/client/src/compat/tauri.ts"],
+      "@tauri-apps/plugin-opener": ["./apps/client/src/compat/tauri.ts"],
+      "@tauri-apps/api": ["./apps/client/src/compat/tauri.ts"]
     }
   }
 }

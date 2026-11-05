@@ -1,49 +1,114 @@
-# Sera
+# SeraLauncher
 
-A Minecraft launcher built with Tauri 2, React 19 and Rust.
+A modern, lightweight Minecraft launcher desktop application built with MyGo, pure Go, React 19, and Vite.
 
-Sera is a desktop launcher for managing Minecraft instances and the mods, resource
-packs and shaders that go with them.
+SeraLauncher is a cross-platform desktop launcher for managing Minecraft instances, mod loaders, addons, and custom client runtimes with zero cgo dependencies.
 
-## Status
+---
 
-Early. The shell, theme and settings are built; the pages behind the rail are not
-there yet.
+## Features
+
+- **Multi-Loader Support**: First-class support for Vanilla, Fabric, Quilt, Forge, and NeoForge.
+- **Horizon Engine Support**: Dedicated creation and management for the Horizon Rust-based Minecraft 26.3 client, including official Horizon mod registry browsing, live GitHub release tracking, and native mixin compilation (`.hnmod`).
+- **Addon Discovery**: Integrated Modrinth and CurseForge browser with one-click installation and automatic dependency resolution for mods, resource packs, and shader packs.
+- **Account Management**: Support for Microsoft OAuth, Ely.by, LittleSkin (custom authlib-injector), and offline player profiles.
+- **Managed Java Runtimes**: Automated detection of system runtimes alongside isolated Adoptium Eclipse Temurin JDK installations (Java 8, 17, 21, and 25).
+- **World Management & Backups**: World discovery, one-click zip backup archives, and restoration.
+- **Server Monitoring**: Real-time Server List Ping (SLP) protocol integration with live latency, player counts, and server icons.
+- **Discord Rich Presence**: Live desktop IPC status updates displaying active game instances and session details.
+
+---
+
+## Tech Stack
+
+- **Desktop Framework**: [MyGo](https://github.com/egoist/mygo) (pure Go desktop framework without cgo)
+- **Backend**: Go 1.27+ with pure Go libraries
+- **Frontend**: React 19, TypeScript, Vite 8, Tailwind CSS v4, and Motion
+- **3D Viewer**: Three.js skin and player head rendering in `@sera/player-model`
+- **Package Management**: Bun workspaces within a monorepo
+
+---
 
 ## Requirements
 
-- [Bun](https://bun.sh)
-- [Rust](https://rustup.rs)
-- Tauri 2's [system dependencies](https://tauri.app/start/prerequisites/)
+- [Bun](https://bun.sh) (v1.2+)
+- [Go](https://go.dev) (v1.27+)
+- WebKitGTK 2.16+ (Linux only)
 
-## Running it
+---
 
-```sh
+## Development
+
+Install JavaScript dependencies and tidy Go modules:
+
+```bash
 bun install
-bun run tauri dev
+go mod tidy
 ```
 
-## Checks
+Start the full desktop application in development mode with hot reload:
 
-```sh
-bun run check          # lint + format check + typecheck
-bun run format         # write formatting
-bun run lint           # oxlint
-cd apps/client/src-tauri && cargo test
+```bash
+bun run dev
 ```
 
-`oxfmt` skips `apps/*/src-tauri/` and `package.json`; see `.oxfmtignore`.
+Run only the Vite frontend dev server (useful for browser inspection at `localhost:1420`):
 
-## Assets
+```bash
+bun run dev:web
+```
 
-- **Typeface** — [Sunghyun Sans](https://github.com/anaclumos/sunghyun-sans), SIL Open
-  Font License. Four weights ship in `src/assets/fonts/` alongside the licence text.
-- **Icons** — [Tabler](https://tabler.io/icons) (MIT), inlined as path data in
-  `src/components/Icon.tsx`. They are inlined rather than loaded as files so
-  `currentColor` resolves in this document; an `<img>`-loaded SVG cannot see the
-  theme's colour.
-- **Logo** — `sera-dark.png` and `sera-light.png`, the variant drawn on each shell.
+---
 
-## Licence
+## Building
+
+Typecheck all workspaces:
+
+```bash
+bun run check
+```
+
+Build the frontend web assets:
+
+```bash
+bun run build:web
+```
+
+Build the production desktop binary:
+
+```bash
+bun run build
+```
+
+Run all Go backend tests:
+
+```bash
+go test ./...
+```
+
+---
+
+## Versioning
+
+Bump the application and workspace package versions using the automated bump script:
+
+```bash
+bun run bump-version patch
+bun run bump-version minor
+bun run bump-version major
+bun run bump-version 0.2.3
+```
+
+---
+
+## Assets & Attribution
+
+- **Typeface**: [Sunghyun Sans](https://github.com/anaclumos/sunghyun-sans) (SIL Open Font License) in `packages/ui/src/assets/fonts/`.
+- **Icons**: [Tabler Icons](https://tabler.io/icons) (MIT) and Minecraft block textures in `packages/ui/src/assets/`.
+- **Branding**: `resources/icons/` and `packages/ui/src/assets/`.
+
+---
+
+## License
 
 GPL-3.0. See [LICENSE](LICENSE).
