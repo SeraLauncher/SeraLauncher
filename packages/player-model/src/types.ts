@@ -1,5 +1,12 @@
 import type React from "react";
 
+export type PlayerAnimationId =
+  | "dynamic_idle"
+  | "walking"
+  | "levitation_float"
+  | "elytra_soar"
+  | "sleepy_nod_off";
+
 export interface PlayerModelViewProps {
   skinUrl?: string | null;
   username?: string;
@@ -8,6 +15,7 @@ export interface PlayerModelViewProps {
   width?: number;
   height?: number;
   animated?: boolean;
+  animation?: PlayerAnimationId;
   interactive?: boolean;
   className?: string;
 }

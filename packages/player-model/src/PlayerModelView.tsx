@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { createSkinTexture } from "./skinTexture";
 import { buildPlayerModel, type PlayerCharacterRig } from "./skinModel";
+import { type Pose, createEmptyPose, getAnimationPose, blendAndApplyPose } from "./animations";
 import type { PlayerModelViewProps } from "./types";
 
 export function PlayerModelView({
@@ -11,6 +12,7 @@ export function PlayerModelView({
   width = size ?? 200,
   height = size ?? 280,
   animated = true,
+  animation = "dynamic_idle",
   interactive = false,
   className = "",
 }: PlayerModelViewProps) {
@@ -27,6 +29,11 @@ export function PlayerModelView({
   const targetRotationYRef = useRef(initialRotationY);
   const targetRotationXRef = useRef(initialRotationX);
 
+  const animationRef = useRef(animation);
+  useEffect(() => {
+    animationRef.current = animation;
+  }, [animation]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -34,6 +41,7 @@ export function PlayerModelView({
     let animId: number | null = null;
     let currentRig: PlayerCharacterRig | null = null;
     let currentTexture: THREE.CanvasTexture | null = null;
+    const currentPose: Pose = createEmptyPose();
 
     // 1. Scene & Camera
     const scene = new THREE.Scene();
@@ -115,7 +123,7 @@ export function PlayerModelView({
     container.addEventListener("pointercancel", onPointerUp);
 
     // 6. Animation loop
-    let startTime = performance.now();
+    const startTime = performance.now();
     const animate = (time: number) => {
       animId = requestAnimationFrame(animate);
 
@@ -129,16 +137,8 @@ export function PlayerModelView({
 
         if (animated) {
           const elapsed = (time - startTime) * 0.001;
-          // Natural idle breathing: feet stay firmly planted, chest, head and arms breathe
-          currentRig.root.position.y = 0;
-          const breathCycle = Math.sin(elapsed * 1.6);
-          currentRig.bodyPivot.rotation.x = breathCycle * 0.016;
-          currentRig.headPivot.rotation.x = Math.sin(elapsed * 1.6 + 0.3) * 0.018;
-          currentRig.headPivot.rotation.y = Math.sin(elapsed * 0.8) * 0.035;
-          currentRig.leftArmPivot.rotation.z = 0.06 + breathCycle * 0.015;
-          currentRig.rightArmPivot.rotation.z = -0.06 - breathCycle * 0.015;
-          currentRig.leftArmPivot.rotation.x = breathCycle * 0.025;
-          currentRig.rightArmPivot.rotation.x = -breathCycle * 0.025;
+          const targetPose = getAnimationPose(animationRef.current, elapsed);
+          blendAndApplyPose(currentRig, currentPose, targetPose, 0.15);
         }
       }
 
@@ -169,24 +169,11 @@ export function PlayerModelView({
       keyLight.dispose();
       rimLight.dispose();
       renderer.dispose();
-
-      if (renderer.domElement.parentElement) {
-        renderer.domElement.parentElement.removeChild(renderer.domElement);
+      if (renderer.domElement.parentNode) {
+        renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
     };
   }, [skinUrl, slim, width, height, animated, interactive]);
 
-  return (
-    <div
-      ref={containerRef}
-      className={`relative flex items-center justify-center overflow-hidden [&_canvas]:w-full! [&_canvas]:h-full! [&_canvas]:block [&_canvas]:outline-hidden [&_canvas]:cursor-default ${className}`}
-      style={{
-        width,
-        height,
-        touchAction: "none",
-        userSelect: "none",
-        pointerEvents: interactive ? "auto" : "none",
-      }}
-    />
-  );
+  return <div ref={containerRef} className={`relative select-none ${className}`} />;
 }

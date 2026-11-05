@@ -3,7 +3,7 @@ import { Icon, type Icon as IconName } from "./Icon";
 import { railLabel } from "../motion";
 import type { Theme } from "../theme";
 
-export type SettingsTab = "appearance" | "java";
+export type SettingsTab = "appearance" | "java" | "discord";
 
 export interface SettingsNavItem {
   id: SettingsTab;
@@ -14,6 +14,7 @@ export interface SettingsNavItem {
 export const SETTINGS_TABS: readonly SettingsNavItem[] = [
   { id: "appearance", label: "Appearance", icon: "palette" },
   { id: "java", label: "Java & Runtime", icon: "coffee" },
+  { id: "discord", label: "Discord", icon: "discord" },
 ];
 
 /** Contents of the open rail when settings are active: provides category tabs and

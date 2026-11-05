@@ -3,5 +3,6 @@ export * from "./uvMath";
 export * from "./steveFallback";
 export * from "./skinTexture";
 export * from "./skinModel";
+export * from "./animations";
 export * from "./PlayerModelView";
 export * from "./PlayerHeadView";

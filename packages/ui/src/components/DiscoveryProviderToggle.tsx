@@ -17,7 +17,7 @@ export function DiscoveryProviderToggle({
   onChange,
   theme,
   className = "",
-  showHorizon = true,
+  showHorizon = false,
 }: DiscoveryProviderToggleProps) {
   return (
     <div

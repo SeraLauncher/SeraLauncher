@@ -42,14 +42,16 @@ type activeProcess struct {
 }
 
 var (
-	runningMu              sync.Mutex
-	runningInstances       = make(map[string]*activeProcess)
-	sessionLogsMu          sync.Mutex
-	sessionLogs            = make(map[string]string)
-	logListenersMu         sync.Mutex
-	logListeners           []func(id, line string)
-	processExitListenersMu sync.Mutex
-	processExitListeners   []func(id string, elapsedSecs uint64)
+	runningMu               sync.Mutex
+	runningInstances        = make(map[string]*activeProcess)
+	sessionLogsMu           sync.Mutex
+	sessionLogs             = make(map[string]string)
+	logListenersMu          sync.Mutex
+	logListeners            []func(id, line string)
+	processStartListenersMu sync.Mutex
+	processStartListeners   []func(info RunningInstanceInfo)
+	processExitListenersMu  sync.Mutex
+	processExitListeners    []func(id string, elapsedSecs uint64)
 )
 
 // scanLinesOrCR is a split function for a bufio.Scanner that splits on either \n or \r,
@@ -69,6 +71,24 @@ func scanLinesOrCR(data []byte, atEOF bool) (advance int, token []byte, err erro
 		return len(data), data, nil
 	}
 	return 0, nil, nil
+}
+
+// OnProcessStart registers a listener called whenever an instance process launches.
+func OnProcessStart(fn func(info RunningInstanceInfo)) {
+	processStartListenersMu.Lock()
+	defer processStartListenersMu.Unlock()
+	processStartListeners = append(processStartListeners, fn)
+}
+
+func notifyProcessStart(info RunningInstanceInfo) {
+	processStartListenersMu.Lock()
+	listeners := make([]func(info RunningInstanceInfo), len(processStartListeners))
+	copy(listeners, processStartListeners)
+	processStartListenersMu.Unlock()
+
+	for _, fn := range listeners {
+		fn(info)
+	}
 }
 
 // OnProcessExit registers a listener called whenever an instance process terminates.
@@ -561,6 +581,7 @@ func LaunchInstance(id string, quickPlaySingle, quickPlayMulti *string) error {
 		runningMu.Lock()
 		runningInstances[id] = &activeProcess{info: info, cmd: cmd}
 		runningMu.Unlock()
+		notifyProcessStart(info)
 
 		streamPipe := func(r io.Reader) {
 			scanner := bufio.NewScanner(r)
@@ -672,6 +693,7 @@ func LaunchInstance(id string, quickPlaySingle, quickPlayMulti *string) error {
 	runningMu.Lock()
 	runningInstances[id] = &activeProcess{info: info, cmd: cmd}
 	runningMu.Unlock()
+	notifyProcessStart(info)
 
 	streamPipe := func(r io.Reader) {
 		scanner := bufio.NewScanner(r)

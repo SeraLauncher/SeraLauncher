@@ -31,7 +31,11 @@ func (SettingsService) LoadSettings() settings.Settings {
 }
 
 func (SettingsService) SaveSettings(cfg settings.Settings) error {
-	return settings.Save(cfg)
+	err := settings.Save(cfg)
+	if err == nil {
+		discord.SetConfig(cfg.DiscordRpc, cfg.DiscordDetailed)
+	}
+	return err
 }
 
 // SystemService exposes host system capabilities.
@@ -50,6 +54,18 @@ type DiscordService struct{}
 
 func (DiscordService) SetDiscordNavigation(status *string) {
 	discord.SetNavigation(status)
+}
+
+func (DiscordService) GetDiscordStatus() string {
+	return discord.GetStatus()
+}
+
+func (DiscordService) ReconnectDiscord() string {
+	return discord.Reconnect()
+}
+
+func (DiscordService) DisconnectDiscord() string {
+	return discord.Disconnect()
 }
 
 // JavaService handles runtime discovery, validation, and Adoptium installation.

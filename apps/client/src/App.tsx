@@ -20,6 +20,8 @@ import {
   type DiscoveryCategory,
   type InstanceManagementTab,
   DEFAULT_ZOOM,
+  DEFAULT_ANIMATIONS,
+  type PlayerAnimationId,
   MAX_ZOOM,
   MIN_ZOOM,
   fade,
@@ -69,11 +71,45 @@ const INSTANCE_TAB_STATUS: Record<InstanceManagementTab, string> = {
 const SETTINGS_TAB_STATUS: Record<SettingsTab, string> = {
   appearance: "Appearance",
   java: "Java",
+  discord: "Discord",
 };
 
 export default function App() {
   const { settings, update, fonts, javaRuntimes, systemMemoryMb, refreshJavaRuntimes } =
     useSettings();
+
+  // Active player model animation synchronized with enabled settings pool
+  const [activeAnimation, setActiveAnimation] = useState<PlayerAnimationId>("dynamic_idle");
+
+  // Pick or validate active animation whenever enabled animations setting is loaded or changed
+  useEffect(() => {
+    const pool = (
+      settings.enabledAnimations && settings.enabledAnimations.length > 0
+        ? settings.enabledAnimations
+        : DEFAULT_ANIMATIONS
+    ) as PlayerAnimationId[];
+
+    setActiveAnimation((current) => {
+      if (pool.includes(current)) {
+        return current;
+      }
+      return pool[Math.floor(Math.random() * pool.length)] || "dynamic_idle";
+    });
+  }, [settings.enabledAnimations]);
+
+  const randomizeAnimation = () => {
+    const pool = (
+      settings.enabledAnimations && settings.enabledAnimations.length > 0
+        ? settings.enabledAnimations
+        : DEFAULT_ANIMATIONS
+    ) as PlayerAnimationId[];
+    const candidates = pool.filter((id) => id !== activeAnimation);
+    const targetPool = candidates.length > 0 ? candidates : pool;
+    const next = targetPool[Math.floor(Math.random() * targetPool.length)];
+    if (next) {
+      setActiveAnimation(next);
+    }
+  };
   const {
     instances,
     versions,
@@ -449,6 +485,7 @@ export default function App() {
                     onRefreshJava={refreshJavaRuntimes}
                     onDiscordRpc={(discordRpc) => update({ discordRpc })}
                     onDiscordDetailed={(discordDetailed) => update({ discordDetailed })}
+                    onEnabledAnimations={(enabledAnimations) => update({ enabledAnimations })}
                   />
                 ) : page === 0 ? (
                   <HomePage
@@ -456,6 +493,9 @@ export default function App() {
                     instances={instances.map((i) => i.name)}
                     skinUrl={activeAccount?.skinUrl ?? undefined}
                     username={activeAccount?.username}
+                    animation={activeAnimation}
+                    enabledAnimations={settings.enabledAnimations}
+                    onRandomizeAnimation={randomizeAnimation}
                     onNavigateToInstances={() => setPage(1)}
                     onLaunch={async (instanceName) => {
                       if (!activeAccount) {

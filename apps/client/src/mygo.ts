@@ -322,6 +322,7 @@ export interface Settings {
   jvmArgs: string;
   discordRpc: boolean;
   discordDetailed: boolean;
+  enabledAnimations: string[];
 }
 
 export interface WorldBackupItem {
@@ -362,6 +363,15 @@ export const SystemService = {
 
 /** DiscordService handles navigation presence reporting. */
 export const DiscordService = {
+  disconnectDiscord(): Promise<string> {
+    return call("DiscordService.DisconnectDiscord");
+  },
+  getDiscordStatus(): Promise<string> {
+    return call("DiscordService.GetDiscordStatus");
+  },
+  reconnectDiscord(): Promise<string> {
+    return call("DiscordService.ReconnectDiscord");
+  },
   setDiscordNavigation(status: string | null): Promise<void> {
     return call("DiscordService.SetDiscordNavigation", status);
   },
@@ -509,25 +519,11 @@ export const DiscoveryService = {
   deleteAddon(instanceID: string, projectType: string, fileName: string): Promise<void> {
     return call("DiscoveryService.DeleteAddon", instanceID, projectType, fileName);
   },
-  getDiscoveryProjectDetails(
-    provider: string,
-    projectID: string,
-  ): Promise<DiscoveryProjectDetails> {
+  getDiscoveryProjectDetails(provider: string, projectID: string): Promise<DiscoveryProjectDetails> {
     return call("DiscoveryService.GetDiscoveryProjectDetails", provider, projectID);
   },
-  getDiscoveryProjectVersions(
-    provider: string,
-    projectID: string,
-    mcVersion: string | null,
-    loader: string | null,
-  ): Promise<DiscoveryVersion[]> {
-    return call(
-      "DiscoveryService.GetDiscoveryProjectVersions",
-      provider,
-      projectID,
-      mcVersion,
-      loader,
-    );
+  getDiscoveryProjectVersions(provider: string, projectID: string, mcVersion: string | null, loader: string | null): Promise<DiscoveryVersion[]> {
+    return call("DiscoveryService.GetDiscoveryProjectVersions", provider, projectID, mcVersion, loader);
   },
   getInstalledAddonIDs(instanceID: string, projectType: string): Promise<string[]> {
     return call("DiscoveryService.GetInstalledAddonIDs", instanceID, projectType);
@@ -535,39 +531,13 @@ export const DiscoveryService = {
   getInstalledAddonsList(instanceID: string, projectType: string): Promise<InstalledAddonItem[]> {
     return call("DiscoveryService.GetInstalledAddonsList", instanceID, projectType);
   },
-  installDiscoveryProject(
-    instanceID: string,
-    projectType: string,
-    downloadURL: string,
-    fileName: string,
-    provider: string | null,
-    projectID: string | null,
-    versionID: string | null,
-    title: string | null,
-    iconURL: string | null,
-  ): Promise<string[]> {
-    return call(
-      "DiscoveryService.InstallDiscoveryProject",
-      instanceID,
-      projectType,
-      downloadURL,
-      fileName,
-      provider,
-      projectID,
-      versionID,
-      title,
-      iconURL,
-    );
+  installDiscoveryProject(instanceID: string, projectType: string, downloadURL: string, fileName: string, provider: string | null, projectID: string | null, versionID: string | null, title: string | null, iconURL: string | null): Promise<string[]> {
+    return call("DiscoveryService.InstallDiscoveryProject", instanceID, projectType, downloadURL, fileName, provider, projectID, versionID, title, iconURL);
   },
   searchDiscovery(args: SearchDiscoveryArgs): Promise<DiscoverySearchResponse> {
     return call("DiscoveryService.SearchDiscovery", args);
   },
-  toggleAddonEnabled(
-    instanceID: string,
-    projectType: string,
-    fileName: string,
-    enabled: boolean,
-  ): Promise<string> {
+  toggleAddonEnabled(instanceID: string, projectType: string, fileName: string, enabled: boolean): Promise<string> {
     return call("DiscoveryService.ToggleAddonEnabled", instanceID, projectType, fileName, enabled);
   },
 } as const;
@@ -634,18 +604,10 @@ export const ModpackService = {
   inspectModpackFile(filePath: string): Promise<ModpackInspection> {
     return call("ModpackService.InspectModpackFile", filePath);
   },
-  installModpackFromDiscovery(
-    downloadURL: string,
-    customName: string | null,
-    customIcon: string | null,
-  ): Promise<Instance> {
+  installModpackFromDiscovery(downloadURL: string, customName: string | null, customIcon: string | null): Promise<Instance> {
     return call("ModpackService.InstallModpackFromDiscovery", downloadURL, customName, customIcon);
   },
-  installModpackFromFile(
-    filePath: string,
-    customName: string | null,
-    customIcon: string | null,
-  ): Promise<Instance> {
+  installModpackFromFile(filePath: string, customName: string | null, customIcon: string | null): Promise<Instance> {
     return call("ModpackService.InstallModpackFromFile", filePath, customName, customIcon);
   },
   pickModpackFile(): Promise<string | null> {

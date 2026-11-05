@@ -1487,7 +1487,7 @@ export function InstanceAddonsTab({
                       setPage(1);
                     }}
                     theme={theme}
-                    showHorizon={instance.loader === "horizon" || provider === "horizon"}
+                    showHorizon={instance.loader === "horizon" && category === "mods"}
                   />
                 </div>
 

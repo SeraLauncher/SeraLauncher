@@ -27,37 +27,52 @@ const (
 	DefaultDiscordDet   = true
 )
 
+var defaultEnabledAnimations = []string{
+	"dynamic_idle",
+	"walking",
+	"levitation_float",
+	"elytra_soar",
+	"sleepy_nod_off",
+}
+
+// DefaultEnabledAnimations returns the default list of enabled animation IDs.
+func DefaultEnabledAnimations() []string {
+	return append([]string(nil), defaultEnabledAnimations...)
+}
+
 // Settings represents launcher user preferences.
 type Settings struct {
-	Appearance      string  `json:"appearance"`
-	Font            string  `json:"font"`
-	FontSize        uint32  `json:"fontSize"`
-	Zoom            uint32  `json:"zoom"`
-	JavaPath        *string `json:"javaPath"`
-	MinMemory       uint32  `json:"minMemory"`
-	MaxMemory       uint32  `json:"maxMemory"`
-	GcPreset        string  `json:"gcPreset"`
-	JavaOptimize    bool    `json:"javaOptimize"`
-	JvmArgs         string  `json:"jvmArgs"`
-	DiscordRpc      bool    `json:"discordRpc"`
-	DiscordDetailed bool    `json:"discordDetailed"`
+	Appearance        string   `json:"appearance"`
+	Font              string   `json:"font"`
+	FontSize          uint32   `json:"fontSize"`
+	Zoom              uint32   `json:"zoom"`
+	JavaPath          *string  `json:"javaPath"`
+	MinMemory         uint32   `json:"minMemory"`
+	MaxMemory         uint32   `json:"maxMemory"`
+	GcPreset          string   `json:"gcPreset"`
+	JavaOptimize      bool     `json:"javaOptimize"`
+	JvmArgs           string   `json:"jvmArgs"`
+	DiscordRpc        bool     `json:"discordRpc"`
+	DiscordDetailed   bool     `json:"discordDetailed"`
+	EnabledAnimations []string `json:"enabledAnimations"`
 }
 
 // Defaults returns a default initialized Settings struct.
 func Defaults() Settings {
 	return Settings{
-		Appearance:      DefaultAppearance,
-		Font:            BundledFamily,
-		FontSize:        DefaultFontSize,
-		Zoom:            DefaultZoom,
-		JavaPath:        nil,
-		MinMemory:       DefaultMinMemory,
-		MaxMemory:       DefaultMaxMemory,
-		GcPreset:        DefaultGcPreset,
-		JavaOptimize:    DefaultJavaOptimize,
-		JvmArgs:         DefaultJvmArgs,
-		DiscordRpc:      DefaultDiscordRpc,
-		DiscordDetailed: DefaultDiscordDet,
+		Appearance:        DefaultAppearance,
+		Font:              BundledFamily,
+		FontSize:          DefaultFontSize,
+		Zoom:              DefaultZoom,
+		JavaPath:          nil,
+		MinMemory:         DefaultMinMemory,
+		MaxMemory:         DefaultMaxMemory,
+		GcPreset:          DefaultGcPreset,
+		JavaOptimize:      DefaultJavaOptimize,
+		JvmArgs:           DefaultJvmArgs,
+		DiscordRpc:        DefaultDiscordRpc,
+		DiscordDetailed:   DefaultDiscordDet,
+		EnabledAnimations: DefaultEnabledAnimations(),
 	}
 }
 
@@ -109,6 +124,25 @@ func (s Settings) Sanitized() Settings {
 	} else {
 		s.GcPreset = gc
 	}
+
+	validAnims := map[string]bool{
+		"dynamic_idle":     true,
+		"walking":          true,
+		"levitation_float": true,
+		"elytra_soar":      true,
+		"sleepy_nod_off":   true,
+	}
+
+	var cleanedAnims []string
+	for _, a := range s.EnabledAnimations {
+		if validAnims[a] {
+			cleanedAnims = append(cleanedAnims, a)
+		}
+	}
+	if len(cleanedAnims) == 0 {
+		cleanedAnims = DefaultEnabledAnimations()
+	}
+	s.EnabledAnimations = cleanedAnims
 
 	return s
 }
