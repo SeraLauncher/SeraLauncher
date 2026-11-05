@@ -104,13 +104,19 @@ export function HorizonNativeBuildModal({
         } else if (line.includes("Unpacking native mod mixin bundles")) {
           setCurrentStep("Staging native mixin bundles...");
           setProgressPercent(5);
-        } else if (line.includes("Downloading Horizon's source") || line.includes("Building horizon-mixins")) {
+        } else if (
+          line.includes("Downloading Horizon's source") ||
+          line.includes("Building horizon-mixins")
+        ) {
           setCurrentStep(line);
           setProgressPercent(28);
         } else if (line.includes("Applying the mixins")) {
           setCurrentStep("Applying native source mixins...");
           setProgressPercent(32);
-        } else if (line.includes("native-build completed successfully") || line.includes("Installed custom native binary")) {
+        } else if (
+          line.includes("native-build completed successfully") ||
+          line.includes("Installed custom native binary")
+        ) {
           setBuildStatus("success");
           setCurrentStep("Build completed successfully!");
           setProgressPercent(100);
@@ -154,9 +160,7 @@ export function HorizonNativeBuildModal({
       title={
         <div className="flex items-center gap-2.5">
           <Icon name="wand" size={16} color={theme.primary} />
-          <span className="font-semibold text-sm">
-            Compiling Native Mods · {instance.name}
-          </span>
+          <span className="font-semibold text-sm">Compiling Native Mods · {instance.name}</span>
         </div>
       }
       maxWidth={680}
@@ -224,9 +228,7 @@ export function HorizonNativeBuildModal({
             ) : (
               <Icon name="wand" size={15} color={theme.mutedForeground} />
             )}
-            <span className="font-semibold truncate text-foreground">
-              {currentStep}
-            </span>
+            <span className="font-semibold truncate text-foreground">{currentStep}</span>
           </div>
 
           <span className="font-mono text-[11px] text-muted-foreground shrink-0">
@@ -257,9 +259,7 @@ export function HorizonNativeBuildModal({
           <span className="font-semibold text-[11px] uppercase tracking-wider">
             Compilation Output
           </span>
-          <span className="font-mono text-[10px]">
-            {logs.length} lines
-          </span>
+          <span className="font-mono text-[10px]">{logs.length} lines</span>
         </div>
 
         <div
@@ -279,7 +279,8 @@ export function HorizonNativeBuildModal({
               const isError = line.includes("[ERROR]") || line.includes("error:");
               const isWarn = line.includes("[WARN]") || line.includes("warning:");
               const isInfo = line.includes("[INFO]");
-              const isSuccess = line.includes("completed successfully") || line.includes("Installed custom");
+              const isSuccess =
+                line.includes("completed successfully") || line.includes("Installed custom");
 
               return (
                 <div

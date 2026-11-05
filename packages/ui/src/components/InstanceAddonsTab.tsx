@@ -853,12 +853,19 @@ export function InstanceAddonsTab({
       if (!fileName) {
         if (downloadUrl) {
           const rawEnd = downloadUrl.split("/").pop()?.split("?")[0];
-          if (rawEnd && (rawEnd.endsWith(".hnmod") || rawEnd.endsWith(".hmod") || rawEnd.endsWith(".jar") || rawEnd.endsWith(".zip"))) {
+          if (
+            rawEnd &&
+            (rawEnd.endsWith(".hnmod") ||
+              rawEnd.endsWith(".hmod") ||
+              rawEnd.endsWith(".jar") ||
+              rawEnd.endsWith(".zip"))
+          ) {
             fileName = rawEnd;
           }
         }
         if (!fileName) {
-          const ext = category === "mods" ? (item.source === "horizon" ? ".hnmod" : ".jar") : ".zip";
+          const ext =
+            category === "mods" ? (item.source === "horizon" ? ".hnmod" : ".jar") : ".zip";
           fileName = `${item.slug || item.id || category}${ext}`;
         }
       }
@@ -1130,7 +1137,13 @@ export function InstanceAddonsTab({
                       style={{ background: theme.primary, color: theme.primaryForeground }}
                     >
                       <Icon name="wand" size={13} color="currentColor" />
-                      <span>{isBuildingNative ? "Compiling..." : nativeBuildStatus.isBuilt ? "Rebuild Mods" : "Build Native Mods"}</span>
+                      <span>
+                        {isBuildingNative
+                          ? "Compiling..."
+                          : nativeBuildStatus.isBuilt
+                            ? "Rebuild Mods"
+                            : "Build Native Mods"}
+                      </span>
                     </button>
                   </div>
                 )}

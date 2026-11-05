@@ -42,10 +42,10 @@ type activeProcess struct {
 }
 
 var (
-	runningMu        sync.Mutex
-	runningInstances = make(map[string]*activeProcess)
-	sessionLogsMu    sync.Mutex
-	sessionLogs      = make(map[string]string)
+	runningMu              sync.Mutex
+	runningInstances       = make(map[string]*activeProcess)
+	sessionLogsMu          sync.Mutex
+	sessionLogs            = make(map[string]string)
 	logListenersMu         sync.Mutex
 	logListeners           []func(id, line string)
 	processExitListenersMu sync.Mutex

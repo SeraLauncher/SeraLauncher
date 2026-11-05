@@ -1,0 +1,4 @@
+apps/*/dist/**
+build/**
+node_modules/**
+bun.lock

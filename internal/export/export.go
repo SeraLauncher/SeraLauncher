@@ -13,14 +13,14 @@ import (
 
 // ExportOptions describes parameters for exporting an instance.
 type ExportOptions struct {
-	InstanceID            string `json:"instanceId"`
-	Name                  string `json:"name"`
-	Format                string `json:"format"` // "sera_zip" | "mrpack"
-	IncludeMods           bool   `json:"includeMods"`
-	IncludeConfigs        bool   `json:"includeConfigs"`
-	IncludeResourcepacks  bool   `json:"includeResourcepacks"`
-	IncludeShaderpacks    bool   `json:"includeShaderpacks"`
-	IncludeSaves          bool   `json:"includeSaves"`
+	InstanceID           string `json:"instanceId"`
+	Name                 string `json:"name"`
+	Format               string `json:"format"` // "sera_zip" | "mrpack"
+	IncludeMods          bool   `json:"includeMods"`
+	IncludeConfigs       bool   `json:"includeConfigs"`
+	IncludeResourcepacks bool   `json:"includeResourcepacks"`
+	IncludeShaderpacks   bool   `json:"includeShaderpacks"`
+	IncludeSaves         bool   `json:"includeSaves"`
 }
 
 // ExportResult contains the generated export archive details.
