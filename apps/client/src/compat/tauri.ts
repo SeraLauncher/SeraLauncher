@@ -9,19 +9,16 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
   save_settings: (args) => MyGo.SettingsService.saveSettings(args?.settings ?? args),
   list_fonts: () => MyGo.SystemService.listFonts(),
   get_system_memory: () => MyGo.SystemService.getSystemMemory(),
-  set_discord_navigation: (args) =>
-    MyGo.DiscordService.setDiscordNavigation(args?.status ?? null),
+  set_discord_navigation: (args) => MyGo.DiscordService.setDiscordNavigation(args?.status ?? null),
 
   // Java Runtimes
   list_java_runtimes: () => MyGo.JavaService.listRuntimes(),
   validate_java_path: (args) => MyGo.JavaService.validateJavaPath(args.path),
-  get_required_java_version: (args) =>
-    MyGo.JavaService.getRequiredVersion(args.mcVersion),
+  get_required_java_version: (args) => MyGo.JavaService.getRequiredVersion(args.mcVersion),
   get_managed_java_runtimes: () => MyGo.JavaService.getManagedRuntimes(),
   uninstall_managed_java_runtime: (args) =>
     MyGo.JavaService.uninstallManagedRuntime(args.majorVersion),
-  install_java_runtime: (args) =>
-    MyGo.JavaService.installAdoptium(args.majorVersion),
+  install_java_runtime: (args) => MyGo.JavaService.installAdoptium(args.majorVersion),
 
   // Accounts & Skins
   get_active_account: () => MyGo.AuthService.getActiveAccount(),
@@ -30,12 +27,9 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
   remove_account: (args) => MyGo.AuthService.removeAccount(args.id),
   add_offline_account: (args) => MyGo.AuthService.addOfflineAccount(args.username),
   start_microsoft_login: () => MyGo.AuthService.startMicrosoftLogin(),
-  poll_microsoft_login: (args) =>
-    MyGo.AuthService.pollMicrosoftLogin(args.deviceCode),
-  login_elyby: (args) =>
-    MyGo.AuthService.loginElyBy(args.username, args.password),
-  login_littleskin: (args) =>
-    MyGo.AuthService.loginLittleSkin(args.username, args.password),
+  poll_microsoft_login: (args) => MyGo.AuthService.pollMicrosoftLogin(args.deviceCode),
+  login_elyby: (args) => MyGo.AuthService.loginElyBy(args.username, args.password),
+  login_littleskin: (args) => MyGo.AuthService.loginLittleSkin(args.username, args.password),
   refresh_account_skins: () => MyGo.AuthService.refreshAccountSkins(),
   fetch_skin_as_data_url: (args) => MyGo.AuthService.fetchSkinAsDataURL(args.url),
 
@@ -47,20 +41,14 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
   get_instance_screenshots: (args) => MyGo.InstanceService.getScreenshots(args.id),
   delete_instance_screenshot: (args) =>
     MyGo.InstanceService.deleteScreenshot(args.id, args.fileName),
-  open_instance_folder: (args) =>
-    MyGo.InstanceService.openFolder(args.id, args.subfolder ?? null),
+  open_instance_folder: (args) => MyGo.InstanceService.openFolder(args.id, args.subfolder ?? null),
   get_instance_path: (args) => MyGo.InstanceService.getInstancePath(args.id),
 
   // Minecraft Launching & Logs
   launch_instance: (args) => MyGo.MinecraftService.launchInstance(args.id),
   launch_instance_quick_play: (args) =>
-    MyGo.MinecraftService.launchInstanceQuickPlay(
-      args.id,
-      args.quickPlayType,
-      args.target,
-    ),
-  build_horizon_native_mods: (args) =>
-    MyGo.MinecraftService.buildHorizonNativeMods(args.id),
+    MyGo.MinecraftService.launchInstanceQuickPlay(args.id, args.quickPlayType, args.target),
+  build_horizon_native_mods: (args) => MyGo.MinecraftService.buildHorizonNativeMods(args.id),
   get_horizon_native_build_status: (args) =>
     MyGo.MinecraftService.getHorizonNativeBuildStatus(args.id),
   get_horizon_engine_version: (args) =>
@@ -71,8 +59,7 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
   kill_instance: (args) => MyGo.MinecraftService.killInstance(args.id),
   get_instance_logs: (args) => MyGo.MinecraftService.getInstanceLogs(args.id),
   get_minecraft_versions: () => MyGo.MinecraftService.getMinecraftVersions(),
-  fetch_minecraft_news: (args) =>
-    MyGo.MinecraftService.fetchMinecraftNews(args?.pageSize ?? 4),
+  fetch_minecraft_news: (args) => MyGo.MinecraftService.fetchMinecraftNews(args?.pageSize ?? 4),
 
   // Mod Loaders
   get_mod_loader_versions: (args) =>
@@ -145,8 +132,7 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
     ),
 
   // Modpacks
-  inspect_modpack_file: (args) =>
-    MyGo.ModpackService.inspectModpackFile(args.filePath),
+  inspect_modpack_file: (args) => MyGo.ModpackService.inspectModpackFile(args.filePath),
   install_modpack_from_file: (args) =>
     MyGo.ModpackService.installModpackFromFile(
       args.filePath,
@@ -169,46 +155,33 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
 
   // Worlds
   get_instance_worlds: (args) => MyGo.WorldService.getInstanceWorlds(args.id),
-  create_world_backup: (args) =>
-    MyGo.WorldService.createWorldBackup(args.id, args.folderName),
-  get_instance_world_backups: (args) =>
-    MyGo.WorldService.getInstanceWorldBackups(args.id),
-  delete_world_backup: (args) =>
-    MyGo.WorldService.deleteWorldBackup(args.id, args.backupFileName),
+  create_world_backup: (args) => MyGo.WorldService.createWorldBackup(args.id, args.folderName),
+  get_instance_world_backups: (args) => MyGo.WorldService.getInstanceWorldBackups(args.id),
+  delete_world_backup: (args) => MyGo.WorldService.deleteWorldBackup(args.id, args.backupFileName),
   restore_world_backup: (args) =>
     MyGo.WorldService.restoreWorldBackup(args.id, args.backupFileName),
-  delete_world_save: (args) =>
-    MyGo.WorldService.deleteWorldSave(args.id, args.folderName),
-  clone_world_save: (args) =>
-    MyGo.WorldService.cloneWorldSave(args.id, args.folderName),
-  import_world_zip: (args) =>
-    MyGo.WorldService.importWorldZip(args.id, args.zipPath),
+  delete_world_save: (args) => MyGo.WorldService.deleteWorldSave(args.id, args.folderName),
+  clone_world_save: (args) => MyGo.WorldService.cloneWorldSave(args.id, args.folderName),
+  import_world_zip: (args) => MyGo.WorldService.importWorldZip(args.id, args.zipPath),
 
   // Servers
   get_instance_servers: (args) => MyGo.ServerService.getInstanceServers(args.id),
-  save_instance_servers: (args) =>
-    MyGo.ServerService.saveInstanceServers(args.id, args.servers),
-  ping_minecraft_server: (args) =>
-    MyGo.ServerService.pingMinecraftServer(args.address),
+  save_instance_servers: (args) => MyGo.ServerService.saveInstanceServers(args.id, args.servers),
+  ping_minecraft_server: (args) => MyGo.ServerService.pingMinecraftServer(args.address),
 
   // Visuals
-  get_active_resource_packs: (args) =>
-    MyGo.VisualService.getActiveResourcePacks(args.id),
+  get_active_resource_packs: (args) => MyGo.VisualService.getActiveResourcePacks(args.id),
   set_active_resource_packs: (args) =>
     MyGo.VisualService.setActiveResourcePacks(args.id, args.activePacks),
-  get_active_shader_pack: (args) =>
-    MyGo.VisualService.getActiveShaderPack(args.id),
+  get_active_shader_pack: (args) => MyGo.VisualService.getActiveShaderPack(args.id),
   set_active_shader_pack: (args) =>
     MyGo.VisualService.setActiveShaderPack(args.id, args.shaderPack ?? null),
 
   // Safety, Export & Ingestion
-  validate_instance_safety: (args) =>
-    MyGo.SafetyService.validateInstanceSafety(args.id),
-  resolve_instance_dependencies: (args) =>
-    MyGo.SafetyService.resolveInstanceDependencies(args.id),
+  validate_instance_safety: (args) => MyGo.SafetyService.validateInstanceSafety(args.id),
+  resolve_instance_dependencies: (args) => MyGo.SafetyService.resolveInstanceDependencies(args.id),
   export_instance: (args) => MyGo.ExportService.exportInstance(args.options),
-  ingest_dropped_files: (args) =>
-    MyGo.IngestService.ingestDroppedFiles(args.id, args.paths),
+  ingest_dropped_files: (args) => MyGo.IngestService.ingestDroppedFiles(args.id, args.paths),
 };
 
 /**

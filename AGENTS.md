@@ -7,6 +7,7 @@ Welcome to SeraGo. This document provides coding agents with repository knowledg
 ## 1. Project Overview
 
 SeraGo is a modern Minecraft launcher desktop application built with:
+
 - **Desktop Framework**: MyGo (pure Go desktop application framework without cgo).
 - **Backend**: Go 1.27+ with pure Go libraries.
 - **Frontend**: React 19, TypeScript, Vite 8, Tailwind CSS v4, and Motion.
@@ -15,6 +16,7 @@ SeraGo is a modern Minecraft launcher desktop application built with:
 ## 2. Essential Commands
 
 ### Development Setup
+
 ```bash
 # Install all JavaScript / TypeScript dependencies using Bun
 bun install
@@ -24,6 +26,7 @@ go mod tidy
 ```
 
 ### Development Server
+
 ```bash
 # Run full desktop application in development mode (hot reload)
 bun run dev
@@ -35,6 +38,7 @@ bun run dev:web
 ```
 
 ### TypeScript IPC Client Generation
+
 ```bash
 # Generate TypeScript definitions and client in src/mygo.ts from Go services
 bun run generate
@@ -43,6 +47,7 @@ mygo generate
 ```
 
 ### Build & Typecheck
+
 ```bash
 # Typecheck TypeScript across all workspaces
 bun run check
@@ -57,6 +62,7 @@ mygo build
 ```
 
 ### Testing
+
 ```bash
 # Run all Go unit tests
 go test ./...
@@ -70,6 +76,7 @@ go test -v ./internal/settings/...
 ## 3. Architecture & Coding Conventions
 
 ### Backend (Go)
+
 1. **Pure Go (Zero cgo)**: Never introduce cgo or packages that require external C compilers. Ensure pure Go compatibility across Linux, macOS, and Windows.
 2. **Service Binding**: Services exposed to the frontend are Go structs registered via `mygo.Bind()` in `main.go`.
 3. **Exported Methods**: Methods on bound services must take JSON-serializable parameters and return `(T, error)` or `T`.
@@ -78,6 +85,7 @@ go test -v ./internal/settings/...
 6. **Functional Comments**: Write functional code comments in lowercase explaining logic notes and parameter/return information. Never mention AI or system instructions.
 
 ### Frontend (React / TypeScript)
+
 1. **Toolchain**: Use Bun as package manager and runner.
 2. **Components**: Functional React 19 components with strict TypeScript types.
 3. **Styling**: Tailwind CSS v4 using CSS custom properties (`--background`, `--foreground`, `--sidebar`).

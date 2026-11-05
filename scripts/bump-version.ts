@@ -94,10 +94,7 @@ touchedFiles.push("packages/ui/src/settings.ts");
 // 6. mygo.config.ts
 const mygoConfigPath = path.join(rootDir, "mygo.config.ts");
 let mygoConfigContent = fs.readFileSync(mygoConfigPath, "utf-8");
-mygoConfigContent = mygoConfigContent.replace(
-  /version:\s*".*?",/,
-  `version: "${targetVersion}",`,
-);
+mygoConfigContent = mygoConfigContent.replace(/version:\s*".*?",/, `version: "${targetVersion}",`);
 fs.writeFileSync(mygoConfigPath, mygoConfigContent, "utf-8");
 touchedFiles.push("mygo.config.ts");
 
@@ -125,4 +122,6 @@ console.log(`Successfully updated ${touchedFiles.length} files:`);
 for (const file of touchedFiles) {
   console.log(`  - ${file}`);
 }
-console.log(`\nVersion successfully bumped to ${targetVersion}. Run 'bun install' to synchronize lockfile.`);
+console.log(
+  `\nVersion successfully bumped to ${targetVersion}. Run 'bun install' to synchronize lockfile.`,
+);

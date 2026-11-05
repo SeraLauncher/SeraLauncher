@@ -471,7 +471,7 @@ func LoginElyBy(username, password string) (PublicAccount, error) {
 	defer resp.Body.Close()
 
 	var res struct {
-		AccessToken string `json:"accessToken"`
+		AccessToken     string `json:"accessToken"`
 		SelectedProfile struct {
 			ID   string `json:"id"`
 			Name string `json:"name"`
@@ -528,7 +528,7 @@ func LoginLittleSkin(username, password string) (PublicAccount, error) {
 	defer resp.Body.Close()
 
 	var res struct {
-		AccessToken string `json:"accessToken"`
+		AccessToken     string `json:"accessToken"`
 		SelectedProfile struct {
 			ID   string `json:"id"`
 			Name string `json:"name"`

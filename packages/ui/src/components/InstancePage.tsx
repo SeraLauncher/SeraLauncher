@@ -769,16 +769,11 @@ function CreateInstanceModal({
       if (!name.trim()) return;
       const encodedIcon = encodeInstanceIcon(selectedBlock, selectedGradientName);
       onClose();
-      onCreate(
-        name.trim(),
-        "26.3",
-        "release",
-        encodedIcon,
-        "horizon",
-        "0.2.95",
-      ).catch((err: unknown) => {
-        console.error("Failed to create horizon instance:", err);
-      });
+      onCreate(name.trim(), "26.3", "release", encodedIcon, "horizon", "0.2.95").catch(
+        (err: unknown) => {
+          console.error("Failed to create horizon instance:", err);
+        },
+      );
       return;
     }
     if (!selectedVersion || !name.trim()) return;
@@ -1508,7 +1503,7 @@ function InstanceManagementView({
     } finally {
       setCheckingHorizonEngine(false);
     }
-  }, [instance.id, instance.loader, instance.loaderVersion, onUpdate]);
+  }, [instance, onUpdate]);
 
   useEffect(() => {
     checkHorizonEngineVersion();

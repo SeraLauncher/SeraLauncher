@@ -90,8 +90,8 @@ func InspectModpackFile(filePath string) (ModpackInspection, error) {
 			type cfManifest struct {
 				Name      string `json:"name"`
 				Minecraft struct {
-					Version      string `json:"version"`
-					ModLoaders   []struct {
+					Version    string `json:"version"`
+					ModLoaders []struct {
 						ID string `json:"id"`
 					} `json:"modLoaders"`
 				} `json:"minecraft"`

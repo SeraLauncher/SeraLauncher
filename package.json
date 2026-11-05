@@ -13,7 +13,10 @@
     "generate": "mygo generate",
     "dev:web": "bun --filter @sera/client dev",
     "build:web": "bun --filter @sera/client build",
-    "check": "bun --filter '*' check",
+    "check": "bun run lint && bun --filter '*' check",
+    "lint": "oxlint --ignore-path=.oxlintignore apps packages",
+    "format": "oxfmt --ignore-path=.oxfmtignore .",
+    "format:check": "oxfmt --check --ignore-path=.oxfmtignore .",
     "bump-version": "bun scripts/bump-version.ts"
   },
   "dependencies": {
