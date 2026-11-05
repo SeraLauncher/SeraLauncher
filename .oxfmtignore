@@ -5,3 +5,5 @@ package.json
 apps/*/package.json
 packages/*/package.json
 bun.lock
+apps/*/src/mygo.ts
+

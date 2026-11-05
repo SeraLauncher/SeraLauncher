@@ -58,6 +58,12 @@ export function DiscoveryPage({
     onCategoryChange?.(category);
   }, [category, onCategoryChange]);
 
+  useEffect(() => {
+    if (provider === "horizon") {
+      setProvider("modrinth");
+    }
+  }, [provider]);
+
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<DiscoveryProject[]>([]);
   const [totalHits, setTotalHits] = useState(0);
@@ -355,6 +361,7 @@ export function DiscoveryPage({
                   provider={provider}
                   onChange={(p) => setProvider(p)}
                   theme={theme}
+                  showHorizon={false}
                 />
               </div>
 
