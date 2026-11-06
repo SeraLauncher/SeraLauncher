@@ -6,7 +6,7 @@ export default defineConfig({
   version: "0.2.2",
   updates: {
     publicKey: "2/sqti0GxDz+owYJMY8z18rhDdFnIRrwZ0cRVM7F+m4=",
-    github: "SeraLauncher/SeraLauncher",
+    github: process.env.GITHUB_REPOSITORY || "SeraLauncher/SeraLauncher",
     privateKey: "~/.config/mygo/update-keys/mygo-update.key",
   },
   // `mygo dev` runs devCommand and loads devUrl; `mygo build` runs
