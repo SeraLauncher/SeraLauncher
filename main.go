@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/updater"
 	"serago/internal/api"
 	"serago/internal/discord"
 	"serago/internal/paths"
@@ -14,6 +15,7 @@ func main() {
 	mygo.App.SetName("SeraLauncher")
 	paths.MigrateLegacyDataDir()
 	discord.Init()
+	mygo.Use(updater.Plugin)
 
 	mygo.Bind(
 		api.SettingsService{},
@@ -33,6 +35,7 @@ func main() {
 		api.SafetyService{},
 		api.ExportService{},
 		api.IngestService{},
+		api.UpdateService{},
 	)
 
 	mygo.App.WhenReady(func() {

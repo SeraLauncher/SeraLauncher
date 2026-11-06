@@ -9,6 +9,7 @@ import { Icon } from "./Icon";
 import { Badge } from "./ui/badge";
 import type { SettingsTab } from "./PageHeader";
 import {
+  APP_VERSION,
   BUNDLED_FAMILY,
   DEFAULT_GC_PRESET,
   DEFAULT_JAVA_OPTIMIZE,
@@ -1006,6 +1007,31 @@ export function SettingsPage({
               }}
             >
               <Icon name="reset" size={16} color="currentColor" />
+            </button>
+          }
+        />
+      </Group>
+
+      {/* Software Updates Section */}
+      <Group title="Updates" theme={theme}>
+        <Row
+          label="SeraLauncher Version"
+          hint={`Current version v${APP_VERSION}. Updates are signed with Ed25519 and verified automatically.`}
+          theme={theme}
+          control={
+            <button
+              type="button"
+              onClick={() => {
+                invoke("check_for_updates");
+              }}
+              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg border border-border text-xs font-semibold cursor-pointer select-none transition-colors hover:bg-secondary"
+              style={{
+                background: theme.card,
+                color: theme.foreground,
+              }}
+            >
+              <Icon name="refresh" size={13} color="currentColor" />
+              <span>Check for Updates</span>
             </button>
           }
         />
