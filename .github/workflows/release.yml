@@ -11,17 +11,39 @@ permissions:
 jobs:
   draft-release:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - name: Check version matches package.json
-        run: test "$GITHUB_REF_NAME" = "v$(jq -r .version package.json)"
+
+      - name: Resolve release tag
+        id: resolve
+        run: |
+          pkg_ver="v$(jq -r .version package.json)"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.ref_type }}" = "tag" ]; then
+              tag="${{ github.ref_name }}"
+            else
+              tag="$pkg_ver"
+            fi
+            echo "Manual workflow dispatch for $tag"
+          else
+            tag="${{ github.ref_name }}"
+            if [ "$tag" != "$pkg_ver" ]; then
+              echo "Pushed tag $tag does not match package.json version $pkg_ver"
+              exit 1
+            fi
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
       - name: Create the draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
-          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-              --draft --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --draft --title "$TAG" --generate-notes
           fi
 
   build:
@@ -76,10 +98,11 @@ jobs:
         run: mygo build -platform "${{ matrix.platform }}" -upload
 
   publish:
-    needs: build
+    needs: [draft-release, build]
     runs-on: ubuntu-latest
     steps:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+          TAG: ${{ needs.draft-release.outputs.tag }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
