@@ -118,6 +118,19 @@ launcherGoContent = launcherGoContent.replace(
 fs.writeFileSync(launcherGoPath, launcherGoContent, "utf-8");
 touchedFiles.push("internal/minecraft/launcher.go");
 
+// 9. CHANGELOG.md
+const changelogPath = path.join(rootDir, "CHANGELOG.md");
+if (fs.existsSync(changelogPath)) {
+  let changelogContent = fs.readFileSync(changelogPath, "utf-8");
+  if (!changelogContent.includes(`## [${targetVersion}]`)) {
+    const today = new Date().toISOString().slice(0, 10);
+    const newSection = `## [${targetVersion}] - ${today}\n\n### Changed\n- Version bump to ${targetVersion}\n\n`;
+    changelogContent = changelogContent.replace(/(## \[\d+\.\d+\.\d+\])/, `${newSection}$1`);
+    fs.writeFileSync(changelogPath, changelogContent, "utf-8");
+    touchedFiles.push("CHANGELOG.md");
+  }
+}
+
 console.log(`Successfully updated ${touchedFiles.length} files:`);
 for (const file of touchedFiles) {
   console.log(`  - ${file}`);

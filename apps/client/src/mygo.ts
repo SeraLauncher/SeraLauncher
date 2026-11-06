@@ -655,6 +655,22 @@ export const IngestService = {
   },
 } as const;
 
+/** UpdateService exposes the MyGo updater subsystem to the frontend. */
+export const UpdateService = {
+  automaticChecks(): Promise<boolean> {
+    return call("UpdateService.AutomaticChecks");
+  },
+  availableVersion(): Promise<string> {
+    return call("UpdateService.AvailableVersion");
+  },
+  checkForUpdates(): Promise<void> {
+    return call("UpdateService.CheckForUpdates");
+  },
+  setAutomaticChecks(enabled: boolean): Promise<void> {
+    return call("UpdateService.SetAutomaticChecks", enabled);
+  },
+} as const;
+
 // ---- Events ----
 
 /** Events sent by the Go side. Subscribe with `events.name.on(listener)`. */

@@ -14,6 +14,10 @@ const COMMAND_MAP: Record<string, InvokeHandler> = {
   reconnect_discord: () => MyGo.DiscordService.reconnectDiscord(),
   disconnect_discord: () => MyGo.DiscordService.disconnectDiscord(),
 
+  // Application Updates
+  check_for_updates: () => MyGo.UpdateService.checkForUpdates(),
+  get_available_update_version: () => MyGo.UpdateService.availableVersion(),
+
   // Java Runtimes
   list_java_runtimes: () => MyGo.JavaService.listRuntimes(),
   validate_java_path: (args) => MyGo.JavaService.validateJavaPath(args.path),

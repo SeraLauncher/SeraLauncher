@@ -21,6 +21,8 @@ import (
 	"serago/internal/system"
 	"serago/internal/visuals"
 	"serago/internal/worlds"
+
+	"github.com/egoist/mygo/plugins/updater"
 )
 
 // SettingsService handles user configuration persistence.
@@ -394,6 +396,25 @@ func (ServerService) SaveInstanceServers(id string, serversList []servers.Server
 
 func (ServerService) PingMinecraftServer(address string) (servers.ServerPingResult, error) {
 	return servers.PingServer(address)
+}
+
+// UpdateService exposes the MyGo updater subsystem to the frontend.
+type UpdateService struct{}
+
+func (UpdateService) CheckForUpdates() {
+	updater.CheckForUpdates()
+}
+
+func (UpdateService) AvailableVersion() string {
+	return updater.AvailableVersion()
+}
+
+func (UpdateService) AutomaticChecks() bool {
+	return updater.AutomaticChecks()
+}
+
+func (UpdateService) SetAutomaticChecks(enabled bool) {
+	updater.SetAutomaticChecks(enabled)
 }
 
 // VisualService manages resource pack order and shader packs.
