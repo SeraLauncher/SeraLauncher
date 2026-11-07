@@ -297,20 +297,30 @@ export function InstancePage({
       <div className="flex flex-col gap-2.5 w-full">
         {/* Row 1: Search bar + New instance button */}
         <div className="flex items-center justify-between gap-3 w-full">
-          <div className="flex-1 h-9 flex items-center gap-2 px-3 rounded-lg border border-border bg-secondary focus-within:border-primary transition-colors [&>input]:w-full [&>input]:h-full [&>input]:bg-transparent [&>input]:border-0 [&>input]:text-xs [&>input]:text-foreground [&>input]:outline-none [&>input]:placeholder:text-muted-foreground">
+          <div
+            className="flex-1 h-9 flex items-center gap-2 px-3 rounded-lg border-0 outline-none transition-colors [&>input]:w-full [&>input]:h-full [&>input]:bg-transparent [&>input]:border-0 [&>input]:text-xs [&>input]:text-foreground [&>input]:outline-none [&>input]:placeholder:text-muted-foreground"
+            style={{ background: theme.secondary, border: 0, outline: "none" }}
+          >
             <Icon name="search" size={16} color={theme.mutedForeground} />
             <input
               type="text"
               placeholder="Search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              style={{ color: theme.foreground, border: 0, outline: "none" }}
             />
           </div>
 
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg border-0 bg-primary text-primary-foreground text-sm font-semibold cursor-pointer transition-all hover:brightness-108 active:scale-95 shrink-0"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg border-0 text-sm font-semibold cursor-pointer transition-all hover:brightness-108 active:scale-95 shrink-0"
             onClick={() => setCreateModalOpen(true)}
+            style={{
+              background: theme.primary,
+              color: theme.primaryForeground,
+              border: 0,
+              outline: "none",
+            }}
           >
             <Icon name="plus" size={17} color={theme.primaryForeground} />
             <span>New instance</span>
@@ -322,7 +332,13 @@ export function InstancePage({
           <div className="relative inline-block" ref={sortMenuRef}>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground"
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg text-xs font-medium cursor-pointer transition-colors border-0 outline-none select-none"
+              style={{
+                background: theme.secondary,
+                color: theme.foreground,
+                border: 0,
+                outline: "none",
+              }}
               onClick={() => {
                 setSortMenuOpen(!sortMenuOpen);
                 setFilterMenuOpen(false);
@@ -336,8 +352,8 @@ export function InstancePage({
             <AnimatePresence>
               {sortMenuOpen && (
                 <motion.div
-                  className="absolute left-0 top-[calc(100%+4px)] min-w-[150px] p-1 rounded-lg border border-border bg-secondary shadow-xl z-30 flex flex-col gap-0.5"
-                  style={{ background: theme.secondary, borderColor: theme.border }}
+                  className="absolute left-0 top-[calc(100%+4px)] min-w-[150px] p-1 rounded-lg shadow-xl z-30 flex flex-col gap-0.5 border-0 outline-none"
+                  style={{ background: theme.secondary, border: 0, outline: "none" }}
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
@@ -353,10 +369,12 @@ export function InstancePage({
                       <button
                         key={item.id}
                         type="button"
-                        className="w-full px-3 py-2 rounded-md border-0 text-sm font-medium text-left cursor-pointer transition-colors hover:bg-card/70"
+                        className="w-full px-3 py-2 rounded-md border-0 text-sm font-medium text-left cursor-pointer transition-colors"
                         style={{
                           background: isSelected ? theme.card : "transparent",
                           color: theme.foreground,
+                          border: 0,
+                          outline: "none",
                         }}
                         onClick={() => {
                           setSortBy(item.id as any);
@@ -372,13 +390,17 @@ export function InstancePage({
             </AnimatePresence>
           </div>
 
-          <div className="w-px h-4 bg-border shrink-0" />
-
           {/* Filter dropdown */}
           <div className="relative inline-block" ref={filterMenuRef}>
             <button
               type="button"
-              className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer transition-colors hover:bg-card hover:text-foreground ${versionFilter !== "all" ? "bg-card text-foreground font-semibold border-primary" : ""}`}
+              className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg text-xs font-medium cursor-pointer transition-colors border-0 outline-none select-none"
+              style={{
+                background: versionFilter !== "all" ? theme.card : theme.secondary,
+                color: theme.foreground,
+                border: 0,
+                outline: "none",
+              }}
               onClick={() => {
                 setFilterMenuOpen(!filterMenuOpen);
                 setSortMenuOpen(false);
@@ -402,30 +424,32 @@ export function InstancePage({
             <AnimatePresence>
               {filterMenuOpen && (
                 <motion.div
-                  className="absolute right-0 top-[calc(100%+4px)] min-w-[160px] p-1 rounded-lg border border-border bg-secondary shadow-xl z-30 flex flex-col gap-0.5"
-                  style={{ background: theme.secondary, borderColor: theme.border }}
+                  className="absolute right-0 top-[calc(100%+4px)] min-w-[160px] p-1 rounded-lg shadow-xl z-30 flex flex-col gap-0.5 border-0 outline-none"
+                  style={{ background: theme.secondary, border: 0, outline: "none" }}
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.1 }}
                 >
                   {[
-                    { id: "all", label: "All versions" },
-                    { id: "release", label: "Releases only" },
-                    { id: "snapshot", label: "Snapshots only" },
+                    { id: "all" as const, label: "All versions" },
+                    { id: "release" as const, label: "Releases only" },
+                    { id: "snapshot" as const, label: "Snapshots only" },
                   ].map((item) => {
                     const isSelected = versionFilter === item.id;
                     return (
                       <button
                         key={item.id}
                         type="button"
-                        className="w-full px-3 py-2 rounded-md border-0 text-sm font-medium text-left cursor-pointer transition-colors hover:bg-card/70"
+                        className="w-full px-3 py-2 rounded-md border-0 text-sm font-medium text-left cursor-pointer transition-colors"
                         style={{
                           background: isSelected ? theme.card : "transparent",
                           color: theme.foreground,
+                          border: 0,
+                          outline: "none",
                         }}
                         onClick={() => {
-                          setVersionFilter(item.id as any);
+                          setVersionFilter(item.id);
                           setFilterMenuOpen(false);
                         }}
                       >
@@ -443,7 +467,7 @@ export function InstancePage({
       {/* Main Grid / Empty States */}
       {instances.length === 0 ? (
         <div
-          className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground text-center border border-border rounded-xl"
+          className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground text-center rounded-xl"
           style={{ background: theme.card, borderColor: theme.border }}
         >
           <div
@@ -484,11 +508,12 @@ export function InstancePage({
             return (
               <div
                 key={inst.id}
-                className="group relative flex flex-col p-2.5 rounded-xl border border-border bg-card select-none cursor-pointer transition-all duration-150 hover:border-primary hover:shadow-[0_8px_20px_rgba(0,0,0,0.15)]"
+                className="group relative flex flex-col p-2.5 rounded-xl select-none cursor-pointer transition-all duration-150 border-0 outline-none hover:shadow-[0_8px_20px_rgba(0,0,0,0.15)]"
                 onClick={() => {
                   setEffectiveManagingId(inst.id);
                   setEffectiveTab("overview");
                 }}
+                style={{ background: theme.card, border: 0, outline: "none" }}
                 title={`Manage ${inst.name}`}
               >
                 {/* Thumbnail: Square aspect ratio with top & bottom inset shadows */}
@@ -849,7 +874,7 @@ function CreateInstanceModal({
       }
     >
       {/* Top mode toggle */}
-      <div className="flex items-center gap-1 p-1 rounded-lg border border-border bg-secondary mb-3">
+      <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary mb-3">
         <button
           type="button"
           onClick={() => handleModeChange("vanilla")}
@@ -931,7 +956,7 @@ function CreateInstanceModal({
           </label>
           <input
             type="text"
-            className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+            className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
             style={{
               background: theme.sidebarAccent,
               borderColor: theme.border,
@@ -961,7 +986,7 @@ function CreateInstanceModal({
           }}
         >
           {/* Tab toggles: Blocks vs Background Colors */}
-          <div className="flex items-center gap-1 p-1 rounded-lg border border-border bg-secondary">
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary">
             <button
               type="button"
               className={`flex-1 py-1 px-2.5 rounded-md text-xs font-medium transition-colors text-center ${iconPickerTab === "blocks" ? "bg-card text-foreground font-semibold shadow-xs" : "bg-transparent text-muted-foreground"}`}
@@ -980,7 +1005,7 @@ function CreateInstanceModal({
 
           {iconPickerTab === "blocks" ? (
             <div
-              className="grid grid-cols-6 gap-2 p-2 rounded-lg border border-border bg-secondary max-h-[180px] overflow-y-auto"
+              className="grid grid-cols-6 gap-2 p-2 rounded-lg bg-secondary max-h-[180px] overflow-y-auto"
               style={{ background: "transparent", border: "none", padding: 0 }}
             >
               {BLOCK_ICON_KEYS.map((k) => (
@@ -997,7 +1022,7 @@ function CreateInstanceModal({
             </div>
           ) : (
             <div
-              className="grid grid-cols-3 gap-2 p-2 rounded-lg border border-border bg-secondary max-h-[180px] overflow-y-auto"
+              className="grid grid-cols-3 gap-2 p-2 rounded-lg bg-secondary max-h-[180px] overflow-y-auto"
               style={{ background: "transparent", border: "none", padding: 0 }}
             >
               {PASTEL_GRADIENTS.map((g) => (
@@ -1031,7 +1056,7 @@ function CreateInstanceModal({
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                className="flex-1 px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                className="flex-1 px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                 style={{
                   background: theme.sidebarAccent,
                   borderColor: theme.border,
@@ -1047,7 +1072,7 @@ function CreateInstanceModal({
               <button
                 type="button"
                 onClick={handleBrowse}
-                className="h-8 px-3 rounded-lg border border-border bg-secondary flex items-center justify-center text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+                className="h-8 px-3 rounded-lg bg-secondary flex items-center justify-center text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
                 style={{ borderColor: theme.border, color: theme.foreground }}
               >
                 Browse
@@ -1070,7 +1095,7 @@ function CreateInstanceModal({
           </div>
 
           {isInspecting && (
-            <div className="p-3 rounded-lg border border-border bg-secondary text-xs text-muted-foreground animate-pulse">
+            <div className="p-3 rounded-lg bg-secondary text-xs text-muted-foreground animate-pulse">
               Inspecting instance archive...
             </div>
           )}
@@ -1083,7 +1108,7 @@ function CreateInstanceModal({
 
           {inspection && (
             <div
-              className="p-3.5 rounded-xl border border-border flex flex-col gap-2 text-xs"
+              className="p-3.5 rounded-xl flex flex-col gap-2 text-xs"
               style={{ background: theme.sidebarAccent }}
             >
               <div className="flex items-center justify-between">
@@ -1104,15 +1129,15 @@ function CreateInstanceModal({
                 </p>
               )}
               <div className="flex items-center gap-2 pt-1 flex-wrap">
-                <span className="px-2 py-0.5 rounded-md border border-border bg-card text-[11px] font-mono">
+                <span className="px-2 py-0.5 rounded-md bg-card text-[11px] font-mono">
                   MC {inspection.mcVersion}
                 </span>
                 {inspection.loader && (
-                  <span className="px-2 py-0.5 rounded-md border border-border bg-card text-[11px] font-mono">
+                  <span className="px-2 py-0.5 rounded-md bg-card text-[11px] font-mono">
                     {inspection.loader.toUpperCase()} {inspection.loaderVersion || ""}
                   </span>
                 )}
-                <span className="px-2 py-0.5 rounded-md border border-border bg-card text-[11px] font-mono">
+                <span className="px-2 py-0.5 rounded-md bg-card text-[11px] font-mono">
                   {inspection.fileCount} mods declared
                 </span>
               </div>
@@ -1130,7 +1155,7 @@ function CreateInstanceModal({
             </div>
 
             <div
-              className="max-h-[180px] overflow-y-auto rounded-lg border border-border flex flex-col p-1 gap-0.5"
+              className="max-h-[180px] overflow-y-auto rounded-lg flex flex-col p-1 gap-0.5"
               style={{ background: theme.sidebarAccent, borderColor: theme.border }}
             >
               <button
@@ -1153,7 +1178,7 @@ function CreateInstanceModal({
                     Oct 3, 2026
                   </span>
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border border-border"
+                    className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider "
                     style={{
                       background: "rgba(255, 255, 255, 0.2)",
                       color: theme.primaryForeground,
@@ -1174,7 +1199,7 @@ function CreateInstanceModal({
               Mod Loader
             </label>
             <div
-              className="flex items-center gap-1 p-1 rounded-lg border border-border"
+              className="flex items-center gap-1 p-1 rounded-lg "
               style={{ background: theme.sidebarAccent }}
             >
               {(
@@ -1211,7 +1236,7 @@ function CreateInstanceModal({
                   {getPrefix(loader)} Version
                 </label>
                 {loadingLoaderVersions ? (
-                  <div className="h-9 px-3 flex items-center rounded-lg border border-border bg-secondary text-xs text-muted-foreground animate-pulse">
+                  <div className="h-9 px-3 flex items-center rounded-lg bg-secondary text-xs text-muted-foreground animate-pulse">
                     Fetching {getPrefix(loader)} versions...
                   </div>
                 ) : (
@@ -1240,7 +1265,7 @@ function CreateInstanceModal({
                 Minecraft Version
               </label>
               <div
-                className="flex p-0.5 rounded-md border border-border gap-0.5"
+                className="flex p-0.5 rounded-md gap-0.5"
                 style={{ background: theme.sidebarAccent, borderColor: theme.border }}
               >
                 <button
@@ -1269,7 +1294,7 @@ function CreateInstanceModal({
             </div>
 
             <div
-              className="flex items-center gap-1.5 px-2.5 h-8 rounded-md border border-border mb-2"
+              className="flex items-center gap-1.5 px-2.5 h-8 rounded-md mb-2"
               style={{ background: theme.sidebarAccent, borderColor: theme.border }}
             >
               <Icon name="search" size={14} color={theme.mutedForeground} />
@@ -1284,7 +1309,7 @@ function CreateInstanceModal({
             </div>
 
             <div
-              className="max-h-[180px] overflow-y-auto rounded-lg border border-border flex flex-col p-1 gap-0.5"
+              className="max-h-[180px] overflow-y-auto rounded-lg flex flex-col p-1 gap-0.5"
               style={{ background: theme.sidebarAccent, borderColor: theme.border }}
             >
               {filteredVersions.slice(0, 100).map((v) => {
@@ -1312,7 +1337,7 @@ function CreateInstanceModal({
                         {formatReleaseDate(v.releaseTime)}
                       </span>
                       <span
-                        className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border border-border"
+                        className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider "
                         style={{
                           background: isSelected ? "rgba(255, 255, 255, 0.2)" : theme.card,
                           color: isSelected ? theme.primaryForeground : theme.mutedForeground,
@@ -2012,7 +2037,7 @@ function InstanceManagementView({
 
         <section className="w-full max-w-[620px] [&>h2]:m-0 [&>h2]:mb-2 [&>h2]:ml-0.5 [&>h2]:text-[0.8rem] [&>h2]:font-semibold">
           <form onSubmit={handleSaveSettings}>
-            <div className="px-[18px] py-1 bg-card rounded-xl border border-border">
+            <div className="px-[18px] py-1 bg-card rounded-xl ">
               {/* Row 1: Block icon on left with random at bottom, and instance name input with label to its right */}
               <div className="flex items-center justify-between gap-6 py-3 max-[520px]:flex-col max-[520px]:items-start">
                 <div
@@ -2086,7 +2111,7 @@ function InstanceManagementView({
                     </span>
                     <input
                       type="text"
-                      className="w-full h-10 px-3.5 rounded-xl border border-border bg-secondary text-foreground text-sm font-semibold outline-none focus:border-primary transition-colors"
+                      className="w-full h-10 px-3.5 rounded-xl bg-secondary text-foreground text-sm font-semibold outline-none focus:border-primary transition-colors"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Instance name"
@@ -2109,7 +2134,7 @@ function InstanceManagementView({
                     border: `1px solid ${theme.border}`,
                   }}
                 >
-                  <div className="flex items-center gap-1 p-1 rounded-lg border border-border bg-secondary">
+                  <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary">
                     <button
                       type="button"
                       className={`flex-1 py-1 px-2.5 rounded-md text-xs font-medium transition-colors text-center ${iconPickerTab === "blocks" ? "bg-card text-foreground font-semibold shadow-xs" : "bg-transparent text-muted-foreground"}`}
@@ -2128,7 +2153,7 @@ function InstanceManagementView({
 
                   {iconPickerTab === "blocks" ? (
                     <div
-                      className="grid grid-cols-6 gap-2 p-2 rounded-lg border border-border bg-secondary max-h-[180px] overflow-y-auto"
+                      className="grid grid-cols-6 gap-2 p-2 rounded-lg bg-secondary max-h-[180px] overflow-y-auto"
                       style={{ background: "transparent", border: "none", padding: 0 }}
                     >
                       {BLOCK_ICON_KEYS.map((k) => (
@@ -2145,7 +2170,7 @@ function InstanceManagementView({
                     </div>
                   ) : (
                     <div
-                      className="grid grid-cols-3 gap-2 p-2 rounded-lg border border-border bg-secondary max-h-[180px] overflow-y-auto"
+                      className="grid grid-cols-3 gap-2 p-2 rounded-lg bg-secondary max-h-[180px] overflow-y-auto"
                       style={{ background: "transparent", border: "none", padding: 0 }}
                     >
                       {PASTEL_GRADIENTS.map((g) => (
@@ -2247,7 +2272,7 @@ function InstanceManagementView({
                 <div className="w-full pt-1.5 pb-2.5 border-t border-dashed border-muted-foreground/25">
                   <input
                     type="text"
-                    className="w-full h-10 px-3.5 rounded-xl border border-border bg-secondary text-foreground text-xs font-mono outline-none focus:border-primary transition-colors"
+                    className="w-full h-10 px-3.5 rounded-xl bg-secondary text-foreground text-xs font-mono outline-none focus:border-primary transition-colors"
                     value={customJava}
                     placeholder="e.g. /usr/lib/jvm/java-21-openjdk/bin/java or C:\Program Files\Java\...\javaw.exe"
                     onChange={(e) => setCustomJava(e.target.value)}
@@ -2304,7 +2329,7 @@ function InstanceManagementView({
                           <button
                             key={p.value}
                             type="button"
-                            className={`px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer border border-border transition-colors ${
+                            className={`px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer  transition-colors ${
                               isActive
                                 ? "bg-primary text-primary-foreground font-semibold"
                                 : "bg-secondary text-foreground hover:bg-card"
@@ -2575,7 +2600,7 @@ function InstanceManagementView({
         {activeTab === "overview" && (
           <>
             {/* Top Box: Overview Header Banner with Play button and 3-dots action menu */}
-            <div className="flex items-center justify-between p-5 rounded-2xl border border-border bg-card shadow-sm">
+            <div className="flex items-center justify-between p-5 rounded-2xl bg-card shadow-sm">
               <div className="flex items-center gap-4 min-w-0">
                 <div
                   className="relative size-16 shrink-0 rounded-xl flex items-center justify-center overflow-hidden shadow-[inset_0_2px_5px_rgba(255,255,255,0.28),inset_0_-2px_6px_rgba(0,0,0,0.35)]"
@@ -2690,7 +2715,7 @@ function InstanceManagementView({
                   <AnimatePresence>
                     {bannerMenuOpen && (
                       <motion.div
-                        className="absolute right-0 top-[calc(100%+6px)] min-w-[170px] p-1 rounded-xl border border-border bg-card shadow-2xl z-30 flex flex-col gap-0.5"
+                        className="absolute right-0 top-[calc(100%+6px)] min-w-[170px] p-1 rounded-xl bg-card shadow-2xl z-30 flex flex-col gap-0.5"
                         initial={{ opacity: 0, y: -4, scale: 0.96 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.96 }}
@@ -2744,11 +2769,11 @@ function InstanceManagementView({
               />
             )}
             <div
-              className={`flex flex-col gap-2.5 w-full ${logExpanded ? "fixed inset-6 z-50 p-5 rounded-2xl border border-border bg-card shadow-2xl" : ""}`}
+              className={`flex flex-col gap-2.5 w-full ${logExpanded ? "fixed inset-6 z-50 p-5 rounded-2xl bg-card shadow-2xl" : ""}`}
             >
               {/* Row 1: Search logs + Live Log dropdown */}
               <div className="flex items-center gap-2.5 w-full">
-                <div className="flex-1 flex items-center gap-2.5 h-[38px] px-3 rounded-lg border border-border bg-card/60 focus-within:border-primary transition-colors">
+                <div className="flex-1 flex items-center gap-2.5 h-[38px] px-3 rounded-lg bg-card/60 focus-within:border-primary transition-colors">
                   <Icon name="search" size={15} color={theme.mutedForeground} />
                   <input
                     type="text"
@@ -2761,7 +2786,7 @@ function InstanceManagementView({
 
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 h-[38px] px-3.5 rounded-lg border border-border bg-secondary text-xs font-semibold cursor-pointer shrink-0"
+                  className="inline-flex items-center gap-2 h-[38px] px-3.5 rounded-lg bg-secondary text-xs font-semibold cursor-pointer shrink-0"
                 >
                   {isRunning && (
                     <span
@@ -2785,7 +2810,7 @@ function InstanceManagementView({
                   <Icon name="filter" size={14} color={theme.mutedForeground} />
                   <button
                     type="button"
-                    className={`px-2.5 py-1 text-xs font-medium rounded-md border border-border cursor-pointer transition-all ${isAllActive ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer transition-all ${isAllActive ? "bg-primary text-primary-foreground font-semibold" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
                     onClick={selectAllLevels}
                     title="Show all log levels"
                   >
@@ -2793,7 +2818,7 @@ function InstanceManagementView({
                   </button>
                   <button
                     type="button"
-                    className={`px-2.5 py-1 text-xs font-medium rounded-md border border-border cursor-pointer transition-all ${selectedLevels.has("error") ? "bg-destructive text-destructive-foreground font-semibold" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer transition-all ${selectedLevels.has("error") ? "bg-destructive text-destructive-foreground font-semibold" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
                     onClick={() => toggleLevel("error")}
                     title="Toggle error logs"
                   >
@@ -2801,7 +2826,7 @@ function InstanceManagementView({
                   </button>
                   <button
                     type="button"
-                    className={`px-2.5 py-1 text-xs font-medium rounded-md border border-border cursor-pointer transition-all ${selectedLevels.has("warn") ? "bg-amber-500/20 text-amber-500 font-semibold border-amber-500/40" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer transition-all ${selectedLevels.has("warn") ? "bg-amber-500/20 text-amber-500 font-semibold border-amber-500/40" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
                     onClick={() => toggleLevel("warn")}
                     title="Toggle warning logs"
                   >
@@ -2809,7 +2834,7 @@ function InstanceManagementView({
                   </button>
                   <button
                     type="button"
-                    className={`px-2.5 py-1 text-xs font-medium rounded-md border border-border cursor-pointer transition-all ${selectedLevels.has("info") ? "bg-blue-500/20 text-blue-500 font-semibold border-blue-500/40" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md cursor-pointer transition-all ${selectedLevels.has("info") ? "bg-blue-500/20 text-blue-500 font-semibold border-blue-500/40" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
                     onClick={() => toggleLevel("info")}
                     title="Toggle info logs"
                   >
@@ -2820,7 +2845,7 @@ function InstanceManagementView({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md border border-border bg-secondary hover:bg-card transition-colors cursor-pointer shrink-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md bg-secondary hover:bg-card transition-colors cursor-pointer shrink-0"
                     onClick={() => setLogExpanded(!logExpanded)}
                     title={logExpanded ? "Minimize" : "Expand"}
                   >
@@ -2837,7 +2862,7 @@ function InstanceManagementView({
               {/* Row 3: Terminal screen */}
               <div
                 ref={terminalScreenRef}
-                className="w-full flex-1 min-h-[300px] max-h-[480px] rounded-xl border border-border bg-[#18181b] p-3 overflow-y-auto font-mono text-xs select-text"
+                className="w-full flex-1 min-h-[300px] max-h-[480px] rounded-xl bg-[#18181b] p-3 overflow-y-auto font-mono text-xs select-text"
               >
                 <pre
                   ref={logPreRef}
@@ -2919,7 +2944,7 @@ function InstanceManagementView({
                   type="button"
                   disabled={loadingScreenshots}
                   onClick={refreshScreenshots}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors disabled:opacity-50 select-none"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors disabled:opacity-50 select-none"
                   style={{ color: theme.foreground }}
                   title="Reload screenshots"
                 >
@@ -2929,7 +2954,7 @@ function InstanceManagementView({
 
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
                   onClick={() => onOpenFolder("screenshots")}
                   title="Open folder on disk"
                 >
@@ -2943,16 +2968,13 @@ function InstanceManagementView({
             {loadingScreenshots ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 pt-1">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="aspect-[16/10] rounded-xl border border-border bg-secondary animate-pulse"
-                  />
+                  <div key={i} className="aspect-[16/10] rounded-xl bg-secondary animate-pulse" />
                 ))}
               </div>
             ) : screenshots.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-center py-14 px-4 gap-3 text-muted-foreground text-sm select-none">
                 <div
-                  className="size-12 rounded-2xl flex items-center justify-center border border-border"
+                  className="size-12 rounded-2xl flex items-center justify-center "
                   style={{ background: theme.secondary }}
                 >
                   <Icon name="photo" size={24} color={theme.mutedForeground} />
@@ -2973,7 +2995,7 @@ function InstanceManagementView({
                   <div
                     key={s.fileName}
                     onClick={() => setSelectedScreenshot(s)}
-                    className="group relative flex flex-col rounded-xl border border-border bg-secondary overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-primary/50 select-none"
+                    className="group relative flex flex-col rounded-xl bg-secondary overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-primary/50 select-none"
                   >
                     {/* Image Thumbnail */}
                     <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/20">

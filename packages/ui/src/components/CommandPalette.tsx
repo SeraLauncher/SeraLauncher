@@ -267,7 +267,7 @@ export function CommandPalette({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: -10 }}
           transition={{ duration: 0.15 }}
-          className="relative w-full max-w-[560px] rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col"
+          className="relative w-full max-w-[560px] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
           style={{ background: theme.card }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -374,7 +374,7 @@ export function CommandPalette({
                         <div className="flex items-center gap-2 shrink-0 ml-2">
                           {item.badge && (
                             <span
-                              className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/50 text-muted-foreground"
+                              className="text-[10px] font-mono px-1.5 py-0.5 rounded text-muted-foreground"
                               style={{
                                 background: theme.secondary,
                               }}

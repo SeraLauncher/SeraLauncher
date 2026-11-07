@@ -4,6 +4,26 @@ All notable changes to SeraLauncher will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.4] - 2026-11-07
+
+### Added
+
+- Multi-theme system featuring 6 distinctive color palettes: Sera, Catppuccin, Rosé Pine, Dark+, Dracula, and Tokyo Night.
+- Independent light and dark theme pickers to customize active appearance modes.
+- Real-time root CSS custom property injection to synchronize Tailwind utilities with active theme tokens.
+- Custom `CheckboxDropdown` component with keyboard navigation and animated check states.
+
+### Changed
+
+- Reorganized global settings: introduced a top-level **General** tab with Discord Rich Presence and Updates, merged **Font and layout**, and moved **Theme** under Color scheme.
+- Refined UI styling across the application to a borderless presentation, eliminating harsh outlines from category switchers, search inputs, instance cards, and addon lists.
+- Zoom percentage indicator relocated beside the zoom step button without preset pill clutter.
+
+### Fixed
+
+- Fixed player model head cropping during Levitation Float by extending camera distance and adding vertical tracking.
+- Resolved palette inheritance issues where cards and badges fell back to static stylesheet values.
+
 ## [0.2.2] - 2026-11-06
 
 ### Added

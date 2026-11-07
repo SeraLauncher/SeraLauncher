@@ -31,6 +31,12 @@ interface DiscoveryDetailsPageProps {
 
 type DetailTab = "description" | "versions" | "gallery";
 
+// converts a theme hex token into an rgba string at the given alpha for tint fills
+const tint = (hex: string, alpha: number) => {
+  const n = hex.replace("#", "");
+  return `rgba(${parseInt(n.slice(0, 2), 16)}, ${parseInt(n.slice(2, 4), 16)}, ${parseInt(n.slice(4, 6), 16)}, ${alpha})`;
+};
+
 export function shortenLicenseName(name?: string | null): string {
   if (!name) return "Unknown";
   const trimmed = name.trim();
@@ -147,7 +153,7 @@ function GalleryCard({
   return (
     <div
       onClick={onClick}
-      className="group relative flex flex-col rounded-xl border border-border overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] shadow-xs"
+      className="group relative flex flex-col rounded-xl overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] shadow-xs"
       style={{ background: theme.card }}
     >
       {!imgError ? (
@@ -192,7 +198,7 @@ function CreatorAvatar({ creator, theme }: { creator: DiscoveryAuthor; theme: Th
 
   return (
     <div
-      className="size-6 rounded-full flex items-center justify-center border border-border shrink-0"
+      className="size-6 rounded-full flex items-center justify-center shrink-0"
       style={{ background: theme.card }}
     >
       <Icon name="user" size={12} color={theme.mutedForeground} />
@@ -462,7 +468,7 @@ export function DiscoveryDetailsPage({
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold cursor-pointer transition-colors hover:bg-card"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-opacity hover:opacity-85"
             style={{ background: theme.secondary, color: theme.foreground }}
           >
             <Icon name="arrowLeft" size={14} color="currentColor" />
@@ -481,7 +487,7 @@ export function DiscoveryDetailsPage({
 
         {/* Hero Top Section */}
         <div
-          className="flex items-start justify-between p-4.5 rounded-2xl border border-border gap-4 shadow-xs"
+          className="flex items-start justify-between p-4.5 rounded-2xl gap-4 shadow-xs"
           style={{ background: theme.card }}
         >
           {/* Thumbnail & Info */}
@@ -496,7 +502,7 @@ export function DiscoveryDetailsPage({
               />
             ) : (
               <div
-                className="w-18 h-18 rounded-xl flex items-center justify-center flex-shrink-0 border border-border"
+                className="w-18 h-18 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ background: theme.secondary }}
               >
                 <Icon name="cubes" size={28} color={theme.mutedForeground} />
@@ -600,7 +606,7 @@ export function DiscoveryDetailsPage({
               <button
                 type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="w-8 h-8 rounded-lg border border-border flex items-center justify-center cursor-pointer transition-colors hover:bg-secondary"
+                className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-opacity hover:opacity-80"
                 style={{ background: theme.card }}
                 title="More actions"
               >
@@ -609,7 +615,7 @@ export function DiscoveryDetailsPage({
 
               {menuOpen && (
                 <div
-                  className="absolute right-0 top-[calc(100%+6px)] w-52 p-1 rounded-xl border border-border bg-card shadow-xl z-30 flex flex-col gap-0.5"
+                  className="absolute right-0 top-[calc(100%+6px)] w-52 p-1 rounded-xl bg-card shadow-xl z-30 flex flex-col gap-0.5"
                   style={{ background: theme.card }}
                   onMouseLeave={() => setMenuOpen(false)}
                 >
@@ -669,7 +675,7 @@ export function DiscoveryDetailsPage({
 
         {/* Content Tabs Navigation */}
         <div
-          className="flex items-center gap-1 p-1 rounded-lg border border-border w-fit"
+          className="flex items-center gap-1 p-1 rounded-lg w-fit"
           style={{ background: theme.secondary }}
         >
           <button
@@ -699,7 +705,10 @@ export function DiscoveryDetailsPage({
             <Icon name="cubes" size={13} color="currentColor" />
             <span>Versions</span>
             {versionsList.length > 0 && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-sidebarAccent opacity-80">
+              <span
+                className="text-[10px] px-1.5 py-0.2 rounded-full font-mono opacity-80"
+                style={{ background: theme.sidebarAccent }}
+              >
                 {versionsList.length}
               </span>
             )}
@@ -718,7 +727,10 @@ export function DiscoveryDetailsPage({
             >
               <Icon name="photo" size={13} color="currentColor" />
               <span>Gallery</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-sidebarAccent opacity-80">
+              <span
+                className="text-[10px] px-1.5 py-0.2 rounded-full font-mono opacity-80"
+                style={{ background: theme.sidebarAccent }}
+              >
                 {details.gallery.length}
               </span>
             </button>
@@ -730,7 +742,7 @@ export function DiscoveryDetailsPage({
           <div className="flex-1 overflow-y-auto pr-2 pb-6">
             {loadingDetails ? (
               <div
-                className="p-6 rounded-2xl border border-border flex flex-col gap-3 shadow-xs"
+                className="p-6 rounded-2xl flex flex-col gap-3 shadow-xs"
                 style={{ background: theme.card }}
               >
                 <div className="h-6 w-1/3 rounded-lg bg-secondary animate-pulse" />
@@ -738,10 +750,7 @@ export function DiscoveryDetailsPage({
                 <div className="h-36 w-full rounded-lg bg-secondary animate-pulse" />
               </div>
             ) : details?.description ? (
-              <div
-                className="p-6 rounded-2xl border border-border shadow-xs"
-                style={{ background: theme.card }}
-              >
+              <div className="p-6 rounded-2xl shadow-xs" style={{ background: theme.card }}>
                 <SafeContentRenderer
                   content={details.description}
                   type={details.descriptionType as any}
@@ -750,7 +759,7 @@ export function DiscoveryDetailsPage({
               </div>
             ) : (
               <div
-                className="p-8 rounded-2xl border border-border text-center text-xs text-muted-foreground shadow-xs"
+                className="p-8 rounded-2xl text-center text-xs text-muted-foreground shadow-xs"
                 style={{ background: theme.card }}
               >
                 No description provided for this project.
@@ -769,12 +778,11 @@ export function DiscoveryDetailsPage({
                   key={type}
                   type="button"
                   onClick={() => setVersionFilterType(type)}
-                  className="px-2.5 py-1 rounded-md border text-[11px] font-semibold cursor-pointer transition-colors capitalize"
+                  className="px-2.5 py-1 rounded-md text-[11px] font-semibold cursor-pointer transition-colors capitalize"
                   style={{
                     background: versionFilterType === type ? theme.primary : theme.secondary,
                     color:
                       versionFilterType === type ? theme.primaryForeground : theme.mutedForeground,
-                    borderColor: theme.border,
                   }}
                 >
                   {type}
@@ -786,10 +794,7 @@ export function DiscoveryDetailsPage({
               {loadingVersions ? (
                 <div className="flex flex-col gap-2">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-16 rounded-xl border border-border bg-card animate-pulse"
-                    />
+                    <div key={i} className="h-16 rounded-xl bg-card animate-pulse" />
                   ))}
                 </div>
               ) : filteredVersions.length === 0 ? (
@@ -798,22 +803,28 @@ export function DiscoveryDetailsPage({
                 </div>
               ) : (
                 filteredVersions.map((v) => {
-                  const badgeColor =
+                  // status color follows the version channel so the badge legible across palettes
+                  const channelColor =
                     v.versionType === "release"
-                      ? "text-emerald-500 bg-emerald-500/15 border-emerald-500/30"
+                      ? theme.success
                       : v.versionType === "beta"
-                        ? "text-amber-500 bg-amber-500/15 border-amber-500/30"
-                        : "text-rose-500 bg-rose-500/15 border-rose-500/30";
+                        ? theme.warning
+                        : theme.destructive;
 
                   return (
                     <div
                       key={v.id}
-                      className="flex items-center justify-between p-3 rounded-xl border border-border gap-4 transition-colors hover:bg-card/70"
+                      className="flex items-center justify-between p-3 rounded-xl gap-4 transition-colors hover:opacity-95"
                       style={{ background: theme.card }}
                     >
                       <div className="flex items-start gap-3 min-w-0 flex-1">
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded font-semibold uppercase tracking-wider border shrink-0 mt-0.5 ${badgeColor}`}
+                          className="text-[10px] px-2 py-0.5 rounded font-semibold uppercase tracking-wider border shrink-0 mt-0.5"
+                          style={{
+                            color: channelColor,
+                            background: tint(channelColor, 0.15),
+                            borderColor: tint(channelColor, 0.3),
+                          }}
                         >
                           {v.versionType}
                         </span>
@@ -1242,7 +1253,7 @@ export function DiscoveryDetailsPage({
 
             {instances.length === 0 ? (
               <div
-                className="text-xs p-3 rounded-lg border border-border text-center"
+                className="text-xs p-3 rounded-lg text-center"
                 style={{ background: theme.secondary, color: theme.mutedForeground }}
               >
                 No instances created yet. Please create an instance first!

@@ -326,7 +326,7 @@ export function AppHeader({
         <div className="relative flex items-center" ref={downloadsRef}>
           <button
             type="button"
-            className={`relative inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-border text-xs font-medium cursor-pointer transition-colors duration-120 overflow-hidden ${!isAnyActive ? "w-6 px-0 justify-center" : ""}`}
+            className={`relative inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg text-xs font-medium cursor-pointer transition-colors duration-120 overflow-hidden ${!isAnyActive ? "w-6 px-0 justify-center" : ""}`}
             style={{
               background: theme.background,
               color: isDownloading ? theme.foreground : theme.mutedForeground,
@@ -369,7 +369,7 @@ export function AppHeader({
             {showDownloads && (
               <motion.div
                 key="download-popover"
-                className="absolute right-0 top-[calc(100%+8px)] w-[320px] rounded-xl border border-border shadow-[0_16px_36px_rgba(0,0,0,0.35)] z-50 overflow-hidden"
+                className="absolute right-0 top-[calc(100%+8px)] w-[320px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.35)] z-50 overflow-hidden"
                 initial={{ opacity: 0, scale: 0.96, y: -4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: -4 }}
@@ -408,7 +408,7 @@ export function AppHeader({
                         return (
                           <div
                             key={item.id}
-                            className="flex flex-col gap-1.5 p-2 rounded-lg border border-border/50"
+                            className="flex flex-col gap-1.5 p-2 rounded-lg "
                             style={{
                               background: theme.secondary,
                               borderColor: theme.border,
@@ -621,7 +621,7 @@ export function AppHeader({
                                   <img
                                     src={item.iconUrl}
                                     alt=""
-                                    className="size-6 rounded-md object-cover shrink-0 border border-border"
+                                    className="size-6 rounded-md object-cover shrink-0 "
                                   />
                                 ) : (
                                   <div
@@ -690,7 +690,7 @@ export function AppHeader({
         <div className="relative flex items-center" ref={tasksRef}>
           <button
             type="button"
-            className="inline-flex items-center gap-2 h-6 px-2.5 rounded-lg border border-border text-xs font-medium cursor-pointer transition-colors duration-120"
+            className="inline-flex items-center gap-2 h-6 px-2.5 rounded-lg text-xs font-medium cursor-pointer transition-colors duration-120"
             style={{
               background: theme.background,
               color: runningCount > 0 ? theme.foreground : theme.mutedForeground,
@@ -728,7 +728,7 @@ export function AppHeader({
             {showTasks && (
               <motion.div
                 key="task-popover"
-                className="absolute right-0 top-[calc(100%+8px)] w-[260px] rounded-xl border border-border shadow-[0_16px_36px_rgba(0,0,0,0.35)] z-50 overflow-hidden"
+                className="absolute right-0 top-[calc(100%+8px)] w-[260px] rounded-xl shadow-[0_16px_36px_rgba(0,0,0,0.35)] z-50 overflow-hidden"
                 initial={{ opacity: 0, scale: 0.96, y: -4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: -4 }}

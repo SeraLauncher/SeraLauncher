@@ -279,15 +279,22 @@ export default function App() {
   );
   const isRailOpen = page === SETTINGS || (page === 1 && Boolean(managingInstanceId));
 
-  // the favicon follows the shell, the same pair the rail picks between
+  // Synchronize active theme custom properties on documentElement so all Tailwind utilities and portals adapt
   useEffect(() => {
-    document.documentElement.dataset.appearance = settings.appearance;
+    const root = document.documentElement;
+    root.dataset.appearance = settings.appearance;
     if (settings.appearance === "dark") {
-      document.documentElement.classList.add("dark");
+      root.classList.add("dark");
     } else {
-      document.documentElement.classList.remove("dark");
+      root.classList.remove("dark");
     }
-  }, [settings.appearance]);
+
+    Object.entries(theme).forEach(([key, value]) => {
+      const kebab = key.replace(/([A-Z])/g, "-$1").toLowerCase();
+      root.style.setProperty(`--${kebab}`, value);
+      root.style.setProperty(`--color-${kebab}`, value);
+    });
+  }, [theme, settings.appearance]);
 
   return (
     // `user` honours the os setting, so reduced-motion users get fades without the
@@ -299,13 +306,16 @@ export default function App() {
           {
             // react does not emit css custom properties from a style object, so each
             // palette entry is spelled with the leading dashes for the `var(--x)` in
-            // the stylesheet to resolve
+            // the stylesheet to resolve; the `--color-` twins matter because tailwind's
+            // `@theme` layer defines them at :root and custom properties substitute
+            // their var() references at computed-value time, so utilities reading
+            // `var(--color-card)` otherwise inherit the sera palette forever
             ...Object.fromEntries(
               Object.entries(theme).flatMap(([key, value]) => {
                 const kebab = key.replace(/([A-Z])/g, "-$1").toLowerCase();
                 return [
-                  [`--${key}`, value],
                   [`--${kebab}`, value],
+                  [`--color-${kebab}`, value],
                 ];
               }),
             ),

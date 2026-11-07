@@ -230,7 +230,7 @@ export function SelectVersionModal({
               value={modpackInstanceName}
               onChange={(e) => setModpackInstanceName(e.target.value)}
               placeholder="e.g. Better MC"
-              className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
               style={{
                 borderColor: theme.border,
                 color: theme.foreground,
@@ -248,11 +248,11 @@ export function SelectVersionModal({
         )}
 
         {loading ? (
-          <div className="h-9 px-3 flex items-center rounded-lg border border-border bg-secondary text-xs text-muted-foreground">
+          <div className="h-9 px-3 flex items-center rounded-lg bg-secondary text-xs text-muted-foreground">
             Fetching available versions...
           </div>
         ) : versions.length === 0 ? (
-          <div className="p-3 text-center text-xs text-muted-foreground rounded-lg border border-border bg-secondary">
+          <div className="p-3 text-center text-xs text-muted-foreground rounded-lg bg-secondary">
             No compatible versions found.
           </div>
         ) : (

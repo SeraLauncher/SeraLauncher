@@ -521,12 +521,13 @@ export function HomePage({
           : displayedArticles.map((article) => (
               <motion.article
                 key={article.url + article.title}
-                className="flex flex-col rounded-[10px] border border-secondary overflow-hidden cursor-pointer transition-colors duration-150 hover:border-accent [&:nth-child(n+4)]:hidden min-[1040px]:[&:nth-child(n+4)]:flex"
+                className="flex flex-col rounded-[10px] border-0 outline-none overflow-hidden cursor-pointer transition-shadow duration-150 hover:shadow-md [&:nth-child(n+4)]:hidden min-[1040px]:[&:nth-child(n+4)]:flex"
                 style={{
                   background: theme.card,
-                  borderColor: theme.border,
+                  border: 0,
+                  outline: "none",
                 }}
-                whileHover={{ borderColor: theme.primary }}
+                whileHover={{ scale: 1.01 }}
                 transition={snappy}
                 onClick={() => openArticle(article.url)}
               >
@@ -539,11 +540,11 @@ export function HomePage({
                   />
                   {article.category && (
                     <span
-                      className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-black/60 text-white backdrop-blur-xs uppercase tracking-wider"
+                      className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border-0"
                       style={{
                         background: theme.secondary,
                         color: theme.primary,
-                        borderColor: theme.border,
+                        border: 0,
                       }}
                     >
                       {article.category}
@@ -551,7 +552,7 @@ export function HomePage({
                   )}
                 </div>
 
-                <div className="flex-1 flex flex-col p-3 gap-1 bg-card">
+                <div className="flex-1 flex flex-col p-3 gap-1" style={{ background: theme.card }}>
                   <span
                     className="text-[11px] text-muted-foreground font-mono"
                     style={{ color: theme.mutedForeground }}

@@ -180,7 +180,7 @@ function InstallLoaderModal({
             Loader Version
           </label>
           {loadingVersions ? (
-            <div className="h-9 px-3 flex items-center rounded-lg border border-border bg-secondary text-xs text-muted-foreground">
+            <div className="h-9 px-3 flex items-center rounded-lg bg-secondary text-xs text-muted-foreground">
               Fetching available versions for {instance.mcVersion}...
             </div>
           ) : (
@@ -980,11 +980,11 @@ export function InstanceAddonsTab({
           {isVanilla ? (
             <div className="flex-1 w-full h-full min-h-0 flex items-center justify-center p-4 select-none">
               <div
-                className="flex flex-col items-center justify-center text-center p-7 gap-4 border border-border rounded-2xl shadow-sm max-w-[420px] w-full"
+                className="flex flex-col items-center justify-center text-center p-7 gap-4 rounded-2xl shadow-sm max-w-[420px] w-full"
                 style={{ background: theme.card }}
               >
                 <div
-                  className="size-14 rounded-2xl flex items-center justify-center border border-border"
+                  className="size-14 rounded-2xl flex items-center justify-center "
                   style={{ background: theme.secondary }}
                 >
                   <Icon name="puzzle" size={28} color={theme.primary} />
@@ -1038,7 +1038,7 @@ export function InstanceAddonsTab({
                     <button
                       type="button"
                       onClick={handleDisableShaders}
-                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none text-muted-foreground hover:text-foreground"
+                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none text-muted-foreground hover:text-foreground"
                       title="Turn off shader in optionsshaders.txt"
                     >
                       <Icon name="x" size={13} color="currentColor" />
@@ -1048,7 +1048,7 @@ export function InstanceAddonsTab({
 
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
                     onClick={onOpenFolder}
                     title={`Open instance ${categoryLabel} directory`}
                   >
@@ -1072,7 +1072,7 @@ export function InstanceAddonsTab({
 
               {/* Row 2: Full-width Search Input Bar */}
               <div
-                className="w-full h-[38px] flex items-center gap-2 px-3 rounded-lg border border-border"
+                className="w-full h-[38px] flex items-center gap-2 px-3 rounded-lg "
                 style={{ background: theme.secondary }}
               >
                 <Icon name="search" size={14} color={theme.mutedForeground} />
@@ -1191,14 +1191,14 @@ export function InstanceAddonsTab({
                     {Array.from({ length: 4 }).map((_, i) => (
                       <div
                         key={i}
-                        className="h-16 rounded-xl border border-border animate-pulse"
+                        className="h-16 rounded-xl animate-pulse"
                         style={{ background: theme.card }}
                       />
                     ))}
                   </div>
                 ) : filteredInstalled.length === 0 ? (
                   <div
-                    className="flex flex-col items-center justify-center h-64 rounded-xl border border-border text-center p-6 gap-3"
+                    className="flex flex-col items-center justify-center h-64 rounded-xl text-center p-6 gap-3"
                     style={{ background: theme.card }}
                   >
                     <Icon
@@ -1244,9 +1244,11 @@ export function InstanceAddonsTab({
                     {filteredInstalled.map((item) => (
                       <div
                         key={item.fileName}
-                        className="flex items-start justify-between p-3 rounded-xl border border-border gap-3.5 transition-all select-none"
+                        className="flex items-start justify-between p-3 rounded-xl gap-3.5 transition-all select-none border-0 outline-none"
                         style={{
                           background: theme.card,
+                          border: 0,
+                          outline: "none",
                           opacity: item.enabled ? 1 : 0.65,
                         }}
                       >
@@ -1374,7 +1376,7 @@ export function InstanceAddonsTab({
                                       item.fileName.replace(/\.disabled$/, ""),
                                     ) === 0
                                   }
-                                  className="size-6 rounded flex items-center justify-center border border-border bg-secondary cursor-pointer hover:bg-card disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                  className="size-6 rounded flex items-center justify-center bg-secondary cursor-pointer hover:bg-card disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                   title="Increase pack priority (load higher)"
                                 >
                                   <Icon name="chevronUp" size={12} color="currentColor" />
@@ -1388,7 +1390,7 @@ export function InstanceAddonsTab({
                                     ) ===
                                     activeResourcePacks.length - 1
                                   }
-                                  className="size-6 rounded flex items-center justify-center border border-border bg-secondary cursor-pointer hover:bg-card disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                  className="size-6 rounded flex items-center justify-center bg-secondary cursor-pointer hover:bg-card disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                   title="Decrease pack priority (load lower)"
                                 >
                                   <Icon name="chevronDown" size={12} color="currentColor" />
@@ -1472,7 +1474,7 @@ export function InstanceAddonsTab({
                   <button
                     type="button"
                     onClick={() => setViewMode("installed")}
-                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
                     style={{ color: theme.foreground }}
                     title="Return to installed list"
                   >
@@ -1494,7 +1496,7 @@ export function InstanceAddonsTab({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
                     onClick={onOpenFolder}
                     title={`Open instance ${categoryLabel} directory`}
                   >
@@ -1505,7 +1507,7 @@ export function InstanceAddonsTab({
                   <button
                     type="button"
                     onClick={() => setSearchSettingsOpen((prev) => !prev)}
-                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-semibold cursor-pointer transition-colors select-none"
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold cursor-pointer transition-colors select-none"
                     style={{
                       background: searchSettingsOpen ? theme.primary : theme.secondary,
                       color: searchSettingsOpen ? theme.primaryForeground : theme.foreground,
@@ -1520,8 +1522,8 @@ export function InstanceAddonsTab({
 
               {/* Search Input Bar */}
               <div
-                className="w-full h-[38px] flex items-center gap-2 px-3 rounded-lg border border-border"
-                style={{ background: theme.secondary }}
+                className="w-full h-[38px] flex items-center gap-2 px-3 rounded-lg border-0 outline-none"
+                style={{ background: theme.secondary, border: 0, outline: "none" }}
               >
                 <Icon name="search" size={14} color={theme.mutedForeground} />
                 <input
@@ -1532,8 +1534,8 @@ export function InstanceAddonsTab({
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full text-xs bg-transparent outline-none border-none h-full placeholder:text-muted-foreground"
-                  style={{ color: theme.foreground }}
+                  className="w-full text-xs bg-transparent outline-none border-0 border-none h-full placeholder:text-muted-foreground"
+                  style={{ color: theme.foreground, border: 0, outline: "none" }}
                 />
               </div>
 
@@ -1559,14 +1561,14 @@ export function InstanceAddonsTab({
                     {Array.from({ length: 5 }).map((_, i) => (
                       <div
                         key={i}
-                        className="h-24 rounded-xl border border-border animate-pulse"
+                        className="h-24 rounded-xl animate-pulse"
                         style={{ background: theme.card }}
                       />
                     ))}
                   </div>
                 ) : projects.length === 0 ? (
                   <div
-                    className="flex flex-col items-center justify-center h-64 rounded-xl border border-border text-center p-4"
+                    className="flex flex-col items-center justify-center h-64 rounded-xl text-center p-4"
                     style={{ background: theme.card }}
                   >
                     <Icon name="search" size={28} color={theme.mutedForeground} />

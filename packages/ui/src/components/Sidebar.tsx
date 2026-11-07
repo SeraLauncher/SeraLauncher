@@ -81,7 +81,7 @@ function NavButton({
       data-label={item.label}
       aria-label={item.label}
       aria-current={selected ? "page" : undefined}
-      className={`relative flex items-center justify-center size-11 rounded-[10px] cursor-pointer bg-transparent transition-colors duration-120 hover:bg-sidebar-accent after:content-[attr(data-label)] after:absolute after:left-[calc(100%+8px)] after:top-1/2 after:-translate-y-1/2 after:px-2.5 after:py-1 after:border after:border-border after:rounded-md after:bg-card after:text-foreground after:text-[0.88rem] after:font-medium after:whitespace-nowrap after:opacity-0 after:pointer-events-none after:transition-opacity after:duration-120 after:z-50 after:shadow-[0_4px_12px_rgba(0,0,0,0.25)] hover:after:opacity-100 ${
+      className={`relative flex items-center justify-center size-11 rounded-[10px] cursor-pointer bg-transparent transition-colors duration-120 hover:bg-sidebar-accent after:content-[attr(data-label)] after:absolute after:left-[calc(100%+8px)] after:top-1/2 after:-translate-y-1/2 after:px-2.5 after:py-1 after:rounded-md after:bg-card after:text-foreground after:text-[0.88rem] after:font-medium after:whitespace-nowrap after:opacity-0 after:pointer-events-none after:transition-opacity after:duration-120 after:z-50 after:shadow-[0_4px_12px_rgba(0,0,0,0.25)] hover:after:opacity-100 ${
         selected ? "bg-sidebar-accent" : ""
       }`}
       style={{ background: selected ? theme.sidebarAccent : "transparent" }}

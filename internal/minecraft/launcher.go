@@ -207,7 +207,7 @@ func GetHorizonEngineVersion(instanceID string) (HorizonEngineVersionInfo, error
 	// Query GitHub releases for horizon-rust/horizon
 	client := &http.Client{Timeout: 10 * time.Second}
 	req, _ := http.NewRequest("GET", "https://api.github.com/repos/horizon-rust/horizon/releases?per_page=12", nil)
-	req.Header.Set("User-Agent", "SeraLauncher/0.2.2")
+	req.Header.Set("User-Agent", "SeraLauncher/0.2.4")
 
 	resp, err := client.Do(req)
 	if err != nil {

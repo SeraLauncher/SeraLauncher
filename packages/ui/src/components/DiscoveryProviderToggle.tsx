@@ -21,19 +21,21 @@ export function DiscoveryProviderToggle({
 }: DiscoveryProviderToggleProps) {
   return (
     <div
-      className={`flex items-center p-0.5 rounded-lg border border-border gap-0.5 ${className}`}
-      style={{ background: theme.secondary }}
+      className={`flex items-center p-0.5 rounded-lg gap-0.5 border-0 outline-none ${className}`}
+      style={{ background: theme.secondary, border: 0, outline: "none" }}
     >
       <button
         type="button"
         onClick={() => onChange("modrinth")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer select-none"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer select-none border-0 outline-none"
         style={{
           background: provider === "modrinth" ? theme.primary : "transparent",
           color: provider === "modrinth" ? theme.primaryForeground : theme.mutedForeground,
           fontWeight: provider === "modrinth" ? 600 : 500,
           fontSize: "0.82rem",
           lineHeight: 1.2,
+          border: 0,
+          outline: "none",
         }}
       >
         <SiModrinth size={14} color="currentColor" />
@@ -44,13 +46,15 @@ export function DiscoveryProviderToggle({
         <button
           type="button"
           onClick={() => onChange("horizon")}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer select-none"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer select-none border-0 outline-none"
           style={{
             background: provider === "horizon" ? theme.primary : "transparent",
             color: provider === "horizon" ? theme.primaryForeground : theme.mutedForeground,
             fontWeight: provider === "horizon" ? 600 : 500,
             fontSize: "0.82rem",
             lineHeight: 1.2,
+            border: 0,
+            outline: "none",
           }}
         >
           <Icon name="wand" size={14} color="currentColor" />
@@ -61,13 +65,15 @@ export function DiscoveryProviderToggle({
       <button
         type="button"
         onClick={() => onChange("curseforge")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer select-none"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer select-none border-0 outline-none"
         style={{
           background: provider === "curseforge" ? theme.primary : "transparent",
           color: provider === "curseforge" ? theme.primaryForeground : theme.mutedForeground,
           fontWeight: provider === "curseforge" ? 600 : 500,
           fontSize: "0.82rem",
           lineHeight: 1.2,
+          border: 0,
+          outline: "none",
         }}
       >
         <SiCurseforge size={14} color="currentColor" />

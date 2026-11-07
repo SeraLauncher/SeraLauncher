@@ -73,7 +73,7 @@ export function CompatibilityModal({
           {onLaunchAnyway && (
             <button
               type="button"
-              className="h-7.5 px-3 rounded-md border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none text-muted-foreground hover:text-foreground"
+              className="h-7.5 px-3 rounded-md bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none text-muted-foreground hover:text-foreground"
               onClick={() => {
                 onClose();
                 onLaunchAnyway();
@@ -158,7 +158,7 @@ export function CompatibilityModal({
 
         {hasAutoResolvable && (
           <div
-            className="p-2.5 rounded-lg border border-border bg-card/60 flex items-center gap-2 text-muted-foreground text-[11px]"
+            className="p-2.5 rounded-lg bg-card/60 flex items-center gap-2 text-muted-foreground text-[11px]"
             style={{ background: theme.sidebarAccent }}
           >
             <Icon name="check" size={14} color={theme.primary} />

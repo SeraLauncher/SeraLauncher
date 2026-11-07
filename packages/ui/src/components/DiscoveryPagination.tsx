@@ -75,7 +75,7 @@ export function DiscoveryPagination({
           disabled={page <= 1 || loading}
           onClick={() => changePage(Math.max(1, page - 1))}
           title="Previous Page"
-          className="w-7 h-7 flex items-center justify-center rounded-md border border-border disabled:opacity-30 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+          className="w-7 h-7 flex items-center justify-center rounded-md disabled:opacity-30 transition-opacity cursor-pointer disabled:cursor-not-allowed"
           style={{ background: theme.secondary, color: theme.foreground }}
         >
           <Icon name="arrowLeft" size={13} color="currentColor" />
@@ -117,7 +117,7 @@ export function DiscoveryPagination({
                   }
                   setIsEditingPage(false);
                 }}
-                className="w-12 h-7 px-1 text-center text-xs font-semibold rounded-md border border-border outline-none focus:border-primary"
+                className="w-12 h-7 px-1 text-center text-xs font-semibold rounded-md outline-none"
                 style={{
                   background: theme.secondary,
                   color: theme.foreground,
@@ -131,7 +131,7 @@ export function DiscoveryPagination({
                   setPageInputVal(String(page));
                   setIsEditingPage(true);
                 }}
-                className="h-7 px-1.5 flex items-center justify-center rounded-md text-xs font-semibold border border-transparent hover:border-border cursor-pointer transition-colors"
+                className="h-7 px-1.5 flex items-center justify-center rounded-md text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
                 style={{ color: theme.mutedForeground }}
               >
                 ...
@@ -143,7 +143,7 @@ export function DiscoveryPagination({
               type="button"
               onClick={() => changePage(totalPages)}
               title={`Jump to last page (${totalPages})`}
-              className="h-7 px-2.5 flex items-center justify-center rounded-md border border-border text-xs font-medium cursor-pointer transition-colors hover:bg-card"
+              className="h-7 px-2.5 flex items-center justify-center rounded-md text-xs font-medium cursor-pointer transition-colors hover:bg-card"
               style={{
                 background: theme.secondary,
                 color: theme.foreground,
@@ -160,7 +160,7 @@ export function DiscoveryPagination({
           disabled={page >= totalPages || loading || totalHits === 0}
           onClick={() => changePage(Math.min(totalPages, page + 1))}
           title="Next Page"
-          className="w-7 h-7 flex items-center justify-center rounded-md border border-border disabled:opacity-30 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+          className="w-7 h-7 flex items-center justify-center rounded-md disabled:opacity-30 transition-opacity cursor-pointer disabled:cursor-not-allowed"
           style={{ background: theme.secondary, color: theme.foreground }}
         >
           <Icon name="arrowRight" size={13} color="currentColor" />

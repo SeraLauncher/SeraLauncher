@@ -171,7 +171,7 @@ export function HorizonNativeBuildModal({
             <button
               type="button"
               onClick={handleCopyLogs}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
               style={{ color: theme.foreground }}
               title="Copy terminal logs to clipboard"
             >
@@ -192,7 +192,7 @@ export function HorizonNativeBuildModal({
                   await onRebuild();
                 }}
                 disabled={isBuilding}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
                 style={{ color: theme.foreground }}
               >
                 <Icon name="refresh" size={13} color="currentColor" />
@@ -216,7 +216,7 @@ export function HorizonNativeBuildModal({
       }
     >
       {/* Top Status & Progress Bar */}
-      <div className="flex flex-col gap-2 p-3 rounded-xl border border-border bg-secondary/60">
+      <div className="flex flex-col gap-2 p-3 rounded-xl bg-secondary/60">
         <div className="flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 min-w-0">
             {buildStatus === "building" ? (
@@ -237,7 +237,7 @@ export function HorizonNativeBuildModal({
         </div>
 
         {/* Progress Bar Track */}
-        <div className="w-full h-1.5 rounded-full bg-card overflow-hidden border border-border/50">
+        <div className="w-full h-1.5 rounded-full bg-card overflow-hidden ">
           <div
             className="h-full transition-all duration-200"
             style={{
@@ -264,7 +264,7 @@ export function HorizonNativeBuildModal({
 
         <div
           ref={terminalRef}
-          className="w-full h-64 p-3 rounded-xl border border-border font-mono text-[11px] leading-relaxed overflow-y-auto select-text select-auto"
+          className="w-full h-64 p-3 rounded-xl font-mono text-[11px] leading-relaxed overflow-y-auto select-text select-auto"
           style={{
             background: "#0d0e12",
             color: "#e2e8f0",

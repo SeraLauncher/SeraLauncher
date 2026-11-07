@@ -104,14 +104,14 @@ export function ExportInstanceModal({
       <div className="flex flex-col gap-4 py-1 text-xs">
         {exportResult ? (
           <div
-            className="p-4 rounded-xl border border-border flex flex-col gap-3"
+            className="p-4 rounded-xl flex flex-col gap-3"
             style={{ background: theme.sidebarAccent }}
           >
             <div className="flex items-center gap-2.5 text-primary font-semibold text-sm">
               <Icon name="check" size={18} color="currentColor" />
               <span>Instance Exported Successfully</span>
             </div>
-            <div className="flex flex-col gap-1 text-muted-foreground font-mono text-[11px] break-all bg-card p-3 rounded-lg border border-border">
+            <div className="flex flex-col gap-1 text-muted-foreground font-mono text-[11px] break-all bg-card p-3 rounded-lg ">
               <span className="text-foreground font-bold">{exportResult.fileName}</span>
               <span>{exportResult.outputPath}</span>
               <span className="text-primary font-semibold pt-1">
@@ -136,7 +136,7 @@ export function ExportInstanceModal({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. My Modpack"
-                  className="flex-1 px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                  className="flex-1 px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                   style={{ background: theme.sidebarAccent, color: theme.foreground }}
                 />
                 <span className="font-mono text-muted-foreground font-semibold px-2">{ext}</span>
@@ -204,7 +204,7 @@ export function ExportInstanceModal({
               </label>
 
               <div
-                className="flex flex-col gap-1 p-2 rounded-xl border border-border"
+                className="flex flex-col gap-1 p-2 rounded-xl "
                 style={{ background: theme.sidebarAccent }}
               >
                 {[

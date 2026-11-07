@@ -219,10 +219,7 @@ export function SafeContentRenderer({
         // Tables (GFM)
         if (tagName === "table") {
           return (
-            <div
-              key={currentKey}
-              className="w-full overflow-x-auto my-3 rounded-lg border border-border"
-            >
+            <div key={currentKey} className="w-full overflow-x-auto my-3 rounded-lg ">
               <table className="w-full text-left text-xs border-collapse">{children}</table>
             </div>
           );
@@ -275,7 +272,7 @@ export function SafeContentRenderer({
           return (
             <pre
               key={currentKey}
-              className="p-3 my-3 rounded-lg border border-border bg-secondary font-mono text-xs overflow-x-auto select-text leading-relaxed"
+              className="p-3 my-3 rounded-lg bg-secondary font-mono text-xs overflow-x-auto select-text leading-relaxed"
               style={{ color: theme.foreground }}
             >
               {children}
@@ -286,7 +283,7 @@ export function SafeContentRenderer({
           return (
             <code
               key={currentKey}
-              className="px-1.5 py-0.5 rounded bg-secondary font-mono text-[11px] border border-border/50"
+              className="px-1.5 py-0.5 rounded bg-secondary font-mono text-[11px] "
               style={{ color: theme.foreground }}
             >
               {children}

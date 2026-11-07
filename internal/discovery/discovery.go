@@ -164,7 +164,7 @@ func SearchProjects(provider, projectType string, query, mcVersion, loader *stri
 	if err != nil {
 		return DiscoverySearchResponse{}, err
 	}
-	req.Header.Set("User-Agent", "SeraLauncher/0.2.2")
+	req.Header.Set("User-Agent", "SeraLauncher/0.2.4")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -234,7 +234,7 @@ func GetProjectDetails(provider, projectID string) (DiscoveryProjectDetails, err
 	client := &http.Client{Timeout: 10 * time.Second}
 	url := fmt.Sprintf("https://api.modrinth.com/v2/project/%s", projectID)
 	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("User-Agent", "SeraLauncher/0.2.2")
+	req.Header.Set("User-Agent", "SeraLauncher/0.2.4")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -286,7 +286,7 @@ func GetProjectVersions(provider, projectID string, mcVersion, loader *string) (
 	client := &http.Client{Timeout: 10 * time.Second}
 	u := fmt.Sprintf("https://api.modrinth.com/v2/project/%s/version", projectID)
 	req, _ := http.NewRequest("GET", u, nil)
-	req.Header.Set("User-Agent", "SeraLauncher/0.2.2")
+	req.Header.Set("User-Agent", "SeraLauncher/0.2.4")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -792,7 +792,7 @@ func InstallDiscoveryProject(
 	if err != nil {
 		return nil, fmt.Errorf("invalid download URL: %w", err)
 	}
-	req.Header.Set("User-Agent", "SeraLauncher/0.2.2")
+	req.Header.Set("User-Agent", "SeraLauncher/0.2.4")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -929,7 +929,7 @@ func getOfficialHorizonIndex() (*officialHorizonIndex, error) {
 	// 1. Fetch live index from GitHub Pages
 	client := &http.Client{Timeout: 8 * time.Second}
 	req, _ := http.NewRequest("GET", "https://horizon-rust.github.io/horizon-mods/index.json", nil)
-	req.Header.Set("User-Agent", "SeraLauncher/0.2.2")
+	req.Header.Set("User-Agent", "SeraLauncher/0.2.4")
 
 	resp, err := client.Do(req)
 	if err == nil && resp.StatusCode == http.StatusOK {

@@ -559,7 +559,7 @@ export function SettingsPage({
                       <button
                         key={p.value}
                         type="button"
-                        className="px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer border border-border transition-colors"
+                        className="px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors"
                         style={{
                           background: isActive ? theme.primary : theme.secondary,
                           color: isActive ? theme.primaryForeground : theme.foreground,
@@ -660,7 +660,7 @@ export function SettingsPage({
                     <button
                       key={gc.value}
                       type="button"
-                      className="px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer border border-border transition-colors"
+                      className="px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors"
                       style={{
                         background: isActive ? theme.primary : theme.secondary,
                         color: isActive ? theme.primaryForeground : theme.foreground,
@@ -802,7 +802,7 @@ export function SettingsPage({
                 return (
                   <div
                     key={rt.majorVersion}
-                    className="flex items-center justify-between p-3 rounded-xl border border-border transition-colors"
+                    className="flex items-center justify-between p-3 rounded-xl transition-colors"
                     style={{ background: theme.secondary }}
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
@@ -813,14 +813,16 @@ export function SettingsPage({
                         {rt.isInstalled ? (
                           <Badge
                             variant="outline"
-                            className="text-[10px] py-0 px-1.5 border-emerald-500/40 text-emerald-400 bg-emerald-500/10"
+                            className="text-[10px] py-0 px-1.5"
+                            style={{ color: theme.success, background: tint(theme.success, 0.12) }}
                           >
                             Installed · {formatSize(rt.diskSizeBytes)}
                           </Badge>
                         ) : (
                           <Badge
                             variant="outline"
-                            className="text-[10px] py-0 px-1.5 text-muted-foreground border-border"
+                            className="text-[10px] py-0 px-1.5"
+                            style={{ color: theme.mutedForeground }}
                           >
                             Not Installed
                           </Badge>
@@ -828,7 +830,8 @@ export function SettingsPage({
                         {isSelected && (
                           <Badge
                             variant="outline"
-                            className="text-[10px] py-0 px-1.5 border-primary/40 text-primary bg-primary/10"
+                            className="text-[10px] py-0 px-1.5"
+                            style={{ color: theme.primary, background: tint(theme.primary, 0.1) }}
                           >
                             Active Default
                           </Badge>
@@ -851,7 +854,7 @@ export function SettingsPage({
                                   toast.success(`Set ${rt.title} as default runtime`);
                                 }
                               }}
-                              className="h-7 px-2.5 rounded-lg border border-border bg-card text-xs font-medium cursor-pointer transition-colors hover:bg-foreground/5 select-none"
+                              className="h-7 px-2.5 rounded-lg bg-card text-xs font-medium cursor-pointer transition-colors hover:bg-foreground/5 select-none"
                               style={{ color: theme.foreground }}
                             >
                               Set Default
@@ -1089,7 +1092,12 @@ function Group({
         </h2>
         {headerRight}
       </div>
-      <div className="px-[18px] py-1 bg-card rounded-xl">{children}</div>
+      <div
+        className="px-[18px] py-1 rounded-xl border-0 outline-none"
+        style={{ background: theme.card, border: 0, outline: "none" }}
+      >
+        {children}
+      </div>
     </section>
   );
 }

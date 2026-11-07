@@ -319,8 +319,8 @@ export function DiscoveryPage({
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 {/* Categories */}
                 <div
-                  className="flex items-center gap-1 p-1 rounded-lg border border-border"
-                  style={{ background: theme.secondary }}
+                  className="flex items-center gap-1 p-1 rounded-lg border-0 outline-none"
+                  style={{ background: theme.secondary, border: 0, outline: "none" }}
                 >
                   {(
                     [
@@ -336,13 +336,14 @@ export function DiscoveryPage({
                         key={tab.id}
                         type="button"
                         onClick={() => setCategory(tab.id)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-all cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md font-medium transition-all cursor-pointer border-0 outline-none"
                         style={{
                           background: active ? theme.card : "transparent",
                           color: active ? theme.foreground : theme.mutedForeground,
-                          boxShadow: active ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
                           fontSize: "0.82rem",
                           lineHeight: 1.2,
+                          border: 0,
+                          outline: "none",
                         }}
                       >
                         <Icon
@@ -367,8 +368,8 @@ export function DiscoveryPage({
 
               {/* Search Bar */}
               <div
-                className="w-full h-[36px] flex items-center gap-2 px-3 rounded-lg border border-border"
-                style={{ background: theme.secondary }}
+                className="w-full h-[36px] flex items-center gap-2 px-3 rounded-lg border-0 outline-none"
+                style={{ background: theme.secondary, border: 0, outline: "none" }}
               >
                 <Icon name="search" size={14} color={theme.mutedForeground} />
                 <input
@@ -376,8 +377,8 @@ export function DiscoveryPage({
                   placeholder={`Search ${category}...`}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full text-xs bg-transparent outline-none border-none h-full"
-                  style={{ color: theme.foreground }}
+                  className="w-full text-xs bg-transparent outline-none border-0 border-none h-full"
+                  style={{ color: theme.foreground, border: 0, outline: "none" }}
                 />
               </div>
 
@@ -401,14 +402,14 @@ export function DiscoveryPage({
                     {Array.from({ length: 6 }).map((_, i) => (
                       <div
                         key={i}
-                        className="h-24 rounded-xl border border-border animate-pulse"
+                        className="h-24 rounded-xl animate-pulse"
                         style={{ background: theme.card }}
                       />
                     ))}
                   </div>
                 ) : projects.length === 0 ? (
                   <div
-                    className="flex flex-col items-center justify-center h-64 rounded-xl border border-border"
+                    className="flex flex-col items-center justify-center h-64 rounded-xl"
                     style={{ background: theme.card }}
                   >
                     <Icon name="search" size={28} color={theme.mutedForeground} />
@@ -443,7 +444,7 @@ export function DiscoveryPage({
 
             {/* Right Sidebar: Static flush sidebar panel with compact width */}
             <aside
-              className="w-56 h-full flex flex-col border-l border-border p-4.5 gap-4.5 overflow-y-auto flex-shrink-0"
+              className="w-56 h-full flex flex-col p-4.5 gap-4.5 overflow-y-auto flex-shrink-0"
               style={{ background: theme.sidebar }}
             >
               <div className="flex items-center gap-2">
@@ -614,7 +615,7 @@ export function DiscoveryPage({
 
                   {instances.length === 0 ? (
                     <div
-                      className="text-xs p-3 rounded-lg border border-border text-center"
+                      className="text-xs p-3 rounded-lg text-center"
                       style={{ background: theme.secondary, color: theme.mutedForeground }}
                     >
                       No instances created yet. Please create an instance first!

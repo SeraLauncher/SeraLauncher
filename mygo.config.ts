@@ -3,7 +3,7 @@ import { defineConfig } from "mygo-cli";
 export default defineConfig({
   name: "SeraLauncher",
   identifier: "com.yoruakio.seralauncher",
-  version: "0.2.2",
+  version: "0.2.4",
   updates: {
     publicKey: "2/sqti0GxDz+owYJMY8z18rhDdFnIRrwZ0cRVM7F+m4=",
     github: process.env.GITHUB_REPOSITORY || "SeraLauncher/SeraLauncher",

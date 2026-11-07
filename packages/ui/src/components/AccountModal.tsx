@@ -325,7 +325,7 @@ function AccountModalDialog({
         <div className="flex items-center justify-between w-full">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-md border border-border bg-secondary hover:bg-card text-xs font-semibold cursor-pointer transition-colors"
+            className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-md bg-secondary hover:bg-card text-xs font-semibold cursor-pointer transition-colors"
             onClick={() => {
               stopPolling();
               setMode("view");
@@ -356,7 +356,7 @@ function AccountModalDialog({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-secondary hover:bg-card text-xs font-semibold cursor-pointer transition-colors"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-secondary hover:bg-card text-xs font-semibold cursor-pointer transition-colors"
             onClick={() => {
               setMode("login");
               setAuthType("microsoft");
@@ -397,7 +397,7 @@ function AccountModalDialog({
       {mode === "login" ? (
         <div className="flex flex-col gap-3 w-full">
           {/* Segmented Auth Type Tabs */}
-          <div className="grid grid-cols-4 items-center gap-1 p-1 rounded-lg border border-border bg-secondary w-full">
+          <div className="grid grid-cols-4 items-center gap-1 p-1 rounded-lg bg-secondary w-full">
             <button
               type="button"
               className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all cursor-pointer select-none border-0 whitespace-nowrap ${
@@ -479,7 +479,7 @@ function AccountModalDialog({
                   </label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                    className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                     placeholder="e.g. Steve"
                     value={offlineName}
                     onChange={(e) => {
@@ -531,7 +531,7 @@ function AccountModalDialog({
                   </label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                    className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                     placeholder="username or email"
                     value={elyUsername}
                     onChange={(e) => {
@@ -561,7 +561,7 @@ function AccountModalDialog({
                   <div className="relative flex items-center w-full">
                     <input
                       type={elyShowPassword ? "text" : "password"}
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                      className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                       placeholder="password"
                       value={elyPassword}
                       onChange={(e) => {
@@ -644,7 +644,7 @@ function AccountModalDialog({
                   </label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                    className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                     placeholder="email or character name"
                     value={littleUsername}
                     onChange={(e) => {
@@ -674,7 +674,7 @@ function AccountModalDialog({
                   <div className="relative flex items-center w-full">
                     <input
                       type={littleShowPassword ? "text" : "password"}
-                      className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                      className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                       placeholder="password"
                       value={littlePassword}
                       onChange={(e) => {
@@ -841,7 +841,7 @@ function AccountModalDialog({
               </p>
 
               <div
-                className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary"
+                className="flex items-center justify-between p-3 rounded-lg bg-secondary"
                 style={{ background: theme.secondary, borderColor: theme.border }}
               >
                 <span className="font-mono text-[1.15rem] font-bold tracking-[0.08em]">
@@ -900,7 +900,7 @@ function AccountModalDialog({
         <div className="flex flex-col gap-3 w-full">
           {account ? (
             <div
-              className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-secondary"
+              className="flex items-center justify-between p-3.5 rounded-xl bg-secondary"
               style={{ background: theme.secondary, borderColor: theme.border }}
             >
               <MinecraftHead
@@ -954,7 +954,7 @@ function AccountModalDialog({
                   return (
                     <div
                       key={other.id}
-                      className="flex items-center justify-between p-2.5 rounded-lg border border-border/50 bg-secondary/50 hover:bg-secondary transition-colors"
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
                       style={{ background: theme.secondary, borderColor: theme.border }}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -984,7 +984,7 @@ function AccountModalDialog({
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           type="button"
-                          className="px-2.5 py-1 text-[11px] font-medium rounded border border-border bg-card hover:bg-secondary cursor-pointer transition-colors"
+                          className="px-2.5 py-1 text-[11px] font-medium rounded bg-card hover:bg-secondary cursor-pointer transition-colors"
                           onClick={() => onSelectAccount?.(other.id)}
                         >
                           Switch

@@ -77,8 +77,8 @@ export function DiscoveryProjectCard({
           projectId: item.id,
         }).catch(() => {});
       }}
-      className="flex items-start justify-between p-3 rounded-xl border border-border gap-3.5 transition-all hover:shadow-md cursor-pointer select-none"
-      style={{ background: theme.card }}
+      className="flex items-start justify-between p-3 rounded-xl gap-3.5 transition-all hover:shadow-md cursor-pointer select-none border-0 outline-none"
+      style={{ background: theme.card, border: 0, outline: "none" }}
     >
       {/* Left: Thumbnail & Content */}
       <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -92,7 +92,7 @@ export function DiscoveryProjectCard({
           />
         ) : (
           <div
-            className="w-[72px] h-[72px] rounded-xl flex items-center justify-center flex-shrink-0 border border-border"
+            className="w-[72px] h-[72px] rounded-xl flex items-center justify-center flex-shrink-0"
             style={{ background: theme.secondary }}
           >
             <Icon name="cubes" size={26} color={theme.mutedForeground} />
@@ -131,6 +131,7 @@ export function DiscoveryProjectCard({
               <Badge
                 variant="environment"
                 icon={<Icon name="globe" size={12} color={theme.primary} />}
+                style={{ background: theme.secondary, color: theme.foreground, border: 0 }}
               >
                 Client & Server
               </Badge>
@@ -139,6 +140,7 @@ export function DiscoveryProjectCard({
               <Badge
                 variant="environment"
                 icon={<Icon name="computer" size={12} color={theme.primary} />}
+                style={{ background: theme.secondary, color: theme.foreground, border: 0 }}
               >
                 Client
               </Badge>
@@ -147,13 +149,18 @@ export function DiscoveryProjectCard({
               <Badge
                 variant="environment"
                 icon={<Icon name="server" size={12} color={theme.primary} />}
+                style={{ background: theme.secondary, color: theme.foreground, border: 0 }}
               >
                 Server
               </Badge>
             )}
 
             {item.categories.slice(0, 4).map((cat) => (
-              <Badge key={cat} variant="environment">
+              <Badge
+                key={cat}
+                variant="environment"
+                style={{ background: theme.secondary, color: theme.foreground, border: 0 }}
+              >
                 {capitalizeFirst(cat)}
               </Badge>
             ))}

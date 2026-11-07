@@ -277,7 +277,7 @@ export function InstanceWorldsTab({
       {/* Top Controls Bar */}
       <div className="flex items-center justify-between gap-3 w-full flex-wrap">
         {/* Left: Search input */}
-        <div className="flex items-center gap-2 h-9 px-3 rounded-xl border border-border bg-card/60 flex-1 min-w-[220px] max-w-[360px] focus-within:border-primary transition-colors">
+        <div className="flex items-center gap-2 h-9 px-3 rounded-xl bg-card/60 flex-1 min-w-[220px] max-w-[360px] focus-within:border-primary transition-colors">
           <Icon name="search" size={15} color={theme.mutedForeground} />
           <input
             type="text"
@@ -298,7 +298,7 @@ export function InstanceWorldsTab({
         </div>
 
         {/* Center: Tabs Switcher */}
-        <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-secondary">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary">
           <button
             type="button"
             onClick={() => setActiveSubTab("worlds")}
@@ -354,7 +354,7 @@ export function InstanceWorldsTab({
             type="button"
             disabled={isImporting}
             onClick={handleImportWorld}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-border bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
             style={{ color: theme.foreground }}
             title="Import a world from .zip archive"
           >
@@ -392,7 +392,7 @@ export function InstanceWorldsTab({
           <button
             type="button"
             onClick={() => onOpenFolder(activeSubTab === "worlds" ? "saves" : "backups")}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-border bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
             style={{ color: theme.foreground }}
             title={`Open ${activeSubTab === "worlds" ? "saves" : "backups"} directory`}
           >
@@ -408,7 +408,7 @@ export function InstanceWorldsTab({
           {[1, 2, 3, 4].map((n) => (
             <div
               key={n}
-              className="p-4 rounded-2xl border border-border bg-card/50 flex gap-3.5 items-center animate-pulse"
+              className="p-4 rounded-2xl bg-card/50 flex gap-3.5 items-center animate-pulse"
             >
               <div className="size-16 rounded-xl bg-secondary shrink-0" />
               <div className="flex flex-col gap-2 flex-1">
@@ -420,7 +420,7 @@ export function InstanceWorldsTab({
         </div>
       ) : activeSubTab === "worlds" ? (
         filteredWorlds.length === 0 ? (
-          <div className="p-12 rounded-2xl border border-border bg-card flex flex-col items-center justify-center gap-3 text-center">
+          <div className="p-12 rounded-2xl bg-card flex flex-col items-center justify-center gap-3 text-center">
             <div className="size-12 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground">
               <Icon name="globe" size={24} color="currentColor" />
             </div>
@@ -440,7 +440,8 @@ export function InstanceWorldsTab({
               return (
                 <div
                   key={world.folderName}
-                  className="p-4 rounded-2xl border border-border bg-card shadow-xs flex items-center justify-between gap-4 transition-all hover:border-border/80"
+                  className="p-4 rounded-2xl shadow-xs flex items-center justify-between gap-4 transition-all border-0 outline-none"
+                  style={{ background: theme.card, border: 0, outline: "none" }}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     {/* World Thumbnail */}
@@ -525,7 +526,7 @@ export function InstanceWorldsTab({
                       type="button"
                       disabled={isBackingUp}
                       onClick={() => handleCreateBackup(world.folderName, world.name)}
-                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
+                      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
                       style={{ color: theme.foreground }}
                       title="Create an instant ZIP backup of this world"
                     >
@@ -536,7 +537,7 @@ export function InstanceWorldsTab({
                     <button
                       type="button"
                       onClick={() => handleCloneWorld(world)}
-                      className="size-8 rounded-lg border border-border flex items-center justify-center cursor-pointer hover:bg-card transition-colors text-muted-foreground hover:text-foreground"
+                      className="size-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-card transition-colors text-muted-foreground hover:text-foreground"
                       title="Duplicate / clone this world save"
                     >
                       <Icon name="copy" size={13} color="currentColor" />
@@ -545,7 +546,7 @@ export function InstanceWorldsTab({
                     <button
                       type="button"
                       onClick={() => setDeleteWorldConfirm(world)}
-                      className="size-8 rounded-lg border border-border flex items-center justify-center cursor-pointer hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors"
+                      className="size-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors"
                       title="Delete world save"
                     >
                       <Icon name="trash" size={14} color="currentColor" />
@@ -558,7 +559,7 @@ export function InstanceWorldsTab({
         )
       ) : /* Backups Subtab */
       filteredBackups.length === 0 ? (
-        <div className="p-12 rounded-2xl border border-border bg-card flex flex-col items-center justify-center gap-3 text-center">
+        <div className="p-12 rounded-2xl bg-card flex flex-col items-center justify-center gap-3 text-center">
           <div className="size-12 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground">
             <Icon name="archive" size={24} color="currentColor" />
           </div>
@@ -576,7 +577,7 @@ export function InstanceWorldsTab({
           {filteredBackups.map((b) => (
             <div
               key={b.fileName}
-              className="p-3.5 rounded-xl border border-border bg-card flex items-center justify-between gap-4"
+              className="p-3.5 rounded-xl bg-card flex items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="size-10 rounded-lg bg-secondary flex items-center justify-center text-primary shrink-0">
@@ -598,7 +599,7 @@ export function InstanceWorldsTab({
                 <button
                   type="button"
                   onClick={() => setRestoringBackup(b)}
-                  className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg border border-border bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
+                  className="inline-flex items-center gap-1.5 h-7.5 px-3 rounded-lg bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
                   style={{ color: theme.foreground }}
                   title="Restore this backup back into the saves directory"
                 >
@@ -609,7 +610,7 @@ export function InstanceWorldsTab({
                 <button
                   type="button"
                   onClick={() => setDeleteBackupConfirm(b)}
-                  className="size-7.5 rounded-lg border border-border flex items-center justify-center cursor-pointer hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors"
+                  className="size-7.5 rounded-lg flex items-center justify-center cursor-pointer hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors"
                   title="Delete backup archive"
                 >
                   <Icon name="trash" size={13} color="currentColor" />

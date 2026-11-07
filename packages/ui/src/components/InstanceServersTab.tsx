@@ -198,7 +198,7 @@ export function InstanceServersTab({
               }
               toast.info("Refreshing server status...");
             }}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-semibold cursor-pointer hover:bg-card transition-colors select-none"
             style={{ color: theme.foreground }}
             title="Re-ping all servers"
           >
@@ -219,7 +219,7 @@ export function InstanceServersTab({
           <button
             type="button"
             onClick={() => onOpenFolder()}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-secondary text-xs font-medium cursor-pointer hover:bg-card transition-colors select-none"
             style={{ color: theme.foreground }}
             title="Open game directory"
           >
@@ -235,7 +235,7 @@ export function InstanceServersTab({
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="p-4 rounded-2xl border border-border bg-card/50 flex gap-3.5 items-center animate-pulse"
+              className="p-4 rounded-2xl bg-card/50 flex gap-3.5 items-center animate-pulse"
             >
               <div className="size-16 rounded-xl bg-secondary shrink-0" />
               <div className="flex flex-col gap-2 flex-1">
@@ -246,7 +246,7 @@ export function InstanceServersTab({
           ))}
         </div>
       ) : servers.length === 0 ? (
-        <div className="p-12 rounded-2xl border border-border bg-card flex flex-col items-center justify-center gap-3 text-center">
+        <div className="p-12 rounded-2xl bg-card flex flex-col items-center justify-center gap-3 text-center">
           <div className="size-12 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground">
             <Icon name="server" size={24} color="currentColor" />
           </div>
@@ -280,7 +280,8 @@ export function InstanceServersTab({
             return (
               <div
                 key={`${s.name}:${s.ip}`}
-                className="p-4 rounded-2xl border border-border bg-card shadow-xs flex items-center justify-between gap-4 transition-all hover:border-border/80"
+                className="p-4 rounded-2xl shadow-xs flex items-center justify-between gap-4 transition-all border-0 outline-none"
+                style={{ background: theme.card, border: 0, outline: "none" }}
               >
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
                   {/* Server Icon */}
@@ -370,7 +371,7 @@ export function InstanceServersTab({
                   <button
                     type="button"
                     onClick={() => openEditModal(s)}
-                    className="size-8 rounded-lg border border-border bg-secondary flex items-center justify-center cursor-pointer hover:bg-card transition-colors text-muted-foreground hover:text-foreground"
+                    className="size-8 rounded-lg bg-secondary flex items-center justify-center cursor-pointer hover:bg-card transition-colors text-muted-foreground hover:text-foreground"
                     title="Edit server name or address"
                   >
                     <Icon name="edit" size={13} color="currentColor" />
@@ -379,7 +380,7 @@ export function InstanceServersTab({
                   <button
                     type="button"
                     onClick={() => setDeleteConfirmServer(s)}
-                    className="size-8 rounded-lg border border-border flex items-center justify-center cursor-pointer hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors"
+                    className="size-8 rounded-lg flex items-center justify-center cursor-pointer hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors"
                     title="Remove server"
                   >
                     <Icon name="trash" size={14} color="currentColor" />
@@ -431,7 +432,7 @@ export function InstanceServersTab({
                 value={serverName}
                 onChange={(e) => setServerName(e.target.value)}
                 placeholder="e.g. Nomad Survival"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                 style={{ background: theme.sidebarAccent, color: theme.foreground }}
               />
             </div>
@@ -445,7 +446,7 @@ export function InstanceServersTab({
                 value={serverAddress}
                 onChange={(e) => setServerAddress(e.target.value)}
                 placeholder="e.g. nomad.aak.bar or mc.hypixel.net:25565"
-                className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                 style={{ background: theme.sidebarAccent, color: theme.foreground }}
               />
             </div>
@@ -492,7 +493,7 @@ export function InstanceServersTab({
                 type="text"
                 value={serverName}
                 onChange={(e) => setServerName(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                 style={{ background: theme.sidebarAccent, color: theme.foreground }}
               />
             </div>
@@ -505,7 +506,7 @@ export function InstanceServersTab({
                 type="text"
                 value={serverAddress}
                 onChange={(e) => setServerAddress(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-secondary text-foreground text-xs outline-none focus:border-primary transition-colors"
                 style={{ background: theme.sidebarAccent, color: theme.foreground }}
               />
             </div>
