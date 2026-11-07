@@ -29,9 +29,10 @@ import {
   pageFade,
   rail,
   railLabel,
-  themes,
+  resolveTheme,
   type Appearance,
   type SettingsTab,
+  type ThemeId,
   toast,
 } from "@sera/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -272,7 +273,10 @@ export default function App() {
     }
   }, []);
 
-  const theme = themes[settings.appearance];
+  const theme = resolveTheme(
+    settings.appearance === "dark" ? settings.darkTheme : settings.lightTheme,
+    settings.appearance,
+  );
   const isRailOpen = page === SETTINGS || (page === 1 && Boolean(managingInstanceId));
 
   // the favicon follows the shell, the same pair the rail picks between
@@ -477,6 +481,8 @@ export default function App() {
                     onFont={(font) => update({ font })}
                     onZoom={(zoom) => update({ zoom })}
                     onAppearance={(appearance: Appearance) => update({ appearance })}
+                    onLightTheme={(lightTheme: ThemeId) => update({ lightTheme })}
+                    onDarkTheme={(darkTheme: ThemeId) => update({ darkTheme })}
                     onJavaPath={(javaPath) => update({ javaPath })}
                     onMemory={(minMemory, maxMemory) => update({ minMemory, maxMemory })}
                     onGcPreset={(gcPreset) => update({ gcPreset })}

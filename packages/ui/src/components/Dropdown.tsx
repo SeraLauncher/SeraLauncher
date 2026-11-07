@@ -10,6 +10,7 @@ export function Dropdown<T extends string | number>({
   value,
   options,
   render,
+  renderLeading,
   onChange,
   theme,
   className,
@@ -19,6 +20,8 @@ export function Dropdown<T extends string | number>({
   options: readonly T[];
   /** how one option reads, both in the list and on the closed trigger */
   render: (option: T) => string;
+  /** optional visual (e.g. a colour chip) drawn before the text in the trigger and list */
+  renderLeading?: (option: T) => React.ReactNode;
   onChange: (option: T) => void;
   theme: Theme;
   className?: string;
@@ -101,14 +104,17 @@ export function Dropdown<T extends string | number>({
         whileTap={{ scale: 0.985 }}
         transition={snappy}
       >
-        <span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {render(value)}
+        <span className="flex items-center gap-2 min-w-0">
+          {renderLeading?.(value)}
+          <span
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {render(value)}
+          </span>
         </span>
         <motion.svg
           width="12"
@@ -168,12 +174,13 @@ export function Dropdown<T extends string | number>({
                     aria-selected={option === value}
                     onClick={() => pick(option)}
                     onPointerEnter={() => setCursor(index)}
-                    className="block w-full px-2.5 py-[7px] border-0 rounded-md text-sm font-medium text-left whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer transition-colors"
+                    className="flex items-center gap-2 w-full px-2.5 py-[7px] border-0 rounded-md text-sm font-medium text-left whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer transition-colors"
                     style={{
                       color: option === value ? theme.primary : theme.foreground,
                       background: index === cursor ? theme.card : "transparent",
                     }}
                   >
+                    {renderLeading?.(option)}
                     {render(option)}
                   </button>
                 </li>

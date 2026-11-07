@@ -7,6 +7,25 @@ export const APP_VERSION = "0.2.2";
  *  settings store can import it without pulling the palettes in. */
 export type Appearance = "dark" | "light";
 
+/** Ids of the palettes shipped with the app. `theme.ts` paints each of them in both
+ *  appearances, and an unknown stored id falls back to the flagship on load. */
+export type ThemeId =
+  | "default"
+  | "catppuccin"
+  | "rose_pine"
+  | "dark_plus"
+  | "dracula"
+  | "tokyo_night";
+export const DEFAULT_THEME: ThemeId = "default";
+export const THEME_IDS: readonly ThemeId[] = [
+  "default",
+  "catppuccin",
+  "rose_pine",
+  "dark_plus",
+  "dracula",
+  "tokyo_night",
+];
+
 /** Sunghyun Sans, shipped with the app. */
 export const BUNDLED_FAMILY = "Sunghyun Sans";
 
@@ -88,6 +107,10 @@ export interface ManagedJavaRuntime {
 /** User preferences, persisted as json by the rust side. */
 export type Settings = {
   appearance: Appearance;
+  /** palette painting light mode */
+  lightTheme: ThemeId;
+  /** palette painting dark mode */
+  darkTheme: ThemeId;
   font: FontChoice;
   fontSize: number;
   zoom: number;

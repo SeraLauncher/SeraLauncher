@@ -47,7 +47,13 @@ import type {
 } from "../instance";
 import { formatPlayTime } from "../instance";
 import type { JavaRuntime, Settings } from "../settings";
-import { DEFAULT_MIN_MEMORY, DEFAULT_MAX_MEMORY, DEFAULT_ZOOM, MEMORY_PRESETS } from "../settings";
+import {
+  DEFAULT_MIN_MEMORY,
+  DEFAULT_MAX_MEMORY,
+  DEFAULT_THEME,
+  DEFAULT_ZOOM,
+  MEMORY_PRESETS,
+} from "../settings";
 import { Dropdown } from "./Dropdown";
 import { EffectiveJavaArgsModal } from "./EffectiveJavaArgsModal";
 import { InstanceAddonsTab } from "./InstanceAddonsTab";
@@ -1969,6 +1975,8 @@ function InstanceManagementView({
   const previewSettings = useMemo<Settings>(() => {
     return {
       appearance: "dark",
+      lightTheme: DEFAULT_THEME,
+      darkTheme: DEFAULT_THEME,
       font: "Sunghyun Sans",
       fontSize: 16,
       zoom: DEFAULT_ZOOM,

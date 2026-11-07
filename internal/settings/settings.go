@@ -11,6 +11,7 @@ import (
 
 const (
 	DefaultAppearance   = "dark"
+	DefaultThemeName    = "default"
 	BundledFamily       = "Sunghyun Sans"
 	DefaultFontSize     = 16
 	MinFontSize         = 12
@@ -43,6 +44,8 @@ func DefaultEnabledAnimations() []string {
 // Settings represents launcher user preferences.
 type Settings struct {
 	Appearance        string   `json:"appearance"`
+	LightTheme        string   `json:"lightTheme"`
+	DarkTheme         string   `json:"darkTheme"`
 	Font              string   `json:"font"`
 	FontSize          uint32   `json:"fontSize"`
 	Zoom              uint32   `json:"zoom"`
@@ -61,6 +64,8 @@ type Settings struct {
 func Defaults() Settings {
 	return Settings{
 		Appearance:        DefaultAppearance,
+		LightTheme:        DefaultThemeName,
+		DarkTheme:         DefaultThemeName,
 		Font:              BundledFamily,
 		FontSize:          DefaultFontSize,
 		Zoom:              DefaultZoom,
@@ -81,6 +86,22 @@ func (s Settings) Sanitized() Settings {
 	if s.Appearance != "dark" && s.Appearance != "light" {
 		s.Appearance = DefaultAppearance
 	}
+
+	validThemes := map[string]bool{
+		"default":     true,
+		"catppuccin":  true,
+		"rose_pine":   true,
+		"dark_plus":   true,
+		"dracula":     true,
+		"tokyo_night": true,
+	}
+	if !validThemes[s.LightTheme] {
+		s.LightTheme = DefaultThemeName
+	}
+	if !validThemes[s.DarkTheme] {
+		s.DarkTheme = DefaultThemeName
+	}
+
 	if strings.TrimSpace(s.Font) == "" {
 		s.Font = BundledFamily
 	}

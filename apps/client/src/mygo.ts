@@ -311,6 +311,8 @@ export interface ServerPingResult {
 
 export interface Settings {
   appearance: string;
+  lightTheme: string;
+  darkTheme: string;
   font: string;
   fontSize: number;
   zoom: number;

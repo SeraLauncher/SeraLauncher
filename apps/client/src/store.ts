@@ -12,11 +12,13 @@ import {
   DEFAULT_JVM_ARGS,
   DEFAULT_MAX_MEMORY,
   DEFAULT_MIN_MEMORY,
+  DEFAULT_THEME,
   DEFAULT_ZOOM,
   MAX_FONT_SIZE,
   MAX_ZOOM,
   MIN_FONT_SIZE,
   MIN_ZOOM,
+  THEME_IDS,
   type FontChoice,
   type GcPreset,
   type JavaRuntime,
@@ -33,6 +35,8 @@ import {
 
 const DEFAULTS: Settings = {
   appearance: "dark",
+  lightTheme: DEFAULT_THEME,
+  darkTheme: DEFAULT_THEME,
   font: BUNDLED_FAMILY,
   fontSize: DEFAULT_FONT_SIZE,
   zoom: DEFAULT_ZOOM,
@@ -54,6 +58,8 @@ const GC_PRESETS: readonly GcPreset[] = ["none", "g1gc", "zgc"];
 
 function usable(loaded: Partial<Settings>): Settings {
   const appearance = APPEARANCES.find((option) => option === loaded.appearance);
+  const lightTheme = THEME_IDS.find((id) => id === loaded.lightTheme) ?? DEFAULTS.lightTheme;
+  const darkTheme = THEME_IDS.find((id) => id === loaded.darkTheme) ?? DEFAULTS.darkTheme;
   const minMemory = Number(loaded.minMemory) || DEFAULTS.minMemory;
   const maxMemory = Number(loaded.maxMemory) || DEFAULTS.maxMemory;
 
@@ -63,6 +69,8 @@ function usable(loaded: Partial<Settings>): Settings {
 
   return {
     appearance: appearance ?? DEFAULTS.appearance,
+    lightTheme,
+    darkTheme,
     font: loaded.font?.trim() ? loaded.font : DEFAULTS.font,
     fontSize: Math.min(
       MAX_FONT_SIZE,

@@ -19,6 +19,8 @@ func TestDefaultsAndSanitization(t *testing.T) {
 	s.FontSize = 999
 	s.Zoom = 10
 	s.Appearance = "neon"
+	s.LightTheme = "matrix"
+	s.DarkTheme = "papyrus"
 	s = s.Sanitized()
 
 	if s.FontSize != MaxFontSize {
@@ -29,6 +31,19 @@ func TestDefaultsAndSanitization(t *testing.T) {
 	}
 	if s.Appearance != DefaultAppearance {
 		t.Fatalf("expected default appearance %s, got %s", DefaultAppearance, s.Appearance)
+	}
+	if s.LightTheme != DefaultThemeName {
+		t.Fatalf("expected default light theme %s, got %s", DefaultThemeName, s.LightTheme)
+	}
+	if s.DarkTheme != DefaultThemeName {
+		t.Fatalf("expected default dark theme %s, got %s", DefaultThemeName, s.DarkTheme)
+	}
+
+	s.LightTheme = "dracula"
+	s.DarkTheme = "catppuccin"
+	s = s.Sanitized()
+	if s.LightTheme != "dracula" || s.DarkTheme != "catppuccin" {
+		t.Fatalf("expected valid themes to be kept, got light=%s dark=%s", s.LightTheme, s.DarkTheme)
 	}
 }
 

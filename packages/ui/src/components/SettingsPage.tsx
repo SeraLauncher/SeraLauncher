@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { Dropdown } from "./Dropdown";
 import { CheckboxDropdown } from "./CheckboxDropdown";
-import { AppearancePicker } from "./Appearance";
+import { AppearancePicker, ThemePicker } from "./Appearance";
 import { Icon } from "./Icon";
 import { Badge } from "./ui/badge";
 import type { SettingsTab } from "./PageHeader";
@@ -27,6 +27,7 @@ import {
   type JavaRuntime,
   type ManagedJavaRuntime,
   type Settings,
+  type ThemeId,
 } from "../settings";
 import type { Theme } from "../theme";
 
@@ -58,6 +59,8 @@ export function SettingsPage({
   onFont,
   onZoom,
   onAppearance,
+  onLightTheme,
+  onDarkTheme,
   onJavaPath,
   onMemory,
   onGcPreset,
@@ -78,6 +81,8 @@ export function SettingsPage({
   onFontSize?: (size: number) => void;
   onZoom?: (zoom: number) => void;
   onAppearance: (appearance: Appearance) => void;
+  onLightTheme: (themeId: ThemeId) => void;
+  onDarkTheme: (themeId: ThemeId) => void;
   onJavaPath?: (javaPath: string | null) => void;
   onMemory?: (minMemory: number, maxMemory: number) => void;
   onGcPreset?: (gcPreset: GcPreset) => void;
@@ -853,8 +858,24 @@ export function SettingsPage({
       {/* Appearance Section */}
       <section className="w-full max-w-[620px] [&>h2]:m-0 [&>h2]:mb-2 [&>h2]:ml-0.5 [&>h2]:text-[0.8rem] [&>h2]:font-semibold">
         <h2 style={{ color: theme.mutedForeground }}>Color scheme</h2>
-        <AppearancePicker value={settings.appearance} onChange={onAppearance} theme={theme} />
+        <AppearancePicker
+          value={settings.appearance}
+          onChange={onAppearance}
+          theme={theme}
+          themeId={settings.appearance === "dark" ? settings.darkTheme : settings.lightTheme}
+        />
       </section>
+
+      {/* Theme Section */}
+      <Group title="Theme" theme={theme}>
+        <ThemePicker
+          lightTheme={settings.lightTheme}
+          darkTheme={settings.darkTheme}
+          onLight={onLightTheme}
+          onDark={onDarkTheme}
+          theme={theme}
+        />
+      </Group>
 
       {/* Typography Section */}
       <Group title="Typography" theme={theme}>
