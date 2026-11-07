@@ -48,7 +48,7 @@ export function PlayerModelView({
     const aspect = width / height;
     const camera = new THREE.PerspectiveCamera(34, aspect, 0.1, 200);
     // Positioned zoomed out to display the entire character with clean margins
-    camera.position.set(0, 16, 61);
+    camera.position.set(0, 16, 66);
     camera.lookAt(0, 16, 0);
 
     // 2. Lighting: soft ambient + directional key + subtle rim
@@ -139,7 +139,15 @@ export function PlayerModelView({
           const elapsed = (time - startTime) * 0.001;
           const targetPose = getAnimationPose(animationRef.current, elapsed);
           blendAndApplyPose(currentRig, currentPose, targetPose, 0.15);
+        } else {
+          currentPose.rootY = 0;
         }
+
+        // follow a fraction of the model lift so lifted poses (levitation/elytra) never exceed the top edge;
+        // 0.6 keeps the float motion visible while the hat front corner stays inside the frustum
+        const followY = Math.max(0, currentPose.rootY) * 0.6;
+        camera.position.y = 16 + followY;
+        camera.lookAt(0, 16 + followY, 0);
       }
 
       renderer.render(scene, camera);
