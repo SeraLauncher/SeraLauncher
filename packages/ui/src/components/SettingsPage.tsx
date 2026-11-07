@@ -48,9 +48,19 @@ function formatSize(bytes: number): string {
   return `${Math.round(mb)} MB`;
 }
 
+/** #rrggbb colour composited at an alpha, for translucent status tints that stay
+ *  legible on every palette. Non-hex values pass through untouched. */
+function tint(color: string, a: number): string {
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) {
+    const n = parseInt(color.slice(1), 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+  }
+  return color;
+}
+
 /** Full-screen settings organized by category tabs. */
 export function SettingsPage({
-  activeTab = "appearance",
+  activeTab = "general",
   settings,
   fonts,
   theme,
@@ -120,7 +130,7 @@ export function SettingsPage({
   const [busyDiscord, setBusyDiscord] = useState(false);
 
   useEffect(() => {
-    if (activeTab !== "discord") return;
+    if (activeTab !== "general") return;
     let active = true;
 
     const queryStatus = () => {
@@ -275,14 +285,14 @@ export function SettingsPage({
     Math.max(0, ((settings.minMemory - minRamMin) / minRamRange) * 100),
   );
 
-  if (activeTab === "discord") {
+  if (activeTab === "general") {
     return (
       <main className="flex flex-col items-center gap-7 px-6 py-9">
         <h1
           className="w-full max-w-[620px] m-0 text-2xl font-bold tracking-[-0.01em] text-left"
           style={{ color: theme.foreground }}
         >
-          Discord
+          General
         </h1>
 
         {/* Discord Rich Presence Section */}
@@ -301,22 +311,37 @@ export function SettingsPage({
                     ? "Not Connected · Click to reconnect"
                     : "Stopped · Click to connect"
               }
-              className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full border text-[11px] font-semibold cursor-pointer select-none transition-colors disabled:opacity-50 ${
+              className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[11px] font-semibold cursor-pointer select-none transition-opacity disabled:opacity-50 hover:opacity-85"
+              style={
                 discordStatus === "connected"
-                  ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20"
+                  ? {
+                      color: theme.success,
+                      background: tint(theme.success, 0.12),
+                      border: `1px solid ${tint(theme.success, 0.4)}`,
+                    }
                   : discordStatus === "not_connected"
-                    ? "border-amber-500/40 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
-                    : "border-border text-muted-foreground bg-secondary hover:bg-card"
-              }`}
+                    ? {
+                        color: theme.warning,
+                        background: tint(theme.warning, 0.13),
+                        border: `1px solid ${tint(theme.warning, 0.42)}`,
+                      }
+                    : {
+                        color: theme.mutedForeground,
+                        background: theme.secondary,
+                        border: `1px solid ${theme.border}`,
+                      }
+              }
             >
               <span
-                className={`size-1.5 rounded-full ${
-                  discordStatus === "connected"
-                    ? "bg-emerald-400 animate-pulse"
-                    : discordStatus === "not_connected"
-                      ? "bg-amber-400"
-                      : "bg-muted-foreground"
-                }`}
+                className={`size-1.5 rounded-full ${discordStatus === "connected" ? "animate-pulse" : ""}`}
+                style={{
+                  background:
+                    discordStatus === "connected"
+                      ? theme.success
+                      : discordStatus === "not_connected"
+                        ? theme.warning
+                        : theme.mutedForeground,
+                }}
               />
               <span>
                 {busyDiscord
@@ -380,6 +405,31 @@ export function SettingsPage({
                     transform: settings.discordDetailed ? "translateX(22px)" : "translateX(2px)",
                   }}
                 />
+              </button>
+            }
+          />
+        </Group>
+
+        {/* Software Updates Section */}
+        <Group title="Updates" theme={theme}>
+          <Row
+            label="SeraLauncher Version"
+            hint={`Current version v${APP_VERSION}. Updates are signed with Ed25519 and verified automatically.`}
+            theme={theme}
+            control={
+              <button
+                type="button"
+                onClick={() => {
+                  invoke("check_for_updates");
+                }}
+                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg outline-none text-xs font-semibold cursor-pointer select-none transition-opacity hover:opacity-85"
+                style={{
+                  background: theme.secondary,
+                  color: theme.foreground,
+                }}
+              >
+                <Icon name="refresh" size={13} color="currentColor" />
+                <span>Check for Updates</span>
               </button>
             }
           />
@@ -877,8 +927,8 @@ export function SettingsPage({
         />
       </Group>
 
-      {/* Typography Section */}
-      <Group title="Typography" theme={theme}>
+      {/* Font and Layout Section */}
+      <Group title="Font and layout" theme={theme}>
         <Row
           label="Interface font"
           hint="The face used across the app"
@@ -910,75 +960,52 @@ export function SettingsPage({
             </button>
           }
         />
-      </Group>
-
-      {/* Interface Scale / Zoom Section */}
-      <Group title="Interface scale" theme={theme}>
         <Row
           label="Zoom level"
           hint="Scales the launcher interface for higher or lower resolution displays. Shortcut: Ctrl + Shift + - / +"
           theme={theme}
           control={
-            <div className="flex flex-col gap-2 py-1 w-full min-w-[240px]">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span style={{ color: theme.mutedForeground }}>Current scale:</span>
-                <strong style={{ color: theme.foreground }}>{settings.zoom}%</strong>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onZoom?.(Math.max(MIN_ZOOM, settings.zoom - 5))}
-                  disabled={settings.zoom <= MIN_ZOOM}
-                  title="Zoom out"
-                  aria-label="Zoom out"
-                  className="flex items-center justify-center size-7 rounded-lg border border-border bg-secondary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  style={{ color: theme.foreground }}
-                >
-                  <Icon name="minus" size={14} color="currentColor" />
-                </button>
-                <input
-                  type="range"
-                  className="settings-slider flex-1 h-1.5 rounded-full bg-secondary outline-none cursor-pointer appearance-none"
-                  min={MIN_ZOOM}
-                  max={MAX_ZOOM}
-                  step={5}
-                  value={settings.zoom}
-                  style={{
-                    background: `linear-gradient(to right, ${theme.primary} 0%, ${theme.primary} ${((settings.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100}%, ${theme.secondary} ${((settings.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100}%, ${theme.secondary} 100%)`,
-                  }}
-                  onChange={(e) => onZoom?.(Number(e.target.value))}
-                />
-                <button
-                  type="button"
-                  onClick={() => onZoom?.(Math.min(MAX_ZOOM, settings.zoom + 5))}
-                  disabled={settings.zoom >= MAX_ZOOM}
-                  title="Zoom in"
-                  aria-label="Zoom in"
-                  className="flex items-center justify-center size-7 rounded-lg border border-border bg-secondary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  style={{ color: theme.foreground }}
-                >
-                  <Icon name="plus" size={14} color="currentColor" />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {[75, 90, 100, 110, 125, 150].map((preset) => {
-                  const isActive = settings.zoom === preset;
-                  return (
-                    <button
-                      key={preset}
-                      type="button"
-                      className="px-2 py-0.5 rounded-md text-xs font-medium cursor-pointer border border-border transition-colors"
-                      style={{
-                        background: isActive ? theme.primary : theme.secondary,
-                        color: isActive ? theme.primaryForeground : theme.foreground,
-                      }}
-                      onClick={() => onZoom?.(preset)}
-                    >
-                      {preset}%
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex items-center gap-2 py-1 w-full min-w-[240px]">
+              <button
+                type="button"
+                onClick={() => onZoom?.(Math.max(MIN_ZOOM, settings.zoom - 5))}
+                disabled={settings.zoom <= MIN_ZOOM}
+                title="Zoom out"
+                aria-label="Zoom out"
+                className="flex items-center justify-center size-7 rounded-lg outline-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-80"
+                style={{ color: theme.foreground, background: theme.secondary }}
+              >
+                <Icon name="minus" size={14} color="currentColor" />
+              </button>
+              <input
+                type="range"
+                className="settings-slider flex-1 h-1.5 rounded-full bg-secondary outline-none cursor-pointer appearance-none"
+                min={MIN_ZOOM}
+                max={MAX_ZOOM}
+                step={5}
+                value={settings.zoom}
+                style={{
+                  background: `linear-gradient(to right, ${theme.primary} 0%, ${theme.primary} ${((settings.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100}%, ${theme.secondary} ${((settings.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100}%, ${theme.secondary} 100%)`,
+                }}
+                onChange={(e) => onZoom?.(Number(e.target.value))}
+              />
+              <button
+                type="button"
+                onClick={() => onZoom?.(Math.min(MAX_ZOOM, settings.zoom + 5))}
+                disabled={settings.zoom >= MAX_ZOOM}
+                title="Zoom in"
+                aria-label="Zoom in"
+                className="flex items-center justify-center size-7 rounded-lg outline-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-80"
+                style={{ color: theme.foreground, background: theme.secondary }}
+              >
+                <Icon name="plus" size={14} color="currentColor" />
+              </button>
+              <strong
+                className="text-xs font-mono tabular-nums w-11 text-right"
+                style={{ color: theme.foreground }}
+              >
+                {settings.zoom}%
+              </strong>
             </div>
           }
           action={
@@ -1028,31 +1055,6 @@ export function SettingsPage({
               }}
             >
               <Icon name="reset" size={16} color="currentColor" />
-            </button>
-          }
-        />
-      </Group>
-
-      {/* Software Updates Section */}
-      <Group title="Updates" theme={theme}>
-        <Row
-          label="SeraLauncher Version"
-          hint={`Current version v${APP_VERSION}. Updates are signed with Ed25519 and verified automatically.`}
-          theme={theme}
-          control={
-            <button
-              type="button"
-              onClick={() => {
-                invoke("check_for_updates");
-              }}
-              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg border border-border text-xs font-semibold cursor-pointer select-none transition-colors hover:bg-secondary"
-              style={{
-                background: theme.card,
-                color: theme.foreground,
-              }}
-            >
-              <Icon name="refresh" size={13} color="currentColor" />
-              <span>Check for Updates</span>
             </button>
           }
         />

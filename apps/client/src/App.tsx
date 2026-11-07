@@ -70,9 +70,9 @@ const INSTANCE_TAB_STATUS: Record<InstanceManagementTab, string> = {
 
 /** the settings tab the user is browsing, mapped to a status fragment */
 const SETTINGS_TAB_STATUS: Record<SettingsTab, string> = {
+  general: "General",
   appearance: "Appearance",
   java: "Java",
-  discord: "Discord",
 };
 
 export default function App() {
@@ -177,7 +177,7 @@ export default function App() {
   const [loginReason, setLoginReason] = useState<string | null>(null);
 
   const [page, setPage] = useState(0);
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("general");
   const [managingInstanceId, setManagingInstanceId] = useState<string | null>(null);
   const [instanceTab, setInstanceTab] = useState<InstanceManagementTab>("overview");
   const [discoveryCategory, setDiscoveryCategory] = useState<DiscoveryCategory>("modpack");

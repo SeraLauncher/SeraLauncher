@@ -90,6 +90,18 @@ export function CommandPalette({
         },
       },
       {
+        id: "nav-settings-general",
+        title: "Settings: General",
+        subtitle: "Discord Rich Presence and software updates",
+        category: "Navigation",
+        icon: "settings",
+        action: () => {
+          onNavigatePage(3);
+          onNavigateSettingsTab("general");
+          onClose();
+        },
+      },
+      {
         id: "nav-settings-appearance",
         title: "Settings: Appearance",
         subtitle: "Customize themes, color schemes, and interface typography",
